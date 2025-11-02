@@ -218,6 +218,18 @@ export const savedProjectsService = {
   checkIfSaved: (projectId: string) => api.get(`/saved/check/${projectId}`),
 };
 
+// Feedback
+export const feedbackService = {
+  submitFeedback: (data: {
+    feedback_type: 'suggestion' | 'improvement' | 'contact' | 'report';
+    message: string;
+    contact_email?: string;
+    reported_project_id?: string;
+    reported_user_id?: string;
+    report_reason?: 'spam' | 'inappropriate' | 'harassment' | 'false_info' | 'other';
+  }) => api.post('/feedback', data),
+};
+
 // Admin
 export const adminService = {
   // Analytics
@@ -298,6 +310,19 @@ export const adminService = {
   removeValidatorAssignment: (assignmentId: string) => api.delete(`/admin/validator-assignments/${assignmentId}`),
   getValidatorAssignments: (validatorId: string) => api.get(`/admin/validator-assignments/validator/${validatorId}`),
   getCategories: () => api.get('/admin/categories'),
+
+  // Feedback & Reports
+  getAllFeedback: (params: { type?: string; status?: string; page?: number; perPage?: number } = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.type) queryParams.append('type', params.type);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.perPage) queryParams.append('per_page', params.perPage.toString());
+    return api.get(`/feedback/admin?${queryParams.toString()}`);
+  },
+  updateFeedbackStatus: (feedbackId: string, data: { status: string; admin_notes?: string }) =>
+    api.patch(`/feedback/admin/${feedbackId}/status`, data),
+  deleteFeedback: (feedbackId: string) => api.delete(`/feedback/admin/${feedbackId}`),
 };
 
 export default api;

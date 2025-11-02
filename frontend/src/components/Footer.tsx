@@ -1,11 +1,74 @@
-import { Link } from 'react-router-dom';
-import { Github, Twitter, Mail, ExternalLink } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Github, Twitter, Mail, ExternalLink, MessageSquare, Lightbulb, HelpCircle, Flag } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FeedbackModal } from './modals/FeedbackModal';
+import { useUserByUsername } from '../hooks/useUser';
+
+type FeedbackType = 'suggestion' | 'improvement' | 'contact' | 'report';
 
 export function Footer() {
+  const location = useLocation();
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('contact');
+  const [reportedProjectId, setReportedProjectId] = useState<string | undefined>(undefined);
+  const [reportedUserId, setReportedUserId] = useState<string | undefined>(undefined);
+  const [detectedUsername, setDetectedUsername] = useState<string | undefined>(undefined);
+
+  // Fetch user data if on a user profile page
+  const { data: profileUser } = useUserByUsername(detectedUsername || '', {
+    enabled: !!detectedUsername,
+  });
+
+  // Update reported user ID when profile user data is fetched
+  useEffect(() => {
+    if (profileUser?.id && detectedUsername) {
+      setReportedUserId(profileUser.id);
+    }
+  }, [profileUser, detectedUsername]);
+
+  const openFeedbackModal = (type: FeedbackType) => {
+    setFeedbackType(type);
+
+    // Auto-detect project or user ID from current page URL
+    if (type === 'report') {
+      const pathname = location.pathname;
+
+      // Check if on project detail page: /project/:id
+      const projectMatch = pathname.match(/^\/project\/([^\/]+)$/);
+      if (projectMatch) {
+        setReportedProjectId(projectMatch[1]);
+        setReportedUserId(undefined);
+        setDetectedUsername(undefined);
+      }
+      // Check if on user profile page: /u/:username
+      else {
+        const userMatch = pathname.match(/^\/u\/([^\/]+)$/);
+        if (userMatch) {
+          const username = userMatch[1];
+          setDetectedUsername(username);
+          setReportedProjectId(undefined);
+          // User ID will be set automatically by useEffect when profileUser data is fetched
+        } else {
+          // General report
+          setReportedProjectId(undefined);
+          setReportedUserId(undefined);
+          setDetectedUsername(undefined);
+        }
+      }
+    } else {
+      setReportedProjectId(undefined);
+      setReportedUserId(undefined);
+      setDetectedUsername(undefined);
+    }
+
+    setFeedbackModalOpen(true);
+  };
+
   return (
-    <footer className="bg-black border-t border-gray-900">
-      <div className="container mx-auto px-4 py-12 sm:py-16">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
+    <>
+      <footer className="bg-black border-t border-gray-900">
+        <div className="container mx-auto px-4 py-12 sm:py-16">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-3">
@@ -72,7 +135,7 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Community */}
+          {/* Community & Feedback */}
           <div>
             <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Community</h3>
             <ul className="space-y-3 text-sm">
@@ -89,10 +152,28 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="mailto:support@zero.sh" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>Contact</span>
-                  <Mail className="h-3 w-3" />
-                </a>
+                <button onClick={() => openFeedbackModal('contact')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Reach Out</span>
+                  <MessageSquare className="h-3 w-3" />
+                </button>
+              </li>
+              <li>
+                <button onClick={() => openFeedbackModal('suggestion')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Suggestions</span>
+                  <Lightbulb className="h-3 w-3" />
+                </button>
+              </li>
+              <li>
+                <button onClick={() => openFeedbackModal('improvement')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Help Us Improve</span>
+                  <HelpCircle className="h-3 w-3" />
+                </button>
+              </li>
+              <li>
+                <button onClick={() => openFeedbackModal('report')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Report</span>
+                  <Flag className="h-3 w-3" />
+                </button>
               </li>
             </ul>
           </div>
@@ -160,5 +241,14 @@ export function Footer() {
         </div>
       </div>
     </footer>
+
+      <FeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        initialType={feedbackType}
+        reportedProjectId={reportedProjectId}
+        reportedUserId={reportedUserId}
+      />
+    </>
   );
 }

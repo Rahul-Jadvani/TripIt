@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List, Edit2, Settings } from 'lucide-react';
+import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List, Edit2, Settings, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { adminService } from '@/services/api';
@@ -438,6 +438,302 @@ function BadgeManagementList() {
   );
 }
 
+interface FeedbackItem {
+  id: string;
+  feedback_type: string;
+  message: string;
+  contact_email?: string;
+  reported_project_id?: string;
+  reported_user_id?: string;
+  report_reason?: string;
+  status: string;
+  admin_notes?: string;
+  created_at: string;
+  user_id?: string;
+  submitter?: {
+    id: string;
+    username: string;
+    email: string;
+  };
+}
+
+function FeedbackManagement() {
+  const { toast } = useToast();
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+
+  const fetchFeedback = async () => {
+    try {
+      setLoading(true);
+      const params: any = {};
+      if (typeFilter !== 'all') params.type = typeFilter;
+      if (statusFilter !== 'all') params.status = statusFilter;
+
+      const response = await adminService.getAllFeedback(params);
+      setFeedback(response.data.data || []);
+    } catch (error: any) {
+      console.error('Error fetching feedback:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to load feedback',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeedback();
+  }, [typeFilter, statusFilter]);
+
+  const handleUpdateStatus = async (feedbackId: string, newStatus: string) => {
+    try {
+      setUpdatingStatus(feedbackId);
+      await adminService.updateFeedbackStatus(feedbackId, {
+        status: newStatus,
+        admin_notes: adminNotes[feedbackId] || undefined,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Status updated successfully',
+      });
+
+      fetchFeedback();
+    } catch (error: any) {
+      console.error('Error updating status:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update status',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const handleDelete = async (feedbackId: string) => {
+    if (!confirm('Are you sure you want to delete this feedback?')) return;
+
+    try {
+      await adminService.deleteFeedback(feedbackId);
+      toast({
+        title: 'Success',
+        description: 'Feedback deleted successfully',
+      });
+      fetchFeedback();
+    } catch (error: any) {
+      console.error('Error deleting feedback:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to delete feedback',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getTypeBadge = (type: string) => {
+    const variants: Record<string, any> = {
+      suggestion: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50', icon: '💡' },
+      improvement: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/50', icon: '🔧' },
+      contact: { color: 'bg-green-500/20 text-green-400 border-green-500/50', icon: '💬' },
+      report: { color: 'bg-red-500/20 text-red-400 border-red-500/50', icon: '🚩' },
+    };
+    const variant = variants[type] || variants.contact;
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium border ${variant.color}`}>
+        {variant.icon} {type}
+      </span>
+    );
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, string> = {
+      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+      reviewed: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+      resolved: 'bg-green-500/20 text-green-400 border-green-500/50',
+      dismissed: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
+    };
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium border ${variants[status] || variants.pending}`}>
+        {status}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex gap-4">
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="suggestion">Suggestions</SelectItem>
+            <SelectItem value="improvement">Improvements</SelectItem>
+            <SelectItem value="contact">Contact</SelectItem>
+            <SelectItem value="report">Reports</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="reviewed">Reviewed</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+            <SelectItem value="dismissed">Dismissed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Feedback List */}
+      {feedback.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No feedback found</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {feedback.map((item) => (
+            <Card key={item.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      {getTypeBadge(item.feedback_type)}
+                      {getStatusBadge(item.status)}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(item.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    {item.submitter && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-yellow-400">
+                          Submitted by: @{item.submitter.username}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({item.submitter.email})
+                        </span>
+                      </div>
+                    )}
+                    {item.contact_email && (
+                      <p className="text-sm text-muted-foreground">
+                        Contact: {item.contact_email}
+                      </p>
+                    )}
+                    {item.report_reason && (
+                      <p className="text-sm text-muted-foreground">
+                        Reason: {item.report_reason}
+                      </p>
+                    )}
+                    {item.reported_project_id && (
+                      <p className="text-sm text-muted-foreground">
+                        Project ID: {item.reported_project_id}
+                      </p>
+                    )}
+                    {item.reported_user_id && (
+                      <p className="text-sm text-muted-foreground">
+                        User ID: {item.reported_user_id}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(item.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Message</Label>
+                  <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                    {item.message}
+                  </p>
+                </div>
+
+                {item.admin_notes && (
+                  <div>
+                    <Label className="text-sm font-medium">Admin Notes</Label>
+                    <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                      {item.admin_notes}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Add admin notes..."
+                    value={adminNotes[item.id] || ''}
+                    onChange={(e) => setAdminNotes({ ...adminNotes, [item.id]: e.target.value })}
+                    className="flex-1"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUpdateStatus(item.id, 'reviewed')}
+                    disabled={updatingStatus === item.id}
+                  >
+                    Mark Reviewed
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUpdateStatus(item.id, 'resolved')}
+                    disabled={updatingStatus === item.id}
+                  >
+                    Mark Resolved
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUpdateStatus(item.id, 'dismissed')}
+                    disabled={updatingStatus === item.id}
+                  >
+                    Dismiss
+                  </Button>
+                  {updatingStatus === item.id && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('analytics');
@@ -607,7 +903,7 @@ export default function Admin() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="analytics">
             <TrendingUp className="h-4 w-4 mr-2" />
             Analytics
@@ -631,6 +927,10 @@ export default function Admin() {
           <TabsTrigger value="investors">
             <Users className="h-4 w-4 mr-2" />
             Investors
+          </TabsTrigger>
+          <TabsTrigger value="feedback">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Feedback
           </TabsTrigger>
         </TabsList>
 
@@ -1739,6 +2039,21 @@ export default function Admin() {
               )}
             </TabsContent>
           </Tabs>
+        </TabsContent>
+
+        {/* Feedback & Reports Tab */}
+        <TabsContent value="feedback" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Feedback & Reports</CardTitle>
+              <CardDescription>
+                View and manage user feedback, suggestions, and reports
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FeedbackManagement />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

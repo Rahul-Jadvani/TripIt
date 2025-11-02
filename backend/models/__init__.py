@@ -7,6 +7,7 @@ from .vote import Vote
 from .comment import Comment
 from .badge import ValidationBadge
 from .intro import Intro
+from .feedback import Feedback
 
 __all__ = [
     'User',
@@ -15,5 +16,6 @@ __all__ = [
     'Vote',
     'Comment',
     'ValidationBadge',
-    'Intro'
+    'Intro',
+    'Feedback'
 ]

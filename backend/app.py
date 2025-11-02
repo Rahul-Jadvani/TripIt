@@ -110,6 +110,7 @@ def register_blueprints(app):
     from routes.admin import admin_bp
     from routes.validator import validator_bp
     from routes.project_updates import project_updates_bp
+    from routes.feedback import feedback_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
@@ -129,6 +130,7 @@ def register_blueprints(app):
     app.register_blueprint(direct_messages_bp)
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(validator_bp, url_prefix='/api/validator')
+    app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
 
     from routes.admin_auth import admin_auth_bp
     app.register_blueprint(admin_auth_bp)
