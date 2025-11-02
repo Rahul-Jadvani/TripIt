@@ -23,6 +23,7 @@ function transformProject(backendProject: any) {
     githubUrl: backendProject.github_url,
     hackathonName: backendProject.hackathon_name || '',
     hackathonDate: backendProject.hackathon_date || '',
+    hackathons: backendProject.hackathons || [],
     techStack: backendProject.tech_stack || [],
     teamMembers: backendProject.team_members || [],
     team_members: backendProject.team_members || [],
@@ -150,6 +151,30 @@ export function useUserProjects(userId: string) {
     gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
 
     // Background refetch for user projects
+    refetchInterval: 1000 * 60 * 2, // Refresh every 2 minutes
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useUserTaggedProjects(userId: string) {
+  return useQuery({
+    queryKey: ['user-tagged-projects', userId],
+    queryFn: async () => {
+      const response = await projectsService.getTaggedProjects(userId);
+
+      // Transform the projects data
+      return {
+        ...response.data,
+        data: response.data.data?.map(transformProject) || [],
+      };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 3, // Consider data fresh for 3 minutes
+    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
+
+    // Background refetch for tagged projects
     refetchInterval: 1000 * 60 * 2, // Refresh every 2 minutes
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

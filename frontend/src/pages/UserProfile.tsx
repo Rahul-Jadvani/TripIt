@@ -1,18 +1,35 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Shield, Award, Loader2, AlertCircle, Github, ExternalLink } from 'lucide-react';
+import { Shield, Award, Loader2, AlertCircle, Github, ExternalLink, MapPin, Briefcase, TrendingUp, Globe, Link as LinkIcon, MessageSquare, Send } from 'lucide-react';
 import { useUserByUsername } from '@/hooks/useUser';
-import { useUserProjects } from '@/hooks/useProjects';
+import { useUserProjects, useUserTaggedProjects } from '@/hooks/useProjects';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
+import { useQuery } from '@tanstack/react-query';
+import { adminService } from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 
 export default function UserProfile() {
   const { username } = useParams();
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   const { data: user, isLoading: userLoading, error: userError } = useUserByUsername(username || '');
   const { data: projectsData, isLoading: projectsLoading } = useUserProjects(user?.id || '');
+  const { data: taggedProjectsData, isLoading: taggedProjectsLoading } = useUserTaggedProjects(user?.id || '');
+
+  // Fetch investor profile if user is an investor
+  const { data: investorProfile } = useQuery({
+    queryKey: ['investorProfile', user?.id],
+    queryFn: async () => {
+      const response = await adminService.getUserInvestorProfile(user!.id);
+      return response.data.data;
+    },
+    enabled: !!user?.id && !!(user as any)?.isInvestor,
+  });
 
   // Loading state
   if (userLoading) {
@@ -71,6 +88,18 @@ export default function UserProfile() {
                       Admin
                     </Badge>
                   )}
+                  {(user as any)?.isInvestor && (
+                    <Badge className="bg-primary text-black">
+                      <Award className="mr-1 h-3 w-3" />
+                      Investor
+                    </Badge>
+                  )}
+                  {(user as any)?.isValidator && (
+                    <Badge className="bg-blue-600 text-white">
+                      <Shield className="mr-1 h-3 w-3" />
+                      Validator
+                    </Badge>
+                  )}
                   {user.github_connected && user.github_username && (
                     <a
                       href={`https://github.com/${user.github_username}`}
@@ -86,6 +115,29 @@ export default function UserProfile() {
                 </div>
                 <p className="mb-4 text-lg font-bold text-primary mb-3">@{user.username}</p>
                 {user.bio && <p className="text-base text-foreground leading-relaxed">{user.bio}</p>}
+
+                {/* Action Buttons - Show for all users when logged in and not viewing own profile */}
+                {currentUser && currentUser.username !== user.username && (
+                  <div className="flex items-center gap-2 mt-4">
+                    <Button
+                      onClick={() => navigate(`/messages?user=${user.id}`)}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Send Message
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/intros')}
+                      size="sm"
+                      className="btn-primary gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Request Intro
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -108,6 +160,252 @@ export default function UserProfile() {
             </div>
           </div>
 
+          {/* Investor Profile Section */}
+          {(user as any)?.isInvestor && investorProfile && (
+            <div className="mb-10 card-elevated p-8">
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-black text-foreground">Investor Profile</h2>
+                  <Badge className="bg-primary text-black">
+                    <Award className="h-3 w-3 mr-1" />
+                    Verified Investor
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Public investor profile information
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {investorProfile.name && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Name</div>
+                      <div className="text-sm font-medium">{investorProfile.name}</div>
+                    </div>
+                  )}
+                  {investorProfile.investor_type && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Investor Type</div>
+                      <div className="text-sm font-medium capitalize">{investorProfile.investor_type}</div>
+                    </div>
+                  )}
+                  {investorProfile.location && (
+                    <div>
+                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
+                        <MapPin className="h-3 w-3" />
+                        Location
+                      </div>
+                      <div className="text-sm font-medium">{investorProfile.location}</div>
+                    </div>
+                  )}
+                  {investorProfile.company_name && (
+                    <div>
+                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
+                        <Briefcase className="h-3 w-3" />
+                        Company
+                      </div>
+                      <div className="text-sm font-medium">{investorProfile.company_name}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Investment Focus */}
+                {(investorProfile.investment_stages?.length > 0 || investorProfile.industries?.length > 0) && (
+                  <div>
+                    <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-2">
+                      <TrendingUp className="h-3 w-3" />
+                      Investment Focus
+                    </div>
+                    <div className="space-y-2">
+                      {investorProfile.investment_stages?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Stages</div>
+                          <div className="flex flex-wrap gap-1">
+                            {investorProfile.investment_stages.map((stage: string) => (
+                              <Badge key={stage} variant="secondary" className="text-xs">
+                                {stage}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {investorProfile.industries?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Industries</div>
+                          <div className="flex flex-wrap gap-1">
+                            {investorProfile.industries.map((industry: string) => (
+                              <Badge key={industry} variant="secondary" className="text-xs">
+                                {industry}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {investorProfile.geographic_focus?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Geographic Focus</div>
+                          <div className="flex flex-wrap gap-1">
+                            {investorProfile.geographic_focus.map((region: string) => (
+                              <Badge key={region} variant="secondary" className="text-xs">
+                                {region}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bio */}
+                {investorProfile.bio && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Bio</div>
+                    <p className="text-sm text-foreground/90">{investorProfile.bio}</p>
+                  </div>
+                )}
+
+                {/* Investment Thesis */}
+                {investorProfile.investment_thesis && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Investment Thesis</div>
+                    <p className="text-sm text-foreground/90">{investorProfile.investment_thesis}</p>
+                  </div>
+                )}
+
+                {/* Investment Details */}
+                {(investorProfile.ticket_size_min || investorProfile.ticket_size_max || investorProfile.num_investments || investorProfile.fund_size) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(investorProfile.ticket_size_min || investorProfile.ticket_size_max) && (
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Ticket Size</div>
+                        <div className="text-sm font-medium">
+                          {investorProfile.ticket_size_min && investorProfile.ticket_size_max
+                            ? `$${investorProfile.ticket_size_min}K - $${investorProfile.ticket_size_max}K`
+                            : investorProfile.ticket_size_min
+                            ? `From $${investorProfile.ticket_size_min}K`
+                            : `Up to $${investorProfile.ticket_size_max}K`}
+                        </div>
+                      </div>
+                    )}
+                    {investorProfile.num_investments && (
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Number of Investments</div>
+                        <div className="text-sm font-medium">{investorProfile.num_investments}</div>
+                      </div>
+                    )}
+                    {investorProfile.fund_size && (
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Fund Size</div>
+                        <div className="text-sm font-medium">{investorProfile.fund_size}</div>
+                      </div>
+                    )}
+                    {investorProfile.years_experience && (
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Years of Experience</div>
+                        <div className="text-sm font-medium">{investorProfile.years_experience}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Notable Investments */}
+                {investorProfile.notable_investments && investorProfile.notable_investments.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-2">Notable Investments</div>
+                    <div className="flex flex-wrap gap-2">
+                      {investorProfile.notable_investments.map((investment: any, index: number) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {typeof investment === 'string'
+                            ? investment
+                            : `${investment.company || 'Company'}${investment.stage ? ` (${investment.stage})` : ''}${investment.year ? ` - ${investment.year}` : ''}`
+                          }
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Portfolio Highlights */}
+                {investorProfile.portfolio_highlights && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Portfolio Highlights</div>
+                    <p className="text-sm text-foreground/90">{investorProfile.portfolio_highlights}</p>
+                  </div>
+                )}
+
+                {/* Value Adds */}
+                {investorProfile.value_adds && investorProfile.value_adds.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-2">Value Adds</div>
+                    <div className="flex flex-wrap gap-2">
+                      {investorProfile.value_adds.map((valueAdd: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {valueAdd}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Expertise Areas */}
+                {investorProfile.expertise_areas && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Expertise Areas</div>
+                    <p className="text-sm text-foreground/90">{investorProfile.expertise_areas}</p>
+                  </div>
+                )}
+
+                {/* Links */}
+                {(investorProfile.linkedin_url || investorProfile.website_url || investorProfile.twitter_url) && (
+                  <div>
+                    <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-2">
+                      <LinkIcon className="h-3 w-3" />
+                      Links
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {investorProfile.linkedin_url && (
+                        <a
+                          href={investorProfile.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          LinkedIn
+                          <Globe className="h-3 w-3" />
+                        </a>
+                      )}
+                      {investorProfile.website_url && (
+                        <a
+                          href={investorProfile.website_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          Website
+                          <Globe className="h-3 w-3" />
+                        </a>
+                      )}
+                      {investorProfile.twitter_url && (
+                        <a
+                          href={investorProfile.twitter_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          Twitter
+                          <Globe className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Tabs Section */}
           <Tabs defaultValue="projects">
             <TabsList className="inline-flex h-auto rounded-[15px] bg-secondary border-4 border-black p-1 mb-8">
@@ -116,6 +414,12 @@ export default function UserProfile() {
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
                 Projects ({projectsData?.data?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger
+                value="tagged"
+                className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
+              >
+                Tagged ({taggedProjectsData?.data?.length || 0})
               </TabsTrigger>
               <TabsTrigger
                 value="activity"
@@ -140,6 +444,27 @@ export default function UserProfile() {
                     <p className="text-lg font-bold text-foreground">No projects yet</p>
                     <p className="text-sm text-muted-foreground">
                       Check back soon to see {user.displayName || user.username}'s projects
+                    </p>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="tagged">
+              {taggedProjectsLoading ? (
+                <ProjectCardSkeletonGrid count={3} />
+              ) : taggedProjectsData?.data && taggedProjectsData.data.length > 0 ? (
+                <div className="space-y-4">
+                  {taggedProjectsData.data.map((project: any) => (
+                    <ProjectCard key={project.id} project={project} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card-elevated p-12 text-center">
+                  <div className="space-y-3">
+                    <p className="text-lg font-bold text-foreground">No tagged projects yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.displayName || user.username} hasn't been tagged as a crew member in any projects yet
                     </p>
                   </div>
                 </div>

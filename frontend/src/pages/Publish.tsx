@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, AlertTriangle, Loader2, Users, Info, Check, FileText } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { WalletVerification } from '@/components/WalletVerification';
+import { UserSearchSelect } from '@/components/UserSearchSelect';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Publish() {
@@ -24,10 +26,19 @@ export default function Publish() {
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [githubUrlWarning, setGithubUrlWarning] = useState<string>('');
-  const [teamMembers, setTeamMembers] = useState<{ name: string; role: string }[]>([]);
-  const [memberName, setMemberName] = useState('');
+  const [teamMembers, setTeamMembers] = useState<{ user_id?: string; name: string; role: string; username?: string; avatar_url?: string }[]>([]);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; username: string; display_name: string; email: string; avatar_url?: string } | null>(null);
   const [memberRole, setMemberRole] = useState('');
+  const [showUnregisteredForm, setShowUnregisteredForm] = useState(false);
+  const [unregisteredName, setUnregisteredName] = useState('');
+  const [unregisteredRole, setUnregisteredRole] = useState('');
   const [showProofScoreInfo, setShowProofScoreInfo] = useState(false);
+
+  // Hackathons state
+  const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
+  const [hackathonName, setHackathonName] = useState('');
+  const [hackathonDate, setHackathonDate] = useState('');
+  const [hackathonPrize, setHackathonPrize] = useState('');
 
   // NEW: Extended project information
   const [pitchDeckUrl, setPitchDeckUrl] = useState<string>('');
@@ -72,15 +83,56 @@ export default function Publish() {
   };
 
   const handleAddTeamMember = () => {
-    if (memberName.trim()) {
-      setTeamMembers([...teamMembers, { name: memberName.trim(), role: memberRole.trim() || 'Team Member' }]);
-      setMemberName('');
+    if (selectedUser) {
+      // Check if user is already added
+      if (teamMembers.some(m => m.user_id === selectedUser.id)) {
+        toast.error('This user is already added to the team');
+        return;
+      }
+
+      setTeamMembers([...teamMembers, {
+        user_id: selectedUser.id,
+        name: selectedUser.display_name || selectedUser.username,
+        username: selectedUser.username,
+        avatar_url: selectedUser.avatar_url,
+        role: memberRole.trim() || 'Team Member'
+      }]);
+      setSelectedUser(null);
       setMemberRole('');
+    }
+  };
+
+  const handleAddUnregisteredMember = () => {
+    if (unregisteredName.trim()) {
+      setTeamMembers([...teamMembers, {
+        name: unregisteredName.trim(),
+        role: unregisteredRole.trim() || 'Team Member'
+      }]);
+      setUnregisteredName('');
+      setUnregisteredRole('');
+      setShowUnregisteredForm(false);
     }
   };
 
   const handleRemoveTeamMember = (index: number) => {
     setTeamMembers(teamMembers.filter((_, i) => i !== index));
+  };
+
+  const handleAddHackathon = () => {
+    if (hackathonName.trim()) {
+      setHackathons([...hackathons, {
+        name: hackathonName.trim(),
+        date: hackathonDate || '',
+        prize: hackathonPrize.trim() || undefined
+      }]);
+      setHackathonName('');
+      setHackathonDate('');
+      setHackathonPrize('');
+    }
+  };
+
+  const handleRemoveHackathon = (index: number) => {
+    setHackathons(hackathons.filter((_, i) => i !== index));
   };
 
   const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,11 +330,9 @@ export default function Publish() {
       if (data.githubUrl && data.githubUrl.trim()) {
         payload.github_url = data.githubUrl;
       }
-      if (data.hackathonName && data.hackathonName.trim()) {
-        payload.hackathon_name = data.hackathonName;
-      }
-      if (data.hackathonDate && data.hackathonDate.trim()) {
-        payload.hackathon_date = data.hackathonDate;
+      // Send hackathons array if any exist
+      if (hackathons.length > 0) {
+        payload.hackathons = hackathons;
       }
       if (screenshotUrls.length > 0) {
         payload.screenshot_urls = screenshotUrls;
@@ -673,35 +723,82 @@ export default function Publish() {
 
               <div className="card-elevated p-8">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Hackathon Details (Optional)
+                  Hackathons (Optional)
                 </h2>
                 <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="hackathonName">Hackathon Name</Label>
-                    <Input
-                      id="hackathonName"
-                      placeholder="e.g., ETH Global London"
-                      {...register('hackathonName')}
-                    />
-                    {errors.hackathonName && (
-                      <p className="text-sm text-destructive">{errors.hackathonName.message}</p>
-                    )}
-                  </div>
+                  {/* Display existing hackathons */}
+                  {hackathons.length > 0 && (
+                    <div className="space-y-3">
+                      <Label>Added Hackathons</Label>
+                      {hackathons.map((hackathon, index) => (
+                        <div key={index} className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg border border-border">
+                          <div className="flex-1">
+                            <p className="font-bold text-foreground">{hackathon.name}</p>
+                            {hackathon.date && (
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(hackathon.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                              </p>
+                            )}
+                            {hackathon.prize && (
+                              <p className="text-sm text-primary font-semibold">{hackathon.prize}</p>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveHackathon(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="hackathonDate">Hackathon Date</Label>
-                    <Input
-                      id="hackathonDate"
-                      type="date"
-                      {...register('hackathonDate')}
-                      style={{
-                        colorScheme: 'dark'
-                      }}
-                      className="[&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-100 [&::-webkit-calendar-picker-indicator]:opacity-100"
-                    />
-                    {errors.hackathonDate && (
-                      <p className="text-sm text-destructive">{errors.hackathonDate.message}</p>
-                    )}
+                  {/* Add new hackathon */}
+                  <div className="space-y-4 p-4 bg-secondary/10 rounded-lg border border-border">
+                    <div className="space-y-2">
+                      <Label htmlFor="hackathonName">Hackathon Name *</Label>
+                      <Input
+                        id="hackathonName"
+                        placeholder="e.g., ETH Global London"
+                        value={hackathonName}
+                        onChange={(e) => setHackathonName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="hackathonDate">Date</Label>
+                      <Input
+                        id="hackathonDate"
+                        type="date"
+                        value={hackathonDate}
+                        onChange={(e) => setHackathonDate(e.target.value)}
+                        style={{ colorScheme: 'dark' }}
+                        className="[&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-100 [&::-webkit-calendar-picker-indicator]:opacity-100"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="hackathonPrize">Prize/Award (Optional)</Label>
+                      <Input
+                        id="hackathonPrize"
+                        placeholder="e.g., 1st Place - $10,000"
+                        value={hackathonPrize}
+                        onChange={(e) => setHackathonPrize(e.target.value)}
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddHackathon}
+                      disabled={!hackathonName.trim()}
+                      className="w-full"
+                    >
+                      + Add Hackathon
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -817,60 +914,184 @@ export default function Publish() {
               <div className="card-elevated p-8">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3 flex items-center gap-2">
                   <Users className="h-6 w-6" />
-                  Team Members / Crew (Optional)
+                  Team Members / Crew
                 </h2>
                 <div className="space-y-5">
-                  <p className="text-sm text-muted-foreground">
-                    Add your team members or collaborators who worked on this project. This will be displayed on project cards and details.
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="font-bold">Name *</Label>
-                      <Input
-                        placeholder="Team member name"
-                        value={memberName}
-                        onChange={(e) => setMemberName(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTeamMember())}
-                        className="text-base"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-bold">Role (optional)</Label>
-                      <Input
-                        placeholder="e.g., Frontend Dev, Designer"
-                        value={memberRole}
-                        onChange={(e) => setMemberRole(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTeamMember())}
-                        className="text-base"
-                      />
-                    </div>
+                  {/* Toggle between registered and unregistered */}
+                  <div className="flex gap-2 p-1 bg-secondary/30 rounded-lg border-2 border-border">
+                    <button
+                      type="button"
+                      onClick={() => setShowUnregisteredForm(false)}
+                      className={`flex-1 px-4 py-2 rounded-md font-bold transition-all ${
+                        !showUnregisteredForm
+                          ? 'bg-primary text-white shadow-brutal'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Registered Users (Recommended)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowUnregisteredForm(true)}
+                      className={`flex-1 px-4 py-2 rounded-md font-bold transition-all ${
+                        showUnregisteredForm
+                          ? 'bg-primary text-white shadow-brutal'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Unregistered User
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleAddTeamMember}
-                    className="btn-secondary px-6 py-2 font-bold"
-                    disabled={!memberName.trim()}
-                  >
-                    Add Team Member
-                  </button>
+                  {/* Registered User Search */}
+                  {!showUnregisteredForm && (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Search and select registered users from the platform. Their profiles will be linked and discoverable.
+                      </p>
 
+                      <div className="space-y-2">
+                        <Label className="font-bold">Search for Team Member</Label>
+                        <UserSearchSelect
+                          onSelect={(user) => setSelectedUser(user)}
+                          placeholder="Search users by name, username, or email..."
+                        />
+                      </div>
+
+                      {/* Show selected user */}
+                      {selectedUser && (
+                        <div className="p-4 bg-primary/10 rounded-lg border-2 border-primary">
+                          <div className="flex items-center gap-3 mb-3">
+                            <Avatar className="h-10 w-10 border-2 border-black">
+                              <AvatarImage src={selectedUser.avatar_url} alt={selectedUser.username} />
+                              <AvatarFallback className="bg-primary text-white font-bold">
+                                {selectedUser.display_name?.[0] || selectedUser.username?.[0] || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="font-bold text-foreground">{selectedUser.display_name || selectedUser.username}</p>
+                              <p className="text-sm text-muted-foreground">@{selectedUser.username}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="font-bold">Role</Label>
+                            <Input
+                              placeholder="e.g., Frontend Dev, Designer, PM"
+                              value={memberRole}
+                              onChange={(e) => setMemberRole(e.target.value)}
+                              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTeamMember())}
+                              className="text-base"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleAddTeamMember}
+                            className="btn-primary px-6 py-2 font-bold mt-3 w-full"
+                          >
+                            Add Team Member
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Unregistered User Form */}
+                  {showUnregisteredForm && (
+                    <div className="space-y-4">
+                      {/* Warning message */}
+                      <div className="p-4 bg-orange-500/10 border-2 border-orange-500 rounded-lg">
+                        <div className="flex gap-3">
+                          <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-2">
+                            <p className="font-bold text-foreground">Caution: Lower Visibility</p>
+                            <p className="text-sm text-muted-foreground">
+                              Unregistered team members won't have linked profiles and will have limited discoverability.
+                              We <span className="font-bold text-foreground">strongly recommend</span> asking them to create an account first,
+                              then adding them as registered users for better visibility and credibility.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="font-bold">Name</Label>
+                          <Input
+                            placeholder="Team member name"
+                            value={unregisteredName}
+                            onChange={(e) => setUnregisteredName(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddUnregisteredMember())}
+                            className="text-base"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-bold">Role</Label>
+                          <Input
+                            placeholder="e.g., Frontend Dev, Designer"
+                            value={unregisteredRole}
+                            onChange={(e) => setUnregisteredRole(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddUnregisteredMember())}
+                            className="text-base"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddUnregisteredMember}
+                        className="btn-secondary px-6 py-2 font-bold w-full"
+                        disabled={!unregisteredName.trim()}
+                      >
+                        Add Unregistered Member
+                      </button>
+                    </div>
+                  )}
+
+                  {/* List of added team members */}
                   {teamMembers.length > 0 && (
                     <div className="space-y-3">
+                      <Label className="font-bold">Team Members ({teamMembers.length})</Label>
                       {teamMembers.map((member, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-4 bg-secondary/20 rounded-lg border-2 border-border hover:border-primary/30 transition-smooth"
+                          className={`flex items-center justify-between p-4 rounded-lg border-2 transition-smooth ${
+                            member.user_id
+                              ? 'bg-green-500/5 border-green-500/30 hover:border-green-500/50'
+                              : 'bg-orange-500/5 border-orange-500/30 hover:border-orange-500/50'
+                          }`}
                         >
-                          <div>
-                            <p className="font-bold text-foreground text-base">{member.name}</p>
-                            <p className="text-sm text-muted-foreground">{member.role}</p>
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <Avatar className="h-10 w-10 border-2 border-black flex-shrink-0">
+                              <AvatarImage src={member.avatar_url} alt={member.name} />
+                              <AvatarFallback className="bg-primary text-white font-bold">
+                                {member.name?.[0] || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold text-foreground text-base">{member.name}</p>
+                                {member.user_id ? (
+                                  <Badge className="bg-green-500/20 text-green-700 border-green-500 text-xs">
+                                    Registered
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-orange-500/20 text-orange-700 border-orange-500 text-xs">
+                                    Unregistered
+                                  </Badge>
+                                )}
+                              </div>
+                              {member.username && (
+                                <p className="text-xs text-muted-foreground">@{member.username}</p>
+                              )}
+                              <p className="text-sm text-muted-foreground">{member.role}</p>
+                            </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleRemoveTeamMember(index)}
-                            className="p-2 hover:bg-destructive/20 rounded-full transition-smooth"
+                            className="p-2 hover:bg-destructive/20 rounded-full transition-smooth flex-shrink-0"
                           >
                             <X className="h-5 w-5 text-destructive" />
                           </button>

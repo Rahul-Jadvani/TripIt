@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List } from 'lucide-react';
+import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List, Edit2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { adminService } from '@/services/api';
@@ -63,9 +63,44 @@ interface Project {
 interface InvestorRequest {
   id: string;
   user_id: string;
+  // Basic Info
   plan_type: string;
+  investor_type: string;
+  name?: string;
   company_name?: string;
+  position_title?: string;
+  linkedin_url?: string;
+  website_url?: string;
+  location?: string;
+  years_experience?: string;
+  // Investment Focus
+  investment_stages?: string[];
+  industries?: string[];
+  ticket_size_min?: number;
+  ticket_size_max?: number;
+  geographic_focus?: string[];
+  // About
+  reason?: string;
+  bio?: string;
+  investment_thesis?: string;
+  // Track Record
+  num_investments?: string;
+  notable_investments?: Array<{ company: string; stage: string; year: string }>;
+  portfolio_highlights?: string;
+  // Value Add
+  value_adds?: string[];
+  expertise_areas?: string;
+  // Visibility
+  is_public?: boolean;
+  open_to_requests?: boolean;
+  // Contact
+  twitter_url?: string;
+  calendar_link?: string;
+  // Organization
+  fund_size?: string;
+  // Admin
   status: string;
+  admin_notes?: string;
   created_at: string;
   user?: { username: string; email: string };
 }
@@ -432,12 +467,16 @@ export default function Admin() {
   const [customBadgeProjectId, setCustomBadgeProjectId] = useState('');
   const [customBadgeRationale, setCustomBadgeRationale] = useState('');
 
+  // Investor management loading states
+  const [removingInvestor, setRemovingInvestor] = useState<string | null>(null);
+  const [updatingPermissions, setUpdatingPermissions] = useState<string | null>(null);
+
   // OPTIMIZED: Load all data on mount with React Query (cached automatically)
   const { data: stats } = useAdminStats();
   const { data: usersData, isLoading: usersLoading } = useAdminUsers({ search: userSearch, role: userFilter, perPage: 100 });
   const { data: validatorsData, isLoading: validatorsLoading } = useAdminValidators();
   const { data: projectsData, isLoading: projectsLoading } = useAdminProjects({ search: projectSearch, perPage: 100 });
-  const { data: investorRequestsData, isLoading: investorsLoading } = useAdminInvestorRequests();
+  const { data: investorRequestsData, isLoading: investorsLoading, refetch: refetchInvestorRequests } = useAdminInvestorRequests();
 
   const users = usersData?.users || [];
   const validators = validatorsData || [];
@@ -1263,15 +1302,14 @@ export default function Admin() {
                     investorRequests.filter(r => r.status === 'pending').map(request => (
                       <Card key={request.id}>
                         <CardContent className="py-4">
-                          <div className="flex items-start justify-between">
+                          {/* Header with User Info and Actions */}
+                          <div className="flex items-start justify-between mb-4">
                             <div>
-                              <p className="font-semibold">{request.user?.username || 'Unknown'}</p>
+                              <p className="font-semibold text-lg">{request.user?.username || 'Unknown'}</p>
                               <p className="text-sm text-muted-foreground">{request.user?.email}</p>
-                              <div className="mt-2">
+                              <div className="flex gap-2 mt-2">
                                 <Badge>{request.plan_type}</Badge>
-                                {request.company_name && (
-                                  <p className="text-sm mt-1">Company: {request.company_name}</p>
-                                )}
+                                <Badge variant="outline">{request.investor_type || 'individual'}</Badge>
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -1291,6 +1329,180 @@ export default function Admin() {
                                 Reject
                               </Button>
                             </div>
+                          </div>
+
+                          {/* Professional Info */}
+                          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                            {request.name && (
+                              <div>
+                                <span className="font-medium">Name: </span>
+                                {request.name}
+                              </div>
+                            )}
+                            {request.company_name && (
+                              <div>
+                                <span className="font-medium">Company: </span>
+                                {request.company_name}
+                              </div>
+                            )}
+                            {request.position_title && (
+                              <div>
+                                <span className="font-medium">Position: </span>
+                                {request.position_title}
+                              </div>
+                            )}
+                            {request.location && (
+                              <div>
+                                <span className="font-medium">Location: </span>
+                                {request.location}
+                              </div>
+                            )}
+                            {request.years_experience && (
+                              <div>
+                                <span className="font-medium">Experience: </span>
+                                {request.years_experience} years
+                              </div>
+                            )}
+                            {request.fund_size && (
+                              <div>
+                                <span className="font-medium">Fund Size: </span>
+                                {request.fund_size}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Investment Focus */}
+                          {(request.investment_stages?.length || request.industries?.length || request.geographic_focus?.length) && (
+                            <div className="mb-4 space-y-2">
+                              <p className="font-medium text-sm">Investment Focus:</p>
+                              {request.investment_stages && request.investment_stages.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  <span className="text-xs text-muted-foreground">Stages:</span>
+                                  {request.investment_stages.map(stage => (
+                                    <Badge key={stage} variant="secondary" className="text-xs">{stage}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {request.industries && request.industries.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  <span className="text-xs text-muted-foreground">Industries:</span>
+                                  {request.industries.map(industry => (
+                                    <Badge key={industry} variant="secondary" className="text-xs">{industry}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {request.geographic_focus && request.geographic_focus.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  <span className="text-xs text-muted-foreground">Regions:</span>
+                                  {request.geographic_focus.map(geo => (
+                                    <Badge key={geo} variant="secondary" className="text-xs">{geo}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {(request.ticket_size_min || request.ticket_size_max) && (
+                                <div className="text-sm">
+                                  <span className="font-medium">Ticket Size: </span>
+                                  ${request.ticket_size_min?.toLocaleString() || '0'} - ${request.ticket_size_max?.toLocaleString() || '∞'}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* About */}
+                          {(request.bio || request.investment_thesis) && (
+                            <div className="mb-4 space-y-2">
+                              {request.bio && (
+                                <div>
+                                  <p className="font-medium text-sm">Bio:</p>
+                                  <p className="text-sm text-muted-foreground">{request.bio}</p>
+                                </div>
+                              )}
+                              {request.investment_thesis && (
+                                <div>
+                                  <p className="font-medium text-sm">Investment Thesis:</p>
+                                  <p className="text-sm text-muted-foreground">{request.investment_thesis}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Track Record */}
+                          {(request.num_investments || request.portfolio_highlights || request.notable_investments?.length) && (
+                            <div className="mb-4 space-y-2">
+                              <p className="font-medium text-sm">Track Record:</p>
+                              {request.num_investments && (
+                                <div className="text-sm">
+                                  <span className="font-medium">Number of Investments: </span>
+                                  {request.num_investments}
+                                </div>
+                              )}
+                              {request.notable_investments && request.notable_investments.length > 0 && (
+                                <div className="text-sm">
+                                  <span className="font-medium">Notable Investments:</span>
+                                  <ul className="list-disc list-inside ml-2 text-muted-foreground">
+                                    {request.notable_investments.map((inv, idx) => (
+                                      <li key={idx}>{inv.company} ({inv.stage}, {inv.year})</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {request.portfolio_highlights && (
+                                <div className="text-sm">
+                                  <span className="font-medium">Portfolio Highlights: </span>
+                                  <p className="text-muted-foreground">{request.portfolio_highlights}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Value Add */}
+                          {(request.value_adds?.length || request.expertise_areas) && (
+                            <div className="mb-4 space-y-2">
+                              <p className="font-medium text-sm">Value Add:</p>
+                              {request.value_adds && request.value_adds.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {request.value_adds.map(value => (
+                                    <Badge key={value} variant="secondary" className="text-xs">{value}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {request.expertise_areas && (
+                                <div className="text-sm text-muted-foreground">
+                                  {request.expertise_areas}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Visibility & Contact */}
+                          <div className="grid grid-cols-2 gap-4 pt-4 border-t text-sm">
+                            <div>
+                              <p className="font-medium mb-1">Visibility:</p>
+                              <div className="flex gap-2">
+                                <Badge variant={request.is_public ? "default" : "outline"}>
+                                  {request.is_public ? 'Public Profile' : 'Private'}
+                                </Badge>
+                                {request.open_to_requests && (
+                                  <Badge variant="default">Open to Requests</Badge>
+                                )}
+                              </div>
+                            </div>
+                            {(request.linkedin_url || request.twitter_url || request.website_url) && (
+                              <div>
+                                <p className="font-medium mb-1">Links:</p>
+                                <div className="flex gap-2 flex-wrap">
+                                  {request.linkedin_url && (
+                                    <a href={request.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">LinkedIn</a>
+                                  )}
+                                  {request.twitter_url && (
+                                    <a href={request.twitter_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">Twitter</a>
+                                  )}
+                                  {request.website_url && (
+                                    <a href={request.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">Website</a>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -1318,18 +1530,206 @@ export default function Admin() {
                     investorRequests.filter(r => r.status === 'approved').map(request => (
                       <Card key={request.id}>
                         <CardContent className="py-4">
-                          <div className="flex items-start justify-between">
-                            <div>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
                               <p className="font-semibold">{request.user?.username || 'Unknown'}</p>
                               <p className="text-sm text-muted-foreground">{request.user?.email}</p>
-                              <div className="mt-2">
-                                <Badge variant="outline">{request.plan_type}</Badge>
+                              <div className="mt-2 space-y-1">
+                                <div className="flex gap-2">
+                                  <Badge variant="outline">{request.plan_type}</Badge>
+                                  <Badge variant={request.is_public ? 'default' : 'secondary'}>
+                                    {request.is_public ? 'Public' : 'Private'}
+                                  </Badge>
+                                  {request.open_to_requests && (
+                                    <Badge variant="outline">Open to Requests</Badge>
+                                  )}
+                                </div>
                                 {request.company_name && (
-                                  <p className="text-sm mt-1">Company: {request.company_name}</p>
+                                  <p className="text-sm">Company: {request.company_name}</p>
+                                )}
+                                {request.location && (
+                                  <p className="text-sm">Location: {request.location}</p>
                                 )}
                               </div>
                             </div>
-                            <Badge>Active</Badge>
+                            <div className="flex gap-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Investor Permissions</DialogTitle>
+                                    <DialogDescription>
+                                      Manage visibility and permissions for {request.user?.username}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                      <Label>Plan Type</Label>
+                                      <Select
+                                        defaultValue={request.plan_type}
+                                        disabled={updatingPermissions === request.id}
+                                        onValueChange={async (value) => {
+                                          setUpdatingPermissions(request.id);
+                                          try {
+                                            const res = await fetch(`${getBackendUrl()}/api/investor-requests/${request.id}/update-permissions`, {
+                                              method: 'POST',
+                                              headers: {
+                                                'Content-Type': 'application/json',
+                                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                              },
+                                              body: JSON.stringify({ plan_type: value })
+                                            });
+                                            const data = await res.json();
+                                            if (data.status === 'success') {
+                                              toast.success(`Plan updated to ${value} successfully`);
+                                              await refetchInvestorRequests();
+                                            } else {
+                                              toast.error(data.message || 'Failed to update plan type');
+                                            }
+                                          } catch (error) {
+                                            toast.error('Failed to update plan type');
+                                          } finally {
+                                            setUpdatingPermissions(null);
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="free">Free</SelectItem>
+                                          <SelectItem value="pro">Pro</SelectItem>
+                                          <SelectItem value="enterprise">Enterprise</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      {updatingPermissions === request.id && (
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                          <span>Updating...</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="space-y-3">
+                                      <Label>Visibility Settings</Label>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm">Public Profile</span>
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="checkbox"
+                                            defaultChecked={request.is_public}
+                                            disabled={updatingPermissions === request.id}
+                                            onChange={async (e) => {
+                                              setUpdatingPermissions(request.id);
+                                              try {
+                                                const res = await fetch(`${getBackendUrl()}/api/investor-requests/${request.id}/update-permissions`, {
+                                                  method: 'POST',
+                                                  headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                                  },
+                                                  body: JSON.stringify({ is_public: e.target.checked })
+                                                });
+                                                const data = await res.json();
+                                                if (data.status === 'success') {
+                                                  toast.success(`Profile ${e.target.checked ? 'is now public' : 'is now private'}`);
+                                                  await refetchInvestorRequests();
+                                                } else {
+                                                  toast.error(data.message || 'Failed to update visibility');
+                                                }
+                                              } catch (error) {
+                                                toast.error('Failed to update visibility');
+                                              } finally {
+                                                setUpdatingPermissions(null);
+                                              }
+                                            }}
+                                            className="h-4 w-4"
+                                          />
+                                          {updatingPermissions === request.id && (
+                                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm">Open to Requests</span>
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="checkbox"
+                                            defaultChecked={request.open_to_requests}
+                                            disabled={updatingPermissions === request.id}
+                                            onChange={async (e) => {
+                                              setUpdatingPermissions(request.id);
+                                              try {
+                                                const res = await fetch(`${getBackendUrl()}/api/investor-requests/${request.id}/update-permissions`, {
+                                                  method: 'POST',
+                                                  headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                                  },
+                                                  body: JSON.stringify({ open_to_requests: e.target.checked })
+                                                });
+                                                const data = await res.json();
+                                                if (data.status === 'success') {
+                                                  toast.success(`${e.target.checked ? 'Now accepting requests' : 'Not accepting requests'}`);
+                                                  await refetchInvestorRequests();
+                                                } else {
+                                                  toast.error(data.message || 'Failed to update permissions');
+                                                }
+                                              } catch (error) {
+                                                toast.error('Failed to update permissions');
+                                              } finally {
+                                                setUpdatingPermissions(null);
+                                              }
+                                            }}
+                                            className="h-4 w-4"
+                                          />
+                                          {updatingPermissions === request.id && (
+                                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={removingInvestor === request.id}
+                                onClick={async () => {
+                                  if (!confirm(`Remove investor status from ${request.user?.username}?`)) return;
+                                  setRemovingInvestor(request.id);
+                                  try {
+                                    const res = await fetch(`${getBackendUrl()}/api/investor-requests/${request.id}/remove-investor`, {
+                                      method: 'POST',
+                                      headers: {
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                      }
+                                    });
+                                    const data = await res.json();
+                                    if (data.status === 'success') {
+                                      toast.success('Investor status removed successfully');
+                                      await refetchInvestorRequests();
+                                    } else {
+                                      toast.error(data.message || 'Failed to remove investor status');
+                                    }
+                                  } catch (error) {
+                                    toast.error('Failed to remove investor status');
+                                  } finally {
+                                    setRemovingInvestor(null);
+                                  }
+                                }}
+                              >
+                                {removingInvestor === request.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Ban className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

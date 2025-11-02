@@ -16,6 +16,46 @@ from utils.cache import CacheService
 users_bp = Blueprint('users', __name__)
 
 
+@users_bp.route('/search', methods=['GET'])
+def search_users():
+    """Search users by name, username, or email"""
+    try:
+        query_param = request.args.get('q', '').strip()
+        limit = request.args.get('limit', 10, type=int)
+
+        if not query_param or len(query_param) < 2:
+            return error_response('Invalid query', 'Search query must be at least 2 characters', 400)
+
+        if limit > 50:
+            limit = 50
+
+        # Search by username, display_name, or email (case-insensitive)
+        search_term = f'%{query_param}%'
+        users = User.query.filter(
+            and_(
+                User.is_active == True,
+                (User.username.ilike(search_term) |
+                 User.display_name.ilike(search_term) |
+                 User.email.ilike(search_term))
+            )
+        ).limit(limit).all()
+
+        # Return minimal user info for selection
+        results = [{
+            'id': user.id,
+            'username': user.username,
+            'display_name': user.display_name,
+            'email': user.email,
+            'avatar_url': user.avatar_url,
+            'is_verified': user.email_verified,
+            'has_oxcert': user.has_oxcert
+        } for user in users]
+
+        return success_response(results, f'Found {len(results)} users', 200)
+    except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
 @users_bp.route('/<username>', methods=['GET'])
 @optional_auth
 def get_user_profile(user_id, username):
@@ -130,6 +170,62 @@ def get_user_projects(current_user_id, user_id):
         # Query projects for this user
         query = Project.query.filter_by(user_id=user_id, is_deleted=False)
         query = query.order_by(Project.created_at.desc())
+
+        total = query.count()
+        projects = query.limit(per_page).offset((page - 1) * per_page).all()
+
+        data = [p.to_dict(include_creator=True) for p in projects]
+
+        # Build response data
+        total_pages = (total + per_page - 1) // per_page
+        response_data = {
+            'status': 'success',
+            'message': 'Success',
+            'data': data,
+            'pagination': {
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': total_pages,
+            }
+        }
+
+        # Cache for 5 minutes
+        CacheService.set(cache_key, response_data, ttl=300)
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+    except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
+@users_bp.route('/<user_id>/tagged-projects', methods=['GET'])
+@optional_auth
+def get_user_tagged_projects(current_user_id, user_id):
+    """Get projects where user is tagged as a team member (not the author)"""
+    try:
+        page, per_page = get_pagination_params(request)
+
+        # Check cache (5 min TTL)
+        cache_key = f"user_tagged_projects:{user_id}:page:{page}"
+        cached = CacheService.get(cache_key)
+        if cached:
+            from flask import jsonify
+            return jsonify(cached), 200
+
+        # Query projects where user is in team_members array but not the author
+        # Using PostgreSQL JSONB contains operator @>
+        # Note: team_members is JSON, so we need to cast it to JSONB first
+        from sqlalchemy import cast
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        query = Project.query.filter(
+            and_(
+                Project.user_id != user_id,  # Not the author
+                Project.is_deleted == False,
+                cast(Project.team_members, JSONB).op('@>')(cast([{'user_id': user_id}], JSONB))  # User is in team_members
+            )
+        ).order_by(Project.created_at.desc())
 
         total = query.count()
         projects = query.limit(per_page).offset((page - 1) * per_page).all()

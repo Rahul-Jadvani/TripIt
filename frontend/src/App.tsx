@@ -32,6 +32,9 @@ import Admin from "./pages/Admin";
 import AdminValidator from "./pages/AdminValidator";
 import Validator from "./pages/Validator";
 import InvestorPlans from "./pages/InvestorPlans";
+import InvestorDashboard from "./pages/InvestorDashboard";
+import InvestorDirectory from "./pages/InvestorDirectory";
+import Investors from "./pages/Investors";
 import DirectMessages from "./pages/DirectMessages";
 import GalleryView from "./pages/GalleryView";
 import NotFound from "./pages/NotFound";
@@ -79,6 +82,7 @@ const App = () => (
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/about" element={<About />} />
               <Route path="/investor-plans" element={<InvestorPlans />} />
+              <Route path="/investors" element={<Investors />} />
 
               {/* Protected Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -89,6 +93,8 @@ const App = () => (
               <Route path="/project/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
               <Route path="/edit-project/:id" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
               <Route path="/intros" element={<ProtectedRoute><Intros /></ProtectedRoute>} />
+              <Route path="/investor-dashboard" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
+              <Route path="/investors" element={<ProtectedRoute><InvestorDirectory /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
 
               {/* Admin Routes */}

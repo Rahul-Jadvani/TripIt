@@ -121,6 +121,7 @@ export const projectsService = {
   update: (id: string, data: any) => api.put(`/projects/${id}`, data),
   delete: (id: string) => api.delete(`/projects/${id}`),
   getByUser: (userId: string) => api.get(`/users/${userId}/projects`),
+  getTaggedProjects: (userId: string) => api.get(`/users/${userId}/tagged-projects`),
 };
 
 // Voting
@@ -277,6 +278,9 @@ export const adminService = {
   getInvestorRequests: () => api.get('/admin/investor-requests'),
   approveInvestorRequest: (requestId: string) => api.post(`/admin/investor-requests/${requestId}/approve`),
   rejectInvestorRequest: (requestId: string) => api.post(`/admin/investor-requests/${requestId}/reject`),
+  getMyInvestorProfile: () => api.get('/investor-requests/my-request'),
+  getUserInvestorProfile: (userId: string) => api.get(`/investor-requests/user/${userId}`),
+  getPublicInvestors: () => api.get('/investor-requests/public'),
 
   // Validator Assignments
   assignProjectToValidator: (data: {

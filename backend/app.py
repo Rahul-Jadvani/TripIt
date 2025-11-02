@@ -25,6 +25,7 @@ def import_models():
     from models.saved_project import SavedProject
     from models.project_view import ProjectView
     from models.validator_permissions import ValidatorPermissions
+    from models.project_update import ProjectUpdate
     return True
 
 
@@ -108,9 +109,11 @@ def register_blueprints(app):
     from routes.saved_projects import saved_projects_bp
     from routes.admin import admin_bp
     from routes.validator import validator_bp
+    from routes.project_updates import project_updates_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
+    app.register_blueprint(project_updates_bp, url_prefix='/api')
     app.register_blueprint(votes_bp, url_prefix='/api/votes')
     app.register_blueprint(comments_bp, url_prefix='/api/comments')
     app.register_blueprint(badges_bp, url_prefix='/api/badges')

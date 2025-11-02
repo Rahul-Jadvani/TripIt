@@ -13,8 +13,11 @@ class ProjectScreenshotSchema(Schema):
 
 class TeamMemberSchema(Schema):
     """Team member schema"""
+    user_id = fields.Str()  # ID of registered user (if selected from search)
     name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     role = fields.Str(validate=validate.Length(max=100))
+    username = fields.Str()  # Username of registered user (for display)
+    avatar_url = fields.Str()  # Avatar URL of registered user (for display)
 
 
 class ProjectSchema(Schema):
@@ -65,6 +68,7 @@ class ProjectCreateSchema(Schema):
     github_url = fields.Url()
     hackathon_name = fields.Str(validate=validate.Length(max=200))
     hackathon_date = fields.Date()
+    hackathons = fields.List(fields.Dict())  # Array of hackathons: [{name, date, prize}, ...]
     categories = fields.List(fields.Str())  # Multiple categories for the project
     tech_stack = fields.List(fields.Str())
     screenshot_urls = fields.List(fields.Url())
@@ -74,7 +78,7 @@ class ProjectCreateSchema(Schema):
         fields = (
             'title', 'tagline', 'description', 'project_story', 'inspiration',
             'pitch_deck_url', 'market_comparison', 'novelty_factor',
-            'demo_url', 'github_url', 'hackathon_name', 'hackathon_date',
+            'demo_url', 'github_url', 'hackathon_name', 'hackathon_date', 'hackathons',
             'categories', 'tech_stack', 'screenshot_urls', 'team_members'
         )
 
@@ -93,6 +97,7 @@ class ProjectUpdateSchema(Schema):
     github_url = fields.Url()
     hackathon_name = fields.Str(validate=validate.Length(max=200))
     hackathon_date = fields.Date()
+    hackathons = fields.List(fields.Dict())  # Array of hackathons: [{name, date, prize}, ...]
     categories = fields.List(fields.Str())
     tech_stack = fields.List(fields.Str())
     team_members = fields.List(fields.Nested(TeamMemberSchema))

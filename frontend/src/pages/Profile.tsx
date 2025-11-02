@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { usersService, uploadService } from '@/services/api';
-import { Loader2, Upload, X } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api, { usersService, uploadService } from '@/services/api';
+import { Loader2, Upload, X, Award, MapPin, Briefcase, TrendingUp, Globe, Link as LinkIcon } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function Profile() {
   const { user, refreshUser } = useAuth();
@@ -18,6 +19,16 @@ export default function Profile() {
     display_name: user?.displayName || '',
     bio: user?.bio || '',
     avatar_url: user?.avatar || '',
+  });
+
+  // Fetch investor profile if user is an investor
+  const { data: investorProfile, isLoading: investorLoading } = useQuery({
+    queryKey: ['investorProfile', user?.id],
+    queryFn: async () => {
+      const response = await api.getMyInvestorProfile();
+      return response.data.data;
+    },
+    enabled: !!user?.isInvestor,
   });
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -118,6 +129,186 @@ export default function Profile() {
               Update your profile information and customize your public profile
             </p>
           </div>
+
+          {/* Investor Profile Section */}
+          {user?.isInvestor && investorProfile && investorProfile.status === 'approved' && (
+            <div className="mb-8 card-elevated p-8">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-black text-foreground">Investor Profile</h2>
+                    <Badge className="bg-primary text-black">
+                      <Award className="h-3 w-3 mr-1" />
+                      Verified Investor
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Your public investor profile information
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {investorProfile.name && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Name</div>
+                      <div className="text-sm font-medium">{investorProfile.name}</div>
+                    </div>
+                  )}
+                  {investorProfile.investor_type && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Investor Type</div>
+                      <div className="text-sm font-medium capitalize">{investorProfile.investor_type}</div>
+                    </div>
+                  )}
+                  {investorProfile.location && (
+                    <div>
+                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
+                        <MapPin className="h-3 w-3" />
+                        Location
+                      </div>
+                      <div className="text-sm font-medium">{investorProfile.location}</div>
+                    </div>
+                  )}
+                  {investorProfile.company_name && (
+                    <div>
+                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
+                        <Briefcase className="h-3 w-3" />
+                        Company
+                      </div>
+                      <div className="text-sm font-medium">{investorProfile.company_name}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Investment Focus */}
+                {(investorProfile.investment_stages?.length > 0 || investorProfile.industries?.length > 0) && (
+                  <div>
+                    <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-2">
+                      <TrendingUp className="h-3 w-3" />
+                      Investment Focus
+                    </div>
+                    <div className="space-y-2">
+                      {investorProfile.investment_stages?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Stages</div>
+                          <div className="flex flex-wrap gap-1">
+                            {investorProfile.investment_stages.map((stage: string) => (
+                              <Badge key={stage} variant="secondary" className="text-xs">
+                                {stage}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {investorProfile.industries?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Industries</div>
+                          <div className="flex flex-wrap gap-1">
+                            {investorProfile.industries.map((industry: string) => (
+                              <Badge key={industry} variant="secondary" className="text-xs">
+                                {industry}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {investorProfile.geographic_focus?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Geographic Focus</div>
+                          <div className="flex flex-wrap gap-1">
+                            {investorProfile.geographic_focus.map((region: string) => (
+                              <Badge key={region} variant="secondary" className="text-xs">
+                                {region}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bio */}
+                {investorProfile.bio && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Bio</div>
+                    <p className="text-sm text-foreground/90">{investorProfile.bio}</p>
+                  </div>
+                )}
+
+                {/* Investment Thesis */}
+                {investorProfile.investment_thesis && (
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Investment Thesis</div>
+                    <p className="text-sm text-foreground/90">{investorProfile.investment_thesis}</p>
+                  </div>
+                )}
+
+                {/* Links */}
+                {(investorProfile.linkedin_url || investorProfile.website_url || investorProfile.twitter_url) && (
+                  <div>
+                    <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-2">
+                      <LinkIcon className="h-3 w-3" />
+                      Links
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {investorProfile.linkedin_url && (
+                        <a
+                          href={investorProfile.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          LinkedIn
+                          <Globe className="h-3 w-3" />
+                        </a>
+                      )}
+                      {investorProfile.website_url && (
+                        <a
+                          href={investorProfile.website_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          Website
+                          <Globe className="h-3 w-3" />
+                        </a>
+                      )}
+                      {investorProfile.twitter_url && (
+                        <a
+                          href={investorProfile.twitter_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          Twitter
+                          <Globe className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Visibility Settings */}
+                <div className="pt-4 border-t border-border">
+                  <div className="text-xs font-medium text-muted-foreground mb-2">Visibility</div>
+                  <div className="flex gap-4 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2 w-2 rounded-full ${investorProfile.is_public ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <span>{investorProfile.is_public ? 'Public Profile' : 'Private Profile'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2 w-2 rounded-full ${investorProfile.open_to_requests ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <span>{investorProfile.open_to_requests ? 'Accepting Requests' : 'Not Accepting Requests'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Profile Form */}
           <div className="card-elevated p-8">

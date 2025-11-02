@@ -1,16 +1,21 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Eye, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserProjects, useDeleteProject } from '@/hooks/useProjects';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
+import { PostUpdateModal } from '@/components/PostUpdateModal';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 export default function MyProjects() {
   const { user } = useAuth();
   const { data, isLoading, error } = useUserProjects(user?.id || '');
   const deleteProjectMutation = useDeleteProject();
+  const queryClient = useQueryClient();
+  const [showPostUpdate, setShowPostUpdate] = useState<string | null>(null);
   return (
     <div className="bg-background min-h-screen overflow-hidden">
       <div className="container mx-auto px-6 py-12 overflow-hidden">
@@ -61,6 +66,16 @@ export default function MyProjects() {
                           Project Actions
                         </p>
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowPostUpdate(project.id);
+                            }}
+                            className="btn-primary inline-flex items-center gap-2 px-3 py-2"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                            <span>Post Update</span>
+                          </button>
                           <Link
                             to={`/project/${project.id}`}
                             className="btn-secondary inline-flex items-center gap-2 px-3 py-2"
@@ -110,6 +125,19 @@ export default function MyProjects() {
           )}
         </div>
       </div>
+
+      {/* Post Update Modal */}
+      {showPostUpdate && (
+        <PostUpdateModal
+          projectId={showPostUpdate}
+          isOpen={!!showPostUpdate}
+          onClose={() => setShowPostUpdate(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['projectUpdates', showPostUpdate] });
+            setShowPostUpdate(null);
+          }}
+        />
+      )}
     </div>
   );
 }

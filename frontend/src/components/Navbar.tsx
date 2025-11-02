@@ -46,6 +46,12 @@ export function Navbar() {
               <Trophy className="h-4 w-4" />
               <span>Leaderboard</span>
             </Link>
+            {user && (
+              <Link to="/investors" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+                <Building2 className="h-4 w-4" />
+                <span>Investors</span>
+              </Link>
+            )}
             <Link to="/search" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <Search className="h-4 w-4" />
               <span>Search</span>
@@ -139,13 +145,21 @@ export function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {user.is_investor ? (
-                      <DropdownMenuItem asChild>
-                        <Link to="/investor-plans" className="cursor-pointer flex items-center gap-2 font-medium bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-l-2 border-yellow-600 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-500 transition-all">
-                          <Building2 className="h-4 w-4 text-white group-hover:text-white" />
-                          <span className="text-white font-bold group-hover:text-white">Investor Account</span>
-                          <Sparkles className="h-3 w-3 text-white ml-auto group-hover:text-white" />
-                        </Link>
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link to="/investor-dashboard" className="cursor-pointer flex items-center gap-2 font-medium bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-l-2 border-yellow-600 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-500 transition-all">
+                            <Building2 className="h-4 w-4 text-white group-hover:text-white" />
+                            <span className="text-white font-bold group-hover:text-white">Investor Dashboard</span>
+                            <Sparkles className="h-3 w-3 text-white ml-auto group-hover:text-white" />
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/investor-plans" className="cursor-pointer flex items-center gap-2 font-medium">
+                            <Settings className="h-4 w-4" />
+                            <span>Edit Investor Profile</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
                     ) : (
                       <DropdownMenuItem asChild>
                         <Link to="/investor-plans" className="cursor-pointer flex items-center gap-2 font-medium bg-gradient-to-r from-primary/10 to-accent/10 border-l-2 border-primary hover:from-primary/20 hover:to-accent/20 transition-all">

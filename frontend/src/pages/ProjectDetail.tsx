@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText } from 'lucide-react';
+import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCheckIfSaved, useSaveProject, useUnsaveProject } from '@/hooks/useSavedProjects';
 import { VoteButtons } from '@/components/VoteButtons';
@@ -12,8 +12,12 @@ import { IntroRequest } from '@/components/IntroRequest';
 import { ValidationStatusCard } from '@/components/ValidationStatusCard';
 import { ProjectDetailSkeleton } from '@/components/ProjectDetailSkeleton';
 import { ShareDialog } from '@/components/ShareDialog';
+import { ProjectUpdateSticker } from '@/components/ProjectUpdateSticker';
+import { PostUpdateModal } from '@/components/PostUpdateModal';
 import { useAuth } from '@/context/AuthContext';
 import { useProjectById } from '@/hooks/useProjects';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +27,58 @@ export default function ProjectDetail() {
   const saveMutation = useSaveProject();
   const unsaveMutation = useUnsaveProject();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [showPostUpdate, setShowPostUpdate] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Manage sticker positions (persist in localStorage)
+  const [stickerPositions, setStickerPositions] = useState<Record<string, { x: number; y: number }>>(() => {
+    const saved = localStorage.getItem(`sticker-positions-${id}`);
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Fetch project updates
+  const { data: updatesData } = useQuery({
+    queryKey: ['projectUpdates', id],
+    queryFn: async () => {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/projects/${id}/updates`);
+      return response.data.data;
+    },
+    enabled: !!id
+  });
+
+  // Delete update mutation
+  const deleteUpdateMutation = useMutation({
+    mutationFn: async (updateId: string) => {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/projects/${id}/updates/${updateId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projectUpdates', id] });
+      toast.success('Update deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete update');
+    }
+  });
+
+  const handleDeleteUpdate = (updateId: string) => {
+    if (confirm('Are you sure you want to delete this update?')) {
+      deleteUpdateMutation.mutate(updateId);
+    }
+  };
+
+  const handleStickerPositionChange = (updateId: string, position: { x: number; y: number }) => {
+    setStickerPositions((prev) => {
+      const updated = { ...prev, [updateId]: position };
+      localStorage.setItem(`sticker-positions-${id}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const getDefaultPosition = (index: number) => {
+    return { x: window.innerWidth - 200, y: 80 + index * 150 };
+  };
 
   const handleShare = () => {
     setShareDialogOpen(true);
@@ -94,7 +150,25 @@ export default function ProjectDetail() {
 
   return (
     <div className="bg-background min-h-screen overflow-hidden">
-      <div className="container mx-auto px-6 py-12 overflow-hidden">
+      <div className="container mx-auto px-6 py-12 relative">
+        {/* Project Updates - Post-it stickers (draggable anywhere) */}
+        {updatesData && updatesData.length > 0 && (
+          <div className="fixed inset-0 pointer-events-none z-50">
+            {updatesData.slice(0, 5).map((update: any, index: number) => (
+              <div key={update.id} className="pointer-events-auto">
+                <ProjectUpdateSticker
+                  update={update}
+                  index={index}
+                  canDelete={user?.id === project?.authorId}
+                  onDelete={handleDeleteUpdate}
+                  position={stickerPositions[update.id] || getDefaultPosition(index)}
+                  onPositionChange={handleStickerPositionChange}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="mx-auto max-w-5xl w-full box-border">
           {/* Hero Header Section */}
           <div className="mb-8 card-elevated p-6">
@@ -149,6 +223,20 @@ export default function ProjectDetail() {
                 </a>
               )}
               <BadgeAwarder projectId={project.id} />
+
+              {/* Project Owner Actions */}
+              {user?.id === project.authorId && (
+                <>
+                  <button onClick={() => setShowPostUpdate(true)} className="btn-primary">
+                    <Sparkles className="mr-2 h-4 w-4 inline" />
+                    Post Update
+                  </button>
+                  <Link to={`/project/${project.id}/edit`} className="btn-secondary">
+                    <Edit className="mr-2 h-4 w-4 inline" />
+                    Edit Project
+                  </Link>
+                </>
+              )}
 
               {/* Share and Save buttons */}
               <button onClick={handleShare} className="btn-secondary">
@@ -214,24 +302,39 @@ export default function ProjectDetail() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase">Crew</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {project.team_members.map((member: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/30 rounded-lg border border-border"
-                      >
-                        <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-                          <span className="text-xs font-bold text-primary">
-                            {member.name.charAt(0).toUpperCase()}
-                          </span>
+                    {project.team_members.map((member: any, idx: number) => {
+                      const MemberCard = (
+                        <div
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/30 rounded-lg border border-border"
+                        >
+                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
+                            <span className="text-xs font-bold text-primary">
+                              {member.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-semibold text-foreground leading-none">{member.name}</p>
+                            {member.role && (
+                              <p className="text-xs text-muted-foreground leading-none mt-0.5">{member.role}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-left">
-                          <p className="text-sm font-semibold text-foreground leading-none">{member.name}</p>
-                          {member.role && (
-                            <p className="text-xs text-muted-foreground leading-none mt-0.5">{member.role}</p>
-                          )}
+                      );
+
+                      return member.user_id && member.username ? (
+                        <Link
+                          key={idx}
+                          to={`/u/${member.username}`}
+                          className="hover:opacity-80 transition-opacity"
+                        >
+                          {MemberCard}
+                        </Link>
+                      ) : (
+                        <div key={idx}>
+                          {MemberCard}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -474,24 +577,57 @@ export default function ProjectDetail() {
           )}
 
           {/* Hackathon Details */}
-          {(project.hackathonName || project.hackathonDate) && (
+          {((project.hackathons && project.hackathons.length > 0) || project.hackathonName || project.hackathonDate) && (
             <div className="card-elevated p-6 mb-8">
               <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
                 <Award className="h-6 w-6 text-primary" />
                 Hackathon Details
               </h2>
-              <div className="space-y-3">
-                {project.hackathonName && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
-                    <span className="text-sm text-foreground font-medium">{project.hackathonName}</span>
-                  </div>
-                )}
-                {project.hackathonDate && (
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
-                    <span className="text-sm text-foreground">{new Date(project.hackathonDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              <div className="space-y-4">
+                {/* Display new hackathons array if available */}
+                {project.hackathons && project.hackathons.length > 0 ? (
+                  project.hackathons.map((hackathon: any, index: number) => (
+                    <div key={index} className="p-4 bg-secondary/20 rounded-lg border-2 border-border">
+                      <div className="space-y-2">
+                        {hackathon.name && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
+                            <span className="text-sm text-foreground font-medium">{hackathon.name}</span>
+                          </div>
+                        )}
+                        {hackathon.date && (
+                          <div className="flex items-center gap-3">
+                            <Calendar className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
+                            <span className="text-sm text-foreground">{new Date(hackathon.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                          </div>
+                        )}
+                        {hackathon.prize && (
+                          <div className="flex items-center gap-3">
+                            <Trophy className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Prize:</span>
+                            <span className="text-sm text-foreground font-medium">{hackathon.prize}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  /* Fallback to old single hackathon fields for backward compatibility */
+                  <div className="space-y-3">
+                    {project.hackathonName && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
+                        <span className="text-sm text-foreground font-medium">{project.hackathonName}</span>
+                      </div>
+                    )}
+                    {project.hackathonDate && (
+                      <div className="flex items-center gap-3">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
+                        <span className="text-sm text-foreground">{new Date(project.hackathonDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -548,17 +684,33 @@ export default function ProjectDetail() {
                 Team & Crew
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.team_members.map((member: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg border border-border">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/20 border-2 border-primary/30">
-                      <Users className="h-6 w-6 text-primary" />
+                {project.team_members.map((member: any, index: number) => {
+                  const MemberCard = (
+                    <div className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg border border-border">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/20 border-2 border-primary/30">
+                        <Users className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground">{member.name}</p>
+                        <p className="text-sm text-muted-foreground">{member.role || 'Team Member'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-foreground">{member.name}</p>
-                      <p className="text-sm text-muted-foreground">{member.role || 'Team Member'}</p>
+                  );
+
+                  return member.user_id && member.username ? (
+                    <Link
+                      key={index}
+                      to={`/u/${member.username}`}
+                      className="hover:opacity-80 transition-opacity"
+                    >
+                      {MemberCard}
+                    </Link>
+                  ) : (
+                    <div key={index}>
+                      {MemberCard}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -578,6 +730,16 @@ export default function ProjectDetail() {
         url={`${window.location.origin}/project/${id}`}
         title={project.title}
         description={project.tagline}
+      />
+
+      {/* Post Update Modal */}
+      <PostUpdateModal
+        projectId={project.id}
+        isOpen={showPostUpdate}
+        onClose={() => setShowPostUpdate(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['projectUpdates', id] });
+        }}
       />
     </div>
   );

@@ -34,6 +34,12 @@ export default function EditProject() {
   const [pitchDeckUrl, setPitchDeckUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Hackathons state
+  const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
+  const [hackathonName, setHackathonName] = useState('');
+  const [hackathonDate, setHackathonDate] = useState('');
+  const [hackathonPrize, setHackathonPrize] = useState('');
+
   const {
     register,
     handleSubmit,
@@ -74,6 +80,7 @@ export default function EditProject() {
       setNoveltyFactor(project.novelty_factor || '');
       setCategories(project.categories || []);
       setPitchDeckUrl(project.pitch_deck_url || '');
+      setHackathons(project.hackathons || []);
     }
   }, [projectData, user, id, navigate, setValue]);
 
@@ -100,6 +107,23 @@ export default function EditProject() {
     setTeamMembers(teamMembers.filter((_, i) => i !== index));
   };
 
+  const handleAddHackathon = () => {
+    if (hackathonName.trim()) {
+      setHackathons([...hackathons, {
+        name: hackathonName.trim(),
+        date: hackathonDate || '',
+        prize: hackathonPrize.trim() || undefined
+      }]);
+      setHackathonName('');
+      setHackathonDate('');
+      setHackathonPrize('');
+    }
+  };
+
+  const handleRemoveHackathon = (index: number) => {
+    setHackathons(hackathons.filter((_, i) => i !== index));
+  };
+
   const onSubmit = async (data: PublishProjectInput) => {
     if (!id) return;
 
@@ -112,8 +136,7 @@ export default function EditProject() {
         description: data.description,
         demo_url: data.demoUrl,
         github_url: data.githubUrl,
-        hackathon_name: data.hackathonName,
-        hackathon_date: data.hackathonDate,
+        hackathons: hackathons,
         tech_stack: techStack,
         team_members: teamMembers,
         project_story: projectStory,
@@ -277,16 +300,84 @@ export default function EditProject() {
                   </div>
                 </div>
 
-                {/* Hackathon */}
+                {/* Hackathons */}
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="hackathonName">Hackathon Name</Label>
-                    <Input id="hackathonName" {...register('hackathonName')} className="mt-1" />
-                  </div>
+                  <Label>Hackathons</Label>
 
-                  <div>
-                    <Label htmlFor="hackathonDate">Hackathon Date</Label>
-                    <Input id="hackathonDate" type="date" {...register('hackathonDate')} className="mt-1" />
+                  {/* Display existing hackathons */}
+                  {hackathons.length > 0 && (
+                    <div className="space-y-2">
+                      {hackathons.map((hackathon, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
+                          <div className="flex-1">
+                            <p className="font-bold text-foreground text-sm">{hackathon.name}</p>
+                            {hackathon.date && (
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(hackathon.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                              </p>
+                            )}
+                            {hackathon.prize && (
+                              <p className="text-xs text-primary font-semibold">{hackathon.prize}</p>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveHackathon(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add new hackathon */}
+                  <div className="space-y-3 p-3 bg-secondary/10 rounded-lg border border-border">
+                    <div>
+                      <Label htmlFor="newHackathonName" className="text-sm">Add Hackathon</Label>
+                      <Input
+                        id="newHackathonName"
+                        placeholder="Hackathon name"
+                        value={hackathonName}
+                        onChange={(e) => setHackathonName(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="newHackathonDate" className="text-sm">Date</Label>
+                      <Input
+                        id="newHackathonDate"
+                        type="date"
+                        value={hackathonDate}
+                        onChange={(e) => setHackathonDate(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="newHackathonPrize" className="text-sm">Prize (Optional)</Label>
+                      <Input
+                        id="newHackathonPrize"
+                        placeholder="e.g., 1st Place - $10,000"
+                        value={hackathonPrize}
+                        onChange={(e) => setHackathonPrize(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddHackathon}
+                      disabled={!hackathonName.trim()}
+                      size="sm"
+                      className="w-full"
+                    >
+                      + Add Hackathon
+                    </Button>
                   </div>
                 </div>
 
