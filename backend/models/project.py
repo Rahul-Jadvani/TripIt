@@ -98,12 +98,13 @@ class Project(db.Model):
             return 0
         return (self.upvotes / total_votes) * 100
 
-    def to_dict(self, include_creator=False, user_id=None):
+    def to_dict(self, include_creator=False, user_id=None, include_chains=True):
         """Convert to dictionary
 
         Args:
             include_creator: Include creator/author information
             user_id: If provided, includes user's vote on this project
+            include_chains: Include chains this project belongs to (default: True)
         """
         data = {
             'id': self.id,
@@ -158,6 +159,21 @@ class Project(db.Model):
             data['user_vote'] = vote.vote_type if vote else None
         else:
             data['user_vote'] = None
+
+        # Include chains this project belongs to
+        if include_chains:
+            chains = []
+            for chain_project in self.chain_memberships:
+                chains.append({
+                    'id': chain_project.chain.id,
+                    'name': chain_project.chain.name,
+                    'slug': chain_project.chain.slug,
+                    'logo_url': chain_project.chain.logo_url,
+                    'is_pinned': chain_project.is_pinned,
+                    'added_at': chain_project.added_at.isoformat(),
+                })
+            data['chains'] = chains
+            data['chain_count'] = len(chains)
 
         return data
 

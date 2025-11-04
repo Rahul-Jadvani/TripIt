@@ -18,7 +18,12 @@
       "Bash(cd E:Disc Platfrontend)",
       "Bash(curl:*)",
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2MTcwNTkxMSwianRpIjoiYTVkNTJjZTctNzNhMy00NWNkLTlkNTgtOTUxY2ExODZjYTllIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjA3NGI3YTZjLTM5MWQtNGI4My04NWZkLTE4OTg2ZGFiZGE4NSIsIm5iZiI6MTc2MTcwNTkxMSwiZXhwIjoxNzY0Mjk3OTExfQ.vS-6aM-KShc9DjUmXBCkt_3d_tU_uVNSe2uMsOUeM7U\")",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(find:*)",
+      "Bash(timeout /t 5)",
+      "Bash(timeout /t 8)",
+      "Bash(nul)",
+      "Bash(ping:*)"
     ],
     "deny": [],
     "ask": []

@@ -2,8 +2,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy } from 'lucide-react';
+import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers } from 'lucide-react';
 import { toast } from 'sonner';
+import { ChainBadge } from '@/components/ChainBadge';
 import { useCheckIfSaved, useSaveProject, useUnsaveProject } from '@/hooks/useSavedProjects';
 import { VoteButtons } from '@/components/VoteButtons';
 import { CommentSection } from '@/components/CommentSection';
@@ -497,6 +498,24 @@ export default function ProjectDetail() {
             </div>
           )}
 
+          {/* Chains Section */}
+          {project.chains && project.chains.length > 0 && (
+            <div className="card-elevated p-6 mb-8">
+              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
+                <Link2 className="h-6 w-6 text-primary" />
+                Published in Chains
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                {project.chains.map((chain: any) => (
+                  <ChainBadge key={chain.id} chain={chain} size="md" showPin={chain.is_pinned} />
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                This project is featured in {project.chains.length} chain{project.chains.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
+
           {/* About Section */}
           <div className="card-elevated p-6 mb-8">
             <h2 className="text-2xl font-black mb-4 text-foreground">About This Project</h2>
@@ -711,6 +730,46 @@ export default function ProjectDetail() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Associated Chains Section */}
+          {project.chains && project.chains.length > 0 && (
+            <div className="card-elevated p-6 mb-8">
+              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
+                <Layers className="h-6 w-6 text-primary" />
+                Part of Chains
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {project.chains.map((chain: any) => (
+                  <Link
+                    key={chain.id}
+                    to={`/chains/${chain.slug}`}
+                    className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all"
+                  >
+                    <Avatar className="h-12 w-12 border-2 border-border">
+                      {chain.logo_url ? (
+                        <AvatarImage src={chain.logo_url} alt={chain.name} />
+                      ) : (
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                          {chain.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-foreground truncate">{chain.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Added {new Date(chain.added_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {chain.is_pinned && (
+                      <Badge variant="default" className="flex-shrink-0">
+                        Pinned
+                      </Badge>
+                    )}
+                  </Link>
+                ))}
               </div>
             </div>
           )}

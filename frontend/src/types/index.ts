@@ -100,6 +100,16 @@ export interface Project {
   is_featured?: boolean; // Backend field
   isDeleted?: boolean;
   is_deleted?: boolean; // Backend field
+  // Chains
+  chains?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    logo_url?: string;
+    is_pinned: boolean;
+    added_at: string;
+  }>;
+  chain_count?: number;
   // Timestamps
   createdAt: string;
   created_at?: string; // Backend field
@@ -158,3 +168,190 @@ export interface LeaderboardEntry {
 
 export type SortType = 'hot' | 'new' | 'top';
 export type TimeFilter = 'week' | 'month' | 'all';
+
+// ============================================================================
+// CHAINS FEATURE
+// ============================================================================
+
+export interface Chain {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  banner_url?: string;
+  logo_url?: string;
+  categories: string[];
+  rules?: string;
+  social_links?: {
+    twitter?: string;
+    website?: string;
+    discord?: string;
+  };
+  is_public: boolean;
+  requires_approval: boolean;
+  project_count: number;
+  follower_count: number;
+  view_count: number;
+  is_featured: boolean;
+  is_active: boolean;
+  is_following?: boolean;
+  is_owner?: boolean;
+  creator_id: string;
+  creator?: User;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChainProject {
+  id: string;
+  chain_id: string;
+  project_id: string;
+  added_by_id: string;
+  order_index: number;
+  is_pinned: boolean;
+  added_at: string;
+  project?: Project;
+  chain?: Chain;
+  added_by?: User;
+}
+
+export interface ChainProjectRequest {
+  id: string;
+  chain_id: string;
+  project_id: string;
+  requester_id: string;
+  message?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by_id?: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
+  project?: Project;
+  chain?: Chain;
+  requester?: User;
+  reviewed_by?: User;
+}
+
+export interface ChainFollower {
+  id: string;
+  chain_id: string;
+  user_id: string;
+  followed_at: string;
+  user?: User;
+  chain?: Chain;
+}
+
+export interface ChainStats {
+  total_views: number;
+  total_upvotes: number;
+  avg_proof_score: number;
+}
+
+export interface ChainFilters {
+  page?: number;
+  limit?: number;
+  sort?: 'trending' | 'newest' | 'most_projects' | 'most_followers' | 'alphabetical';
+  search?: string;
+  category?: string;
+  visibility?: 'all' | 'public' | 'private';
+  featured?: boolean;
+  creator_id?: string;
+}
+
+// ============================================================================
+// CHAIN POSTS (Forum Feature)
+// ============================================================================
+
+export interface ChainPost {
+  id: string;
+  chain_id: string;
+  author_id: string;
+  parent_id?: string;
+  title?: string;
+  content: string;
+  image_urls: string[];
+  upvote_count: number;
+  downvote_count: number;
+  comment_count: number;
+  total_replies: number;
+  is_pinned: boolean;
+  is_locked: boolean;
+  is_deleted: boolean;
+  is_hidden: boolean;
+  created_at: string;
+  updated_at: string;
+  last_activity_at: string;
+  author?: User;
+  chain?: Chain;
+  user_reaction?: 'upvote' | 'downvote' | null;
+  is_author?: boolean;
+  replies?: ChainPost[];
+}
+
+export interface ChainPostReaction {
+  id: string;
+  post_id: string;
+  user_id: string;
+  reaction_type: 'upvote' | 'downvote';
+  created_at: string;
+  updated_at: string;
+  user?: User;
+}
+
+export interface ChainPostFilters {
+  page?: number;
+  per_page?: number;
+  sort?: 'hot' | 'new' | 'top' | 'active' | 'pinned';
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  notification_type: NotificationType;
+  title: string;
+  message: string;
+  project_id?: string;
+  chain_id?: string;
+  actor_id?: string;
+  redirect_url?: string;
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
+  actor?: User;
+  project?: {
+    id: string;
+    title: string;
+    tagline?: string;
+  };
+  chain?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url?: string;
+  };
+}
+
+export type NotificationType =
+  | 'chain_new_project'
+  | 'chain_request_approved'
+  | 'chain_request_rejected'
+  | 'project_added_to_chain'
+  | 'project_removed_from_chain'
+  | 'chain_follower'
+  | 'chain_featured'
+  | 'chain_project_request'
+  | 'vote'
+  | 'comment'
+  | 'badge'
+  | 'intro_request';
+
+export interface PaginatedResponse<T> {
+  data: T;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}

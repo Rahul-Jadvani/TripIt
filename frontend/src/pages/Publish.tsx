@@ -16,6 +16,7 @@ import { WalletVerification } from '@/components/WalletVerification';
 import { UserSearchSelect } from '@/components/UserSearchSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
+import { ChainSelector } from '@/components/ChainSelector';
 
 export default function Publish() {
   const navigate = useNavigate();
@@ -49,6 +50,7 @@ export default function Publish() {
   const [marketComparison, setMarketComparison] = useState('');
   const [noveltyFactor, setNoveltyFactor] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [selectedChainIds, setSelectedChainIds] = useState<string[]>([]);
 
   const createProjectMutation = useCreateProject();
 
@@ -359,6 +361,9 @@ export default function Publish() {
       if (categories && categories.length > 0) {
         payload.categories = categories;
       }
+      if (selectedChainIds && selectedChainIds.length > 0) {
+        payload.chain_ids = selectedChainIds;
+      }
 
       console.log('=== SUBMITTING PROJECT ===');
       console.log('GitHub URL from form:', data.githubUrl);
@@ -379,6 +384,7 @@ export default function Publish() {
       setMarketComparison('');
       setNoveltyFactor('');
       setCategories([]);
+      setSelectedChainIds([]);
       navigate('/my-projects');
     } catch (error: any) {
       console.error('Error publishing project:', error);
@@ -562,6 +568,16 @@ export default function Publish() {
                     <p className="text-xs text-muted-foreground">
                       Selected: {categories.length > 0 ? categories.join(', ') : 'None'}
                     </p>
+                  </div>
+
+                  {/* Chains Selector */}
+                  <div className="space-y-3 mt-6">
+                    <ChainSelector
+                      selectedChainIds={selectedChainIds}
+                      onSelectionChange={setSelectedChainIds}
+                      maxSelections={5}
+                      projectCategories={categories}
+                    />
                   </div>
                 </div>
               </div>

@@ -38,6 +38,13 @@ import Investors from "./pages/Investors";
 import DirectMessages from "./pages/DirectMessages";
 import GalleryView from "./pages/GalleryView";
 import NotFound from "./pages/NotFound";
+import ChainsListPage from "./pages/ChainsListPage";
+import ChainDetailPage from "./pages/ChainDetailPage";
+import ChainAnalytics from "./pages/ChainAnalytics";
+import CreateChainPage from "./pages/CreateChainPage";
+import EditChainPage from "./pages/EditChainPage";
+import ChainRequestsPage from "./pages/ChainRequestsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,6 +91,10 @@ const App = () => (
               <Route path="/investor-plans" element={<InvestorPlans />} />
               <Route path="/investors" element={<Investors />} />
 
+              {/* Chains Routes */}
+              <Route path="/chains" element={<ChainsListPage />} />
+              <Route path="/chains/:slug" element={<ChainDetailPage />} />
+
               {/* Protected Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
@@ -96,6 +107,11 @@ const App = () => (
               <Route path="/investor-dashboard" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
               <Route path="/investors" element={<ProtectedRoute><InvestorDirectory /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
+              <Route path="/chains/create" element={<ProtectedRoute><CreateChainPage /></ProtectedRoute>} />
+              <Route path="/chains/:slug/edit" element={<ProtectedRoute><EditChainPage /></ProtectedRoute>} />
+              <Route path="/chains/:slug/requests" element={<ProtectedRoute><ChainRequestsPage /></ProtectedRoute>} />
+              <Route path="/chains/:slug/analytics" element={<ProtectedRoute><ChainAnalytics /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />

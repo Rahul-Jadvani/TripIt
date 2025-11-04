@@ -9,8 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield } from 'lucide-react';
+import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2 } from 'lucide-react';
 import { ConnectWallet } from '@/components/ConnectWallet';
+import { NotificationBell } from '@/components/NotificationBell';
 import { useState } from 'react';
 
 export function Navbar() {
@@ -45,6 +46,10 @@ export function Navbar() {
             <Link to="/leaderboard" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <Trophy className="h-4 w-4" />
               <span>Leaderboard</span>
+            </Link>
+            <Link to="/chains" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+              <Link2 className="h-4 w-4" />
+              <span>Chains</span>
             </Link>
             {user && (
               <Link to="/investors" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
@@ -84,6 +89,9 @@ export function Navbar() {
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Messages</span>
                 </a>
+
+                {/* Notifications */}
+                <NotificationBell />
 
                 {/* User Menu */}
                 <DropdownMenu>

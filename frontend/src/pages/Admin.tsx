@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List, Edit2, Settings, MessageSquare } from 'lucide-react';
+import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List, Edit2, Settings, MessageSquare, Layers, Star, Clock, Eye, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { adminService } from '@/services/api';
@@ -30,6 +30,14 @@ import {
   useApproveInvestorRequest,
   useRejectInvestorRequest,
 } from '@/hooks/useAdmin';
+import {
+  useAdminChains,
+  useBanChain,
+  useSuspendChain,
+  useUnbanChain,
+  useDeleteChainAdmin,
+  useToggleChainFeatured,
+} from '@/hooks/useAdminChains';
 
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -455,6 +463,249 @@ interface FeedbackItem {
     username: string;
     email: string;
   };
+}
+
+function ChainsModerationSection() {
+  const [chainSearch, setChainSearch] = useState('');
+  const [chainStatusFilter, setChainStatusFilter] = useState<'all' | 'active' | 'banned' | 'suspended'>('all');
+  const [chainPage, setChainPage] = useState(1);
+  const [selectedChain, setSelectedChain] = useState<any>(null);
+  const [banReason, setBanReason] = useState('');
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspendDuration, setSuspendDuration] = useState(7);
+  const [deleteReason, setDeleteReason] = useState('');
+
+  const { data: chainsData, isLoading: chainsLoading } = useAdminChains({
+    page: chainPage,
+    per_page: 20,
+    search: chainSearch,
+    status: chainStatusFilter === 'all' ? '' : chainStatusFilter,
+  });
+
+  const banChainMutation = useBanChain();
+  const suspendChainMutation = useSuspendChain();
+  const unbanChainMutation = useUnbanChain();
+  const deleteChainMutation = useDeleteChainAdmin();
+  const toggleFeaturedMutation = useToggleChainFeatured();
+
+  const chains = chainsData?.data?.chains || [];
+  const totalChains = chainsData?.data?.total || 0;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-500">Active</Badge>;
+      case 'banned':
+        return <Badge variant="destructive">Banned</Badge>;
+      case 'suspended':
+        return <Badge className="bg-orange-500">Suspended</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <Input
+            placeholder="Search chains..."
+            value={chainSearch}
+            onChange={(e) => setChainSearch(e.target.value)}
+          />
+        </div>
+        <Select value={chainStatusFilter} onValueChange={(value: any) => setChainStatusFilter(value)}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="banned">Banned</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Chains List */}
+      {chainsLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : chains.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            No chains found
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {chains.map((chain: any) => (
+            <Card key={chain.id}>
+              <CardContent className="py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Link
+                        to={`/chains/${chain.slug}`}
+                        className="text-lg font-bold hover:text-primary transition-colors flex items-center gap-1"
+                      >
+                        {chain.name}
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                      {getStatusBadge(chain.status)}
+                      {chain.is_featured && (
+                        <Badge className="bg-yellow-500/20 text-yellow-500">
+                          <Star className="h-3 w-3 mr-1" />
+                          Featured
+                        </Badge>
+                      )}
+                    </div>
+
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      {chain.description}
+                    </p>
+
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <FolderOpen className="h-3 w-3" />
+                        {chain.project_count} projects
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {chain.follower_count} followers
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {chain.view_count} views
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(chain.created_at)}
+                      </span>
+                    </div>
+
+                    {chain.ban_reason && (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded p-2">
+                        <p className="text-xs text-red-500">Reason: {chain.ban_reason}</p>
+                        {chain.suspended_until && (
+                          <p className="text-xs text-red-400">
+                            Until: {formatDate(chain.suspended_until)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col gap-2">
+                    {chain.status === 'active' ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            await toggleFeaturedMutation.mutateAsync(chain.slug);
+                          }}
+                          disabled={toggleFeaturedMutation.isPending}
+                        >
+                          <Star className="h-3 w-3 mr-1" />
+                          {chain.is_featured ? 'Unfeature' : 'Feature'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const reason = prompt('Suspend reason (optional):');
+                            if (reason !== null) {
+                              await suspendChainMutation.mutateAsync({
+                                slug: chain.slug,
+                                reason: reason || undefined,
+                                duration_days: 7,
+                              });
+                            }
+                          }}
+                        >
+                          <Clock className="h-3 w-3 mr-1" />
+                          Suspend
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={async () => {
+                            const reason = prompt('Ban reason (optional):');
+                            if (reason !== null) {
+                              await banChainMutation.mutateAsync({
+                                slug: chain.slug,
+                                reason: reason || undefined,
+                              });
+                            }
+                          }}
+                        >
+                          <Ban className="h-3 w-3 mr-1" />
+                          Ban
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={async () => {
+                          await unbanChainMutation.mutateAsync({
+                            slug: chain.slug,
+                            reason: 'Unbanned by admin',
+                          });
+                        }}
+                        disabled={unbanChainMutation.isPending}
+                      >
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Unban
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-500"
+                      onClick={async () => {
+                        if (confirm(`Delete "${chain.name}" permanently?`)) {
+                          const reason = prompt('Delete reason (optional):');
+                          if (reason !== null) {
+                            await deleteChainMutation.mutateAsync({
+                              slug: chain.slug,
+                              reason: reason || undefined,
+                            });
+                          }
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Stats */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Total Chains: {totalChains}</CardTitle>
+        </CardHeader>
+      </Card>
+    </div>
+  );
 }
 
 function FeedbackManagement() {
@@ -903,7 +1154,7 @@ export default function Admin() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="analytics">
             <TrendingUp className="h-4 w-4 mr-2" />
             Analytics
@@ -919,6 +1170,10 @@ export default function Admin() {
           <TabsTrigger value="projects">
             <FolderOpen className="h-4 w-4 mr-2" />
             Projects
+          </TabsTrigger>
+          <TabsTrigger value="chains">
+            <Layers className="h-4 w-4 mr-2" />
+            Chains
           </TabsTrigger>
           <TabsTrigger value="badges">
             <Award className="h-4 w-4 mr-2" />
@@ -1503,6 +1758,11 @@ export default function Admin() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Chains Tab */}
+        <TabsContent value="chains" className="space-y-6 mt-6">
+          <ChainsModerationSection />
         </TabsContent>
 
         {/* Badges Tab */}

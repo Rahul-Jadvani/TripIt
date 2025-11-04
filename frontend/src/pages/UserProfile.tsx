@@ -1,11 +1,13 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Shield, Award, Loader2, AlertCircle, Github, ExternalLink, MapPin, Briefcase, TrendingUp, Globe, Link as LinkIcon, MessageSquare, Send } from 'lucide-react';
+import { Shield, Award, Loader2, AlertCircle, Github, ExternalLink, MapPin, Briefcase, TrendingUp, Globe, Link as LinkIcon, MessageSquare, Send, Layers } from 'lucide-react';
 import { useUserByUsername } from '@/hooks/useUser';
 import { useUserProjects, useUserTaggedProjects } from '@/hooks/useProjects';
+import { useUserOwnedChains, useUserFollowingChains } from '@/hooks/useChains';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
 import { useQuery } from '@tanstack/react-query';
@@ -20,6 +22,8 @@ export default function UserProfile() {
   const { data: user, isLoading: userLoading, error: userError } = useUserByUsername(username || '');
   const { data: projectsData, isLoading: projectsLoading } = useUserProjects(user?.id || '');
   const { data: taggedProjectsData, isLoading: taggedProjectsLoading } = useUserTaggedProjects(user?.id || '');
+  const { data: ownedChainsData, isLoading: ownedChainsLoading } = useUserOwnedChains(user?.id || '');
+  const { data: followingChainsData, isLoading: followingChainsLoading } = useUserFollowingChains(user?.id || '');
 
   // Fetch investor profile if user is an investor
   const { data: investorProfile } = useQuery({
@@ -422,6 +426,18 @@ export default function UserProfile() {
                 Tagged ({taggedProjectsData?.data?.length || 0})
               </TabsTrigger>
               <TabsTrigger
+                value="owned-chains"
+                className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
+              >
+                Owned Chains ({ownedChainsData?.chains?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger
+                value="following-chains"
+                className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
+              >
+                Following ({followingChainsData?.chains?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger
                 value="activity"
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
@@ -465,6 +481,124 @@ export default function UserProfile() {
                     <p className="text-lg font-bold text-foreground">No tagged projects yet</p>
                     <p className="text-sm text-muted-foreground">
                       {user.displayName || user.username} hasn't been tagged as a crew member in any projects yet
+                    </p>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="owned-chains">
+              {ownedChainsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : ownedChainsData?.chains && ownedChainsData.chains.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {ownedChainsData.chains.map((chain: any) => (
+                    <Link
+                      key={chain.id}
+                      to={`/chains/${chain.slug}`}
+                      className="card-elevated p-6 hover:border-primary transition-all"
+                    >
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-16 w-16 border-2 border-border">
+                          {chain.logo_url ? (
+                            <AvatarImage src={chain.logo_url} alt={chain.name} />
+                          ) : (
+                            <AvatarFallback className="bg-primary/20 text-primary font-bold text-xl">
+                              {chain.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-bold text-lg truncate">{chain.name}</h3>
+                            {chain.is_featured && (
+                              <Badge variant="default" className="gap-1">
+                                <Award className="h-3 w-3" />
+                                Featured
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                            {chain.description}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{chain.project_count} projects</span>
+                            <span>{chain.follower_count} followers</span>
+                            <span>{chain.view_count} views</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="card-elevated p-12 text-center">
+                  <div className="space-y-3">
+                    <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-lg font-bold text-foreground">No chains created yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.displayName || user.username} hasn't created any chains yet
+                    </p>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="following-chains">
+              {followingChainsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : followingChainsData?.chains && followingChainsData.chains.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {followingChainsData.chains.map((chain: any) => (
+                    <Link
+                      key={chain.id}
+                      to={`/chains/${chain.slug}`}
+                      className="card-elevated p-6 hover:border-primary transition-all"
+                    >
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-16 w-16 border-2 border-border">
+                          {chain.logo_url ? (
+                            <AvatarImage src={chain.logo_url} alt={chain.name} />
+                          ) : (
+                            <AvatarFallback className="bg-primary/20 text-primary font-bold text-xl">
+                              {chain.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-bold text-lg truncate">{chain.name}</h3>
+                            {chain.is_featured && (
+                              <Badge variant="default" className="gap-1">
+                                <Award className="h-3 w-3" />
+                                Featured
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                            {chain.description}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{chain.project_count} projects</span>
+                            <span>{chain.follower_count} followers</span>
+                            <span>{chain.view_count} views</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="card-elevated p-12 text-center">
+                  <div className="space-y-3">
+                    <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-lg font-bold text-foreground">Not following any chains</p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.displayName || user.username} hasn't followed any chains yet
                     </p>
                   </div>
                 </div>

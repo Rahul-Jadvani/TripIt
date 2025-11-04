@@ -78,6 +78,8 @@ function transformProject(backendProject: any) {
     userVote: backendProject.user_vote || null,
     user_vote: backendProject.user_vote || null,
     isFeatured: backendProject.is_featured || false,
+    chains: backendProject.chains || [],
+    chainCount: backendProject.chain_count || 0,
     createdAt: backendProject.created_at,
     updatedAt: backendProject.updated_at,
   };

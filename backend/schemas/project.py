@@ -73,13 +73,14 @@ class ProjectCreateSchema(Schema):
     tech_stack = fields.List(fields.Str())
     screenshot_urls = fields.List(fields.Url())
     team_members = fields.List(fields.Nested(TeamMemberSchema))
+    chain_ids = fields.List(fields.Str())  # IDs of chains to add project to
 
     class Meta:
         fields = (
             'title', 'tagline', 'description', 'project_story', 'inspiration',
             'pitch_deck_url', 'market_comparison', 'novelty_factor',
             'demo_url', 'github_url', 'hackathon_name', 'hackathon_date', 'hackathons',
-            'categories', 'tech_stack', 'screenshot_urls', 'team_members'
+            'categories', 'tech_stack', 'screenshot_urls', 'team_members', 'chain_ids'
         )
 
 

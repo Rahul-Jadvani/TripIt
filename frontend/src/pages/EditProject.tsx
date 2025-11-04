@@ -14,6 +14,7 @@ import { X, Loader2, ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { ChainSelector } from '@/components/ChainSelector';
 
 export default function EditProject() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +33,7 @@ export default function EditProject() {
   const [noveltyFactor, setNoveltyFactor] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [pitchDeckUrl, setPitchDeckUrl] = useState('');
+  const [selectedChainIds, setSelectedChainIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Hackathons state
@@ -81,6 +83,7 @@ export default function EditProject() {
       setCategories(project.categories || []);
       setPitchDeckUrl(project.pitch_deck_url || '');
       setHackathons(project.hackathons || []);
+      setSelectedChainIds(project.chains?.map((chain: any) => chain.id) || []);
     }
   }, [projectData, user, id, navigate, setValue]);
 
@@ -145,6 +148,7 @@ export default function EditProject() {
         market_comparison: marketComparison,
         novelty_factor: noveltyFactor,
         categories: categories,
+        chain_ids: selectedChainIds,
       };
 
       await api.patch(`/projects/${id}`, payload);
@@ -227,6 +231,15 @@ export default function EditProject() {
                       </label>
                     ))}
                   </div>
+                </div>
+
+                {/* Chains Selector */}
+                <div className="space-y-3">
+                  <ChainSelector
+                    selectedChainIds={selectedChainIds}
+                    onSelectionChange={setSelectedChainIds}
+                    maxSelections={5}
+                  />
                 </div>
 
                 {/* Extended Information */}

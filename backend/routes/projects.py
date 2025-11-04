@@ -259,6 +259,76 @@ def create_project(user_id):
 
         db.session.commit()
 
+        # Add to chains if chain_ids provided
+        chain_ids = validated_data.get('chain_ids', [])
+        if chain_ids:
+            from models import Chain, ChainProject, ChainProjectRequest, User
+            from utils.notifications import notify_chain_project_request, notify_project_added_to_chain
+
+            # Get the user object for notifications
+            user = User.query.get(user_id)
+
+            for chain_id in chain_ids:
+                chain = Chain.query.get(chain_id)
+                if not chain:
+                    continue
+
+                # Check if project is already in chain
+                existing = ChainProject.query.filter_by(
+                    chain_id=chain_id,
+                    project_id=project.id
+                ).first()
+
+                if existing:
+                    continue
+
+                # If chain requires approval, create a request
+                if chain.requires_approval:
+                    # Check if request already exists
+                    existing_request = ChainProjectRequest.query.filter_by(
+                        chain_id=chain_id,
+                        project_id=project.id,
+                        status='pending'
+                    ).first()
+
+                    if not existing_request:
+                        chain_request = ChainProjectRequest(
+                            chain_id=chain_id,
+                            project_id=project.id,
+                            requester_id=user_id,
+                            message=None
+                        )
+                        db.session.add(chain_request)
+                        db.session.flush()  # Flush to get the ID
+
+                        # Notify chain owner
+                        notify_chain_project_request(
+                            chain.creator_id,
+                            chain,
+                            project,
+                            user,
+                            message=None
+                        )
+                else:
+                    # Add directly if no approval required
+                    chain_project = ChainProject(
+                        chain_id=chain_id,
+                        project_id=project.id,
+                        added_by_id=user_id
+                    )
+                    db.session.add(chain_project)
+                    chain.project_count += 1
+
+                    # Notify chain owner
+                    notify_project_added_to_chain(
+                        chain.creator_id,
+                        chain,
+                        project,
+                        user
+                    )
+
+            db.session.commit()
+
         # AUTO-ASSIGN to matching validators
         from utils.auto_assignment import auto_assign_project_to_validators
         auto_assign_project_to_validators(project, assigned_by_id=user_id)

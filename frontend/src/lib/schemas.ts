@@ -39,3 +39,35 @@ export const publishProjectSchema = z.object({
 });
 
 export type PublishProjectInput = z.infer<typeof publishProjectSchema>;
+
+export const chainSchema = z.object({
+  name: z.string()
+    .min(1, 'Chain name is required')
+    .min(3, 'Chain name must be at least 3 characters')
+    .max(50, 'Chain name must be less than 50 characters'),
+
+  description: z.string()
+    .min(1, 'Description is required')
+    .min(10, 'Description must be at least 10 characters')
+    .max(500, 'Description must be less than 500 characters'),
+
+  rules: z.string()
+    .max(2000, 'Rules must be less than 2000 characters')
+    .optional()
+    .default(''),
+
+  website: z.string()
+    .url('Invalid URL format')
+    .optional()
+    .or(z.literal('')),
+
+  twitter: z.string()
+    .optional()
+    .default(''),
+
+  discord: z.string()
+    .optional()
+    .default(''),
+});
+
+export type ChainFormInput = z.infer<typeof chainSchema>;

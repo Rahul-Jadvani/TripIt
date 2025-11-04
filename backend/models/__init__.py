@@ -8,6 +8,9 @@ from .comment import Comment
 from .badge import ValidationBadge
 from .intro import Intro
 from .feedback import Feedback
+from .chain import Chain, ChainProject, ChainProjectRequest, ChainFollower, ChainModerationLog
+from .chain_post import ChainPost, ChainPostReaction
+from .notification import Notification
 
 __all__ = [
     'User',
@@ -17,5 +20,13 @@ __all__ = [
     'Comment',
     'ValidationBadge',
     'Intro',
-    'Feedback'
+    'Feedback',
+    'Chain',
+    'ChainProject',
+    'ChainProjectRequest',
+    'ChainFollower',
+    'ChainModerationLog',
+    'ChainPost',
+    'ChainPostReaction',
+    'Notification'
 ]

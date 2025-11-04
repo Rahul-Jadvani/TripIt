@@ -26,6 +26,9 @@ def import_models():
     from models.project_view import ProjectView
     from models.validator_permissions import ValidatorPermissions
     from models.project_update import ProjectUpdate
+    from models.chain import Chain, ChainProject, ChainProjectRequest, ChainFollower
+    from models.chain_post import ChainPost, ChainPostReaction
+    from models.notification import Notification
     return True
 
 
@@ -111,6 +114,9 @@ def register_blueprints(app):
     from routes.validator import validator_bp
     from routes.project_updates import project_updates_bp
     from routes.feedback import feedback_bp
+    from routes.chains import chains_bp
+    from routes.chain_posts import chain_posts_bp
+    from routes.notifications import notifications_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
@@ -131,6 +137,9 @@ def register_blueprints(app):
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(validator_bp, url_prefix='/api/validator')
     app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
+    app.register_blueprint(chains_bp, url_prefix='/api/chains')
+    app.register_blueprint(chain_posts_bp, url_prefix='/api/chains')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 
     from routes.admin_auth import admin_auth_bp
     app.register_blueprint(admin_auth_bp)

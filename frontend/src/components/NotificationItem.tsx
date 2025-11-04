@@ -1,0 +1,96 @@
+import { Notification } from '@/types';
+import { Link } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  Bell,
+  CheckCircle,
+  XCircle,
+  Folder,
+  UserPlus,
+  Star,
+  AlertCircle,
+  Trash2
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface NotificationItemProps {
+  notification: Notification;
+  onMarkAsRead?: (id: string) => void;
+}
+
+const NotificationIcon = ({ type }: { type: string }) => {
+  const iconClass = "h-4 w-4 flex-shrink-0";
+
+  switch (type) {
+    case 'chain_new_project':
+      return <Folder className={cn(iconClass, "text-blue-500")} />;
+    case 'chain_request_approved':
+      return <CheckCircle className={cn(iconClass, "text-green-500")} />;
+    case 'chain_request_rejected':
+      return <XCircle className={cn(iconClass, "text-red-500")} />;
+    case 'project_added_to_chain':
+      return <Folder className={cn(iconClass, "text-blue-500")} />;
+    case 'project_removed_from_chain':
+      return <Trash2 className={cn(iconClass, "text-orange-500")} />;
+    case 'chain_follower':
+      return <UserPlus className={cn(iconClass, "text-purple-500")} />;
+    case 'chain_featured':
+      return <Star className={cn(iconClass, "text-yellow-500")} />;
+    case 'chain_project_request':
+      return <AlertCircle className={cn(iconClass, "text-blue-500")} />;
+    default:
+      return <Bell className={cn(iconClass, "text-muted-foreground")} />;
+  }
+};
+
+export function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
+  const handleClick = () => {
+    if (!notification.is_read && onMarkAsRead) {
+      onMarkAsRead(notification.id);
+    }
+  };
+
+  const notificationContent = (
+    <div
+      className={cn(
+        "flex gap-3 p-4 rounded-lg transition-colors cursor-pointer hover:bg-accent/50",
+        !notification.is_read && "bg-accent/30"
+      )}
+      onClick={handleClick}
+    >
+      <div className="mt-0.5">
+        <NotificationIcon type={notification.notification_type} />
+      </div>
+
+      <div className="flex-1 space-y-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-medium leading-tight">
+            {notification.title}
+          </p>
+          {!notification.is_read && (
+            <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1" />
+          )}
+        </div>
+
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {notification.message}
+        </p>
+
+        <p className="text-xs text-muted-foreground">
+          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+        </p>
+      </div>
+    </div>
+  );
+
+  // If there's a redirect URL, wrap in Link
+  if (notification.redirect_url) {
+    return (
+      <Link to={notification.redirect_url} className="block">
+        {notificationContent}
+      </Link>
+    );
+  }
+
+  return notificationContent;
+}

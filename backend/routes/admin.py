@@ -2,17 +2,19 @@
 Admin Routes - Comprehensive admin panel
 """
 from flask import Blueprint, request, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 from extensions import db
 from models.user import User
 from models.project import Project
 from models.badge import ValidationBadge
 from models.investor_request import InvestorRequest
 from models.validator_permissions import ValidatorPermissions
+from models.chain import Chain, ChainModerationLog
 from utils.decorators import admin_required
 from utils.cache import CacheService
 from services.socket_service import SocketService
 from utils.scores import ProofScoreCalculator
+from uuid import uuid4
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -602,6 +604,13 @@ def get_platform_stats(user_id):
         pending_investor_requests = InvestorRequest.query.filter_by(status='pending').count()
         approved_investor_requests = InvestorRequest.query.filter_by(status='approved').count()
 
+        # Chain stats
+        total_chains = Chain.query.count()
+        active_chains = Chain.query.filter_by(status='active').count()
+        banned_chains = Chain.query.filter_by(status='banned').count()
+        suspended_chains = Chain.query.filter_by(status='suspended').count()
+        featured_chains = Chain.query.filter_by(is_featured=True).count()
+
         return jsonify({
             'status': 'success',
             'data': {
@@ -623,6 +632,13 @@ def get_platform_stats(user_id):
                 'investor_requests': {
                     'pending': pending_investor_requests,
                     'approved': approved_investor_requests,
+                },
+                'chains': {
+                    'total': total_chains,
+                    'active': active_chains,
+                    'banned': banned_chains,
+                    'suspended': suspended_chains,
+                    'featured': featured_chains,
                 }
             }
         }), 200
@@ -1095,6 +1111,340 @@ def get_project_badges(user_id, project_id):
                 'badges': [badge.to_dict(include_validator=True) for badge in badges],
                 'total_badges': len(badges),
                 'total_points': sum(badge.points for badge in badges)
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ============================================================================
+# CHAIN MODERATION
+# ============================================================================
+
+@admin_bp.route('/chains', methods=['GET'])
+@admin_required
+def get_all_chains(user_id):
+    """Get all chains with moderation status and filtering"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        search = request.args.get('search', '')
+        status_filter = request.args.get('status', '')  # 'active', 'banned', 'suspended'
+
+        query = Chain.query
+
+        # Search filter
+        if search:
+            query = query.filter(
+                db.or_(
+                    Chain.name.ilike(f'%{search}%'),
+                    Chain.slug.ilike(f'%{search}%'),
+                    Chain.description.ilike(f'%{search}%')
+                )
+            )
+
+        # Status filter
+        if status_filter:
+            query = query.filter(Chain.status == status_filter)
+
+        # Pagination
+        chains = query.order_by(Chain.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'chains': [chain.to_dict(include_creator=True) for chain in chains.items],
+                'total': chains.total,
+                'pages': chains.pages,
+                'current_page': page,
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/chains/<slug>/ban', methods=['POST'])
+@admin_required
+def ban_chain(user_id, slug):
+    """Ban a chain permanently"""
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', 'Banned by administrator')
+
+        chain = Chain.query.filter_by(slug=slug).first()
+        if not chain:
+            return jsonify({'status': 'error', 'message': 'Chain not found'}), 404
+
+        # Ban the chain
+        chain.status = 'banned'
+        chain.banned_at = datetime.utcnow()
+        chain.banned_by_id = user_id
+        chain.ban_reason = reason
+        chain.suspended_until = None  # Clear any suspension
+        chain.is_active = False
+
+        # Create moderation log
+        log = ChainModerationLog(
+            id=str(uuid4()),
+            chain_id=chain.id,
+            admin_id=user_id,
+            action='ban',
+            reason=reason,
+            meta_data={'banned_at': chain.banned_at.isoformat()}
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Chain "{chain.name}" has been banned',
+            'data': chain.to_dict(include_creator=True)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/chains/<slug>/suspend', methods=['POST'])
+@admin_required
+def suspend_chain(user_id, slug):
+    """Suspend a chain temporarily"""
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', 'Suspended by administrator')
+        duration_days = data.get('duration_days', 7)  # Default 7 days
+
+        chain = Chain.query.filter_by(slug=slug).first()
+        if not chain:
+            return jsonify({'status': 'error', 'message': 'Chain not found'}), 404
+
+        # Suspend the chain
+        suspended_until = datetime.utcnow() + timedelta(days=duration_days)
+        chain.status = 'suspended'
+        chain.suspended_until = suspended_until
+        chain.banned_at = datetime.utcnow()
+        chain.banned_by_id = user_id
+        chain.ban_reason = reason
+        chain.is_active = False
+
+        # Create moderation log
+        log = ChainModerationLog(
+            id=str(uuid4()),
+            chain_id=chain.id,
+            admin_id=user_id,
+            action='suspend',
+            reason=reason,
+            meta_data={
+                'suspended_until': suspended_until.isoformat(),
+                'duration_days': duration_days
+            }
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Chain "{chain.name}" has been suspended until {suspended_until.strftime("%Y-%m-%d")}',
+            'data': chain.to_dict(include_creator=True)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/chains/<slug>/unban', methods=['POST'])
+@admin_required
+def unban_chain(user_id, slug):
+    """Unban or unsuspend a chain"""
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', 'Unbanned by administrator')
+
+        chain = Chain.query.filter_by(slug=slug).first()
+        if not chain:
+            return jsonify({'status': 'error', 'message': 'Chain not found'}), 404
+
+        if chain.status not in ['banned', 'suspended']:
+            return jsonify({'status': 'error', 'message': 'Chain is not banned or suspended'}), 400
+
+        # Unban the chain
+        previous_status = chain.status
+        chain.status = 'active'
+        chain.banned_at = None
+        chain.banned_by_id = None
+        chain.ban_reason = None
+        chain.suspended_until = None
+        chain.is_active = True
+
+        # Create moderation log
+        log = ChainModerationLog(
+            id=str(uuid4()),
+            chain_id=chain.id,
+            admin_id=user_id,
+            action='unban',
+            reason=reason,
+            meta_data={'previous_status': previous_status}
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Chain "{chain.name}" has been unbanned',
+            'data': chain.to_dict(include_creator=True)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/chains/<slug>', methods=['DELETE'])
+@admin_required
+def delete_chain(user_id, slug):
+    """Delete a chain permanently (cascades to all related data)"""
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', 'Deleted by administrator')
+
+        chain = Chain.query.filter_by(slug=slug).first()
+        if not chain:
+            return jsonify({'status': 'error', 'message': 'Chain not found'}), 404
+
+        chain_name = chain.name
+        chain_id = chain.id
+
+        # Create moderation log before deletion
+        log = ChainModerationLog(
+            id=str(uuid4()),
+            chain_id=chain_id,
+            admin_id=user_id,
+            action='delete',
+            reason=reason,
+            meta_data={
+                'chain_name': chain_name,
+                'chain_slug': slug,
+                'deleted_at': datetime.utcnow().isoformat()
+            }
+        )
+        db.session.add(log)
+        db.session.flush()  # Save log before deleting chain
+
+        # Delete chain (cascades to chain_projects, chain_followers, etc.)
+        db.session.delete(chain)
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Chain "{chain_name}" has been permanently deleted'
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/chains/<slug>/feature', methods=['POST'])
+@admin_required
+def toggle_chain_featured(user_id, slug):
+    """Feature or unfeature a chain"""
+    try:
+        chain = Chain.query.filter_by(slug=slug).first()
+        if not chain:
+            return jsonify({'status': 'error', 'message': 'Chain not found'}), 404
+
+        # Toggle featured status
+        chain.is_featured = not chain.is_featured
+
+        # Create moderation log
+        action = 'feature' if chain.is_featured else 'unfeature'
+        log = ChainModerationLog(
+            id=str(uuid4()),
+            chain_id=chain.id,
+            admin_id=user_id,
+            action=action,
+            reason=f'Chain {action}d by administrator',
+            meta_data={'is_featured': chain.is_featured}
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        status_text = 'featured' if chain.is_featured else 'unfeatured'
+        return jsonify({
+            'status': 'success',
+            'message': f'Chain "{chain.name}" has been {status_text}',
+            'data': chain.to_dict(include_creator=True)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/chains/moderation-logs', methods=['GET'])
+@admin_required
+def get_chain_moderation_logs(user_id):
+    """Get chain moderation logs with pagination and filtering"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        chain_id = request.args.get('chain_id', '')
+        action = request.args.get('action', '')  # ban, suspend, unban, delete, feature
+        admin_id = request.args.get('admin_id', '')
+
+        query = ChainModerationLog.query
+
+        # Filters
+        if chain_id:
+            query = query.filter(ChainModerationLog.chain_id == chain_id)
+        if action:
+            query = query.filter(ChainModerationLog.action == action)
+        if admin_id:
+            query = query.filter(ChainModerationLog.admin_id == admin_id)
+
+        # Pagination
+        logs = query.order_by(ChainModerationLog.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'logs': [log.to_dict(include_chain=True, include_admin=True) for log in logs.items],
+                'total': logs.total,
+                'pages': logs.pages,
+                'current_page': page,
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/chains/<slug>/logs', methods=['GET'])
+@admin_required
+def get_chain_logs(user_id, slug):
+    """Get moderation logs for a specific chain"""
+    try:
+        chain = Chain.query.filter_by(slug=slug).first()
+        if not chain:
+            return jsonify({'status': 'error', 'message': 'Chain not found'}), 404
+
+        logs = ChainModerationLog.query.filter_by(
+            chain_id=chain.id
+        ).order_by(ChainModerationLog.created_at.desc()).all()
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'chain': chain.to_dict(include_creator=True),
+                'logs': [log.to_dict(include_admin=True) for log in logs]
             }
         }), 200
 
