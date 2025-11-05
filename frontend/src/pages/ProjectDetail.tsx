@@ -78,7 +78,13 @@ export default function ProjectDetail() {
   };
 
   const getDefaultPosition = (index: number) => {
-    return { x: window.innerWidth - 200, y: 80 + index * 150 };
+    // Place near the right edge with a safe margin and stack vertically
+    const rightMargin = 260; // leave room so the note doesn't overflow
+    const topStart = 80;     // initial top offset
+    const verticalGap = 170; // spacing between notes
+    const x = Math.max(0, window.innerWidth - rightMargin);
+    const y = topStart + index * verticalGap;
+    return { x, y };
   };
 
   const handleShare = () => {
@@ -164,6 +170,7 @@ export default function ProjectDetail() {
                   onDelete={handleDeleteUpdate}
                   position={stickerPositions[update.id] || getDefaultPosition(index)}
                   onPositionChange={handleStickerPositionChange}
+                  noteImageSrc="/pin3.png"
                 />
               </div>
             ))}
@@ -190,8 +197,8 @@ export default function ProjectDetail() {
 
               {/* Score Badge */}
               <div className="badge-primary flex flex-col items-center justify-center px-6 py-4 rounded-[15px] flex-shrink-0">
-                <div className="text-3xl font-black text-foreground">{project.proofScore?.total || 0}</div>
-                <div className="text-xs font-bold text-foreground">Score</div>
+                <div className="text-3xl font-black text-black">{project.proofScore?.total || 0}</div>
+                <div className="text-xs font-bold text-black">Score</div>
               </div>
             </div>
 

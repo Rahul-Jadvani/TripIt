@@ -6,6 +6,7 @@ import { ChainFilters } from '@/components/ChainFilters';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, Loader2 } from 'lucide-react';
+import { ChainCardSkeletonGrid } from '@/components/ChainCardSkeleton';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ChainsListPage() {
@@ -62,9 +63,7 @@ export default function ChainsListPage() {
 
       {/* Chains Grid */}
       {isLoading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <ChainCardSkeletonGrid count={12} />
       ) : error ? (
         <Card className="p-8 text-center">
           <p className="text-destructive">Failed to load chains. Please try again.</p>
