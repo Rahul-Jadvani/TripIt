@@ -94,18 +94,33 @@ export function useDeleteChainPost(slug: string) {
 
 export function useReactToPost(slug: string) {
   const queryClient = useQueryClient();
-  const lastVoteTimeRef = useRef<number>(0);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingVoteRef = useRef<{ postId: string; reactionType: 'upvote' | 'downvote' | null } | null>(null);
 
   return useMutation({
     mutationFn: async ({ postId, reactionType }: { postId: string; reactionType: 'upvote' | 'downvote' }) => {
-      // Debounce: Prevent spam clicks (minimum 300ms between votes)
-      const now = Date.now();
-      if (now - lastVoteTimeRef.current < 300) {
-        return Promise.resolve(null); // Silent return for debounced clicks
+      // Clear any existing debounce timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
-      lastVoteTimeRef.current = now;
 
-      return chainPostApi.reactToPost(slug, postId, reactionType);
+      // Store the pending vote
+      pendingVoteRef.current = { postId, reactionType };
+
+      // Return a promise that resolves after debounce period
+      return new Promise((resolve, reject) => {
+        debounceTimerRef.current = setTimeout(async () => {
+          try {
+            if (pendingVoteRef.current) {
+              const result = await chainPostApi.reactToPost(slug, postId, reactionType);
+              pendingVoteRef.current = null;
+              resolve(result);
+            }
+          } catch (error) {
+            reject(error);
+          }
+        }, 300); // 300ms debounce
+      });
     },
     onMutate: async ({ postId, reactionType }) => {
       // Cancel any outgoing refetches

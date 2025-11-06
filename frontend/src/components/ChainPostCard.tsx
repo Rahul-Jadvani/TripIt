@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChainPost } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -51,21 +51,113 @@ export function ChainPostCard({
   const [showAllReplies, setShowAllReplies] = useState(true); // Show all replies by default
   const [showEditDialog, setShowEditDialog] = useState(false);
 
+  // LOCAL STATE for instant UI updates (Instagram-style)
+  const [currentReaction, setCurrentReaction] = useState<'upvote' | 'downvote' | null>(post.user_reaction);
+  const [currentUpvotes, setCurrentUpvotes] = useState(post.upvote_count);
+  const [currentDownvotes, setCurrentDownvotes] = useState(post.downvote_count);
+  const pendingReactionRef = useRef<{ postId: string; reactionType: 'upvote' | 'downvote' | null } | null>(null);
+  const reactionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const reactMutation = useReactToPost(chainSlug);
   const pinMutation = useTogglePinPost(chainSlug);
   const lockMutation = useToggleLockPost(chainSlug);
   const deleteMutation = useDeleteChainPost(chainSlug);
 
+  // Sync local state when post prop changes
+  useEffect(() => {
+    setCurrentReaction(post.user_reaction);
+    setCurrentUpvotes(post.upvote_count);
+    setCurrentDownvotes(post.downvote_count);
+  }, [post.user_reaction, post.upvote_count, post.downvote_count]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (reactionTimerRef.current) {
+        clearTimeout(reactionTimerRef.current);
+      }
+    };
+  }, []);
+
   const isAuthor = user && post.author_id === user.id;
-  const isUpvoted = post.user_reaction === 'upvote';
-  const isDownvoted = post.user_reaction === 'downvote';
+  const isUpvoted = currentReaction === 'upvote';
+  const isDownvoted = currentReaction === 'downvote';
 
   const handleReact = (reactionType: 'upvote' | 'downvote') => {
     if (!user) {
       // Could show login prompt here
       return;
     }
-    reactMutation.mutate({ postId: post.id, reactionType });
+
+    const wasReacted = currentReaction === reactionType;
+    const previousReaction = currentReaction;
+    const previousUpvotes = currentUpvotes;
+    const previousDownvotes = currentDownvotes;
+
+    // INSTANT UI UPDATE (optimistic)
+    if (wasReacted) {
+      // Remove reaction (toggle off)
+      setCurrentReaction(null);
+      if (reactionType === 'upvote') {
+        setCurrentUpvotes(prev => Math.max(0, prev - 1));
+      } else {
+        setCurrentDownvotes(prev => Math.max(0, prev - 1));
+      }
+      pendingReactionRef.current = { postId: post.id, reactionType: null };
+    } else if (currentReaction) {
+      // Change reaction from opposite type
+      setCurrentReaction(reactionType);
+      if (currentReaction === 'upvote' && reactionType === 'downvote') {
+        setCurrentUpvotes(prev => Math.max(0, prev - 1));
+        setCurrentDownvotes(prev => prev + 1);
+      } else if (currentReaction === 'downvote' && reactionType === 'upvote') {
+        setCurrentDownvotes(prev => Math.max(0, prev - 1));
+        setCurrentUpvotes(prev => prev + 1);
+      }
+      pendingReactionRef.current = { postId: post.id, reactionType };
+    } else {
+      // New reaction
+      setCurrentReaction(reactionType);
+      if (reactionType === 'upvote') {
+        setCurrentUpvotes(prev => prev + 1);
+      } else {
+        setCurrentDownvotes(prev => prev + 1);
+      }
+      pendingReactionRef.current = { postId: post.id, reactionType };
+    }
+
+    // Clear existing timer
+    if (reactionTimerRef.current) {
+      clearTimeout(reactionTimerRef.current);
+    }
+
+    // Debounce: wait 300ms after last click before sending request
+    reactionTimerRef.current = setTimeout(() => {
+      const finalReaction = pendingReactionRef.current?.reactionType;
+
+      // If final state matches original state, no need to send request
+      if (finalReaction === post.user_reaction) {
+        pendingReactionRef.current = null;
+        return;
+      }
+
+      // Send the final reaction state
+      if (finalReaction !== null) {
+        reactMutation.mutate(
+          { postId: post.id, reactionType: finalReaction },
+          {
+            onError: () => {
+              // Revert on error
+              setCurrentReaction(previousReaction);
+              setCurrentUpvotes(previousUpvotes);
+              setCurrentDownvotes(previousDownvotes);
+            },
+          }
+        );
+      }
+
+      pendingReactionRef.current = null;
+    }, 300);
   };
 
   const handlePin = () => {
@@ -82,7 +174,7 @@ export function ChainPostCard({
     }
   };
 
-  const voteScore = post.upvote_count - post.downvote_count;
+  const voteScore = currentUpvotes - currentDownvotes;
 
   const visibleReplies = showAllReplies ? post.replies : post.replies?.slice(0, 3);
 
