@@ -6,6 +6,7 @@ from marshmallow import ValidationError
 from datetime import datetime
 from uuid import uuid4
 from sqlalchemy import desc, and_, or_
+from sqlalchemy.orm import joinedload
 
 from extensions import db
 from models.chain import Chain
@@ -13,6 +14,7 @@ from models.chain_post import ChainPost, ChainPostReaction
 from models.user import User
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, get_pagination_params
+from utils.cache import CacheService
 
 chain_posts_bp = Blueprint('chain_posts', __name__)
 
@@ -70,6 +72,9 @@ def create_post(user_id, slug):
         db.session.add(post)
         db.session.commit()
 
+        # Invalidate chain posts cache
+        CacheService.invalidate_chain_posts(slug)
+
         return success_response(
             post.to_dict(include_author=True, include_chain=False, user_id=user_id),
             'Post created successfully',
@@ -87,25 +92,28 @@ def create_post(user_id, slug):
 @chain_posts_bp.route('/<slug>/posts', methods=['GET'])
 @optional_auth
 def list_posts(user_id, slug):
-    """List posts in a chain (top-level only, sorted by various methods)"""
+    """List posts in a chain (top-level only, sorted by various methods) with caching"""
     try:
         page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
+        sort = request.args.get('sort', 'hot')  # hot, new, top, pinned
+
+        # Check cache first (5 minutes TTL)
+        cached = CacheService.get_cached_chain_posts(slug, sort, page)
+        if cached:
+            return success_response(cached)
 
         # Get chain
         chain = Chain.query.filter_by(slug=slug).first()
         if not chain:
             return error_response('Not Found', 'Chain not found', 404)
 
-        # Get sort parameter
-        sort = request.args.get('sort', 'hot')  # hot, new, top, pinned
-
-        # Build base query (only top-level posts)
+        # OPTIMIZED: Build base query with eager loading to prevent N+1 queries
         query = ChainPost.query.filter_by(
             chain_id=chain.id,
             parent_id=None,  # Top-level posts only
             is_deleted=False,
             is_hidden=False
-        )
+        ).options(joinedload(ChainPost.author))
 
         # Apply sorting
         if sort == 'hot' or sort == 'trending':
@@ -139,17 +147,22 @@ def list_posts(user_id, slug):
                 desc(ChainPost.created_at)
             )
 
-        # Paginate
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        posts = pagination.items
+        # OPTIMIZED: Manual pagination to use count cache
+        total = query.count()
+        posts = query.limit(per_page).offset((page - 1) * per_page).all()
 
-        return success_response({
+        response_data = {
             'posts': [post.to_dict(include_author=True, user_id=user_id) for post in posts],
-            'total': pagination.total,
+            'total': total,
             'page': page,
             'per_page': per_page,
-            'total_pages': pagination.pages
-        })
+            'total_pages': (total + per_page - 1) // per_page
+        }
+
+        # Cache the results (5 minutes)
+        CacheService.cache_chain_posts(slug, sort, page, response_data, ttl=300)
+
+        return success_response(response_data)
 
     except Exception as e:
         print(f"Error listing posts: {str(e)}")
@@ -159,27 +172,38 @@ def list_posts(user_id, slug):
 @chain_posts_bp.route('/<slug>/posts/<post_id>', methods=['GET'])
 @optional_auth
 def get_post(user_id, slug, post_id):
-    """Get a single post with its replies"""
+    """Get a single post with its replies with caching"""
     try:
+        # Check cache first (10 minutes TTL)
+        cached = CacheService.get_cached_chain_post(post_id)
+        if cached:
+            return success_response(cached)
+
         # Get chain
         chain = Chain.query.filter_by(slug=slug).first()
         if not chain:
             return error_response('Not Found', 'Chain not found', 404)
 
-        # Get post
-        post = ChainPost.query.filter_by(id=post_id, chain_id=chain.id).first()
+        # OPTIMIZED: Get post with eager loading
+        post = ChainPost.query.filter_by(id=post_id, chain_id=chain.id)\
+            .options(joinedload(ChainPost.author), joinedload(ChainPost.chain))\
+            .first()
         if not post:
             return error_response('Not Found', 'Post not found', 404)
 
-        # Get direct replies (one level deep, sorted by upvotes)
+        # OPTIMIZED: Get direct replies with eager loading (one level deep, sorted by upvotes)
         replies = ChainPost.query.filter_by(
             parent_id=post_id,
             is_deleted=False,
             is_hidden=False
-        ).order_by(desc(ChainPost.upvote_count), desc(ChainPost.created_at)).all()
+        ).options(joinedload(ChainPost.author))\
+        .order_by(desc(ChainPost.upvote_count), desc(ChainPost.created_at)).all()
 
         post_dict = post.to_dict(include_author=True, include_chain=True, user_id=user_id)
         post_dict['replies'] = [reply.to_dict(include_author=True, user_id=user_id) for reply in replies]
+
+        # Cache the results (10 minutes)
+        CacheService.cache_chain_post(post_id, post_dict, ttl=600)
 
         return success_response(post_dict)
 

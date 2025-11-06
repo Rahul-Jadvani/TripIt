@@ -21,13 +21,13 @@ export default function ChainsListPage() {
     search,
     sort,
     category,
-    featured_only: featuredOnly,
+    featured: featuredOnly,
     page,
     limit: 12,
   });
 
   const chains = data?.chains || [];
-  const totalPages = data?.total_pages || 1;
+  const totalPages = data?.pagination?.pages || 1;
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">

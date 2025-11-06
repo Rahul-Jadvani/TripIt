@@ -2,13 +2,14 @@
 Vote routes
 """
 from flask import Blueprint, request
+from sqlalchemy.orm import joinedload
 
 from extensions import db
 from models.vote import Vote
 from models.project import Project
 from schemas.vote import VoteCreateSchema
 from utils.decorators import token_required
-from utils.helpers import success_response, error_response
+from utils.helpers import success_response, error_response, get_pagination_params, paginated_response
 from utils.scores import ProofScoreCalculator
 from utils.cache import CacheService
 from marshmallow import ValidationError
@@ -47,6 +48,7 @@ def cast_vote(user_id):
                 db.session.commit()
                 CacheService.invalidate_project(project_id)
                 CacheService.invalidate_leaderboard()  # Vote removal affects leaderboard
+                CacheService.invalidate_user_votes(user_id)  # Invalidate user votes cache
 
                 # Emit Socket.IO event for real-time vote removal
                 from services.socket_service import SocketService
@@ -84,6 +86,7 @@ def cast_vote(user_id):
         db.session.commit()
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_leaderboard()  # Vote affects leaderboard
+        CacheService.invalidate_user_votes(user_id)  # Invalidate user votes cache
 
         # Emit Socket.IO event for real-time vote updates
         from services.socket_service import SocketService
@@ -103,11 +106,36 @@ def cast_vote(user_id):
 @votes_bp.route('/user', methods=['GET'])
 @token_required
 def get_user_votes(user_id):
-    """Get user's votes"""
+    """Get user's votes with caching and pagination"""
     try:
-        votes = Vote.query.filter_by(user_id=user_id).all()
-        data = [v.to_dict() for v in votes]
+        page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
 
-        return success_response(data, 'User votes retrieved', 200)
+        # Check cache first
+        cached = CacheService.get_cached_user_votes(user_id, page)
+        if cached:
+            return success_response(cached, 'User votes retrieved', 200)
+
+        # OPTIMIZED: Eager load project to prevent N+1 queries
+        query = Vote.query.filter_by(user_id=user_id)\
+            .options(joinedload(Vote.project))
+
+        total = query.count()
+        votes = query.order_by(Vote.created_at.desc())\
+            .limit(per_page).offset((page - 1) * per_page).all()
+
+        response_data = {
+            'votes': [v.to_dict() for v in votes],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+
+        # Cache the results (10 minutes)
+        CacheService.cache_user_votes(user_id, page, response_data, ttl=600)
+
+        return success_response(response_data, 'User votes retrieved', 200)
     except Exception as e:
         return error_response('Error', str(e), 500)

@@ -161,10 +161,13 @@ def get_event_projects(user_id, event_slug):
         limit = min(request.args.get('limit', 20, type=int), 50)
         offset = (page - 1) * limit
 
-        # Base query - join with projects
+        # OPTIMIZED: Base query with eager loading to prevent N+1 queries
+        from sqlalchemy.orm import joinedload
         query = EventProject.query.filter_by(event_id=event.id).join(
             Project, EventProject.project_id == Project.id
-        ).filter(Project.is_deleted == False)
+        ).filter(Project.is_deleted == False).options(
+            joinedload(EventProject.project).joinedload(Project.creator)
+        )
 
         # Filter by track
         track = request.args.get('track')

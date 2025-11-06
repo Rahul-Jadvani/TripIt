@@ -82,6 +82,13 @@ def create_app(config_name=None):
         from utils.init_admins import init_default_admins
         init_default_admins()
 
+        # PERFORMANCE: Start background cache warmer (sequential, stable)
+        if not app.config.get('TESTING'):
+            from utils.cache_warmer import CacheWarmer
+            # Start background warmer (runs every 5 minutes, sequential to avoid crashes)
+            CacheWarmer.start_background_warmer(app, interval=300)
+            print("[PERFORMANCE] Cache warmer started - warming every 5 minutes")
+
     # Health check
     @app.route('/health', methods=['GET'])
     def health_check():
@@ -118,6 +125,11 @@ def register_blueprints(app):
     from routes.chain_posts import chain_posts_bp
     from routes.notifications import notifications_bp
 
+    # PERFORMANCE: Ultra-fast optimized routes
+    from routes.prefetch import prefetch_bp
+    from routes.fast_leaderboard import fast_leaderboard_bp
+    from routes.fast_investor_directory import fast_investor_directory_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
     app.register_blueprint(project_updates_bp, url_prefix='/api')
@@ -140,6 +152,11 @@ def register_blueprints(app):
     app.register_blueprint(chains_bp, url_prefix='/api/chains')
     app.register_blueprint(chain_posts_bp, url_prefix='/api/chains')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+
+    # PERFORMANCE: Ultra-fast optimized endpoints
+    app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')
+    app.register_blueprint(fast_leaderboard_bp, url_prefix='/api/leaderboard')
+    app.register_blueprint(fast_investor_directory_bp, url_prefix='/api/investors')
 
     from routes.admin_auth import admin_auth_bp
     app.register_blueprint(admin_auth_bp)

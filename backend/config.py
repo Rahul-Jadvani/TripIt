@@ -24,13 +24,18 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
 
-    # Database Connection Pooling (Critical for NeonDB performance)
+    # Database Connection Pooling - OPTIMIZED for high concurrency (10,000+ users)
+    # NeonDB-compatible configuration (pooler doesn't support statement_timeout in options)
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 10,           # Number of connections to maintain in the pool
-        'max_overflow': 20,        # Additional connections when pool is full
-        'pool_timeout': 30,        # Timeout in seconds for getting a connection
-        'pool_recycle': 1800,      # Recycle connections after 30 minutes (NeonDB disconnects idle connections)
-        'pool_pre_ping': True,     # Test connections before using them
+        'pool_size': 20,           # Maintain 20 connections for instant access
+        'max_overflow': 40,        # Allow 40 extra connections during peak load
+        'pool_timeout': 10,        # Reduced timeout for faster fail/retry
+        'pool_recycle': 1800,      # Recycle after 30 min (NeonDB disconnects idle)
+        'pool_pre_ping': True,     # Test connections before using (prevents stale conn errors)
+        'echo_pool': False,        # Disable pool logging for performance
+        'connect_args': {
+            'connect_timeout': 10,  # Connection timeout
+        }
     }
 
     # JWT

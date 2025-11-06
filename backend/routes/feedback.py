@@ -80,6 +80,14 @@ def get_all_feedback(user_id):
         feedback_type = request.args.get('type')
         status = request.args.get('status')
 
+        # OPTIMIZED: Check cache first (10 min TTL)
+        from utils.cache import CacheService
+        filters_key = f"{feedback_type or 'all'}:{status or 'all'}"
+        cached = CacheService.get_cached_feedback_list(page, filters_key)
+        if cached:
+            from flask import jsonify
+            return jsonify(cached), 200
+
         query = Feedback.query
 
         if feedback_type:
@@ -95,7 +103,12 @@ def get_all_feedback(user_id):
 
         data = [item.to_dict(include_admin=True) for item in feedback_items]
 
-        return paginated_response(data, total, page, per_page)
+        response = paginated_response(data, total, page, per_page)
+
+        # Cache for 10 minutes
+        CacheService.cache_feedback_list(page, filters_key, response.get_json(), ttl=600)
+
+        return response
 
     except Exception as e:
         return error_response('Error', str(e), 500)
@@ -125,6 +138,10 @@ def update_feedback_status(user_id, feedback_id):
 
         db.session.commit()
 
+        # Invalidate cache
+        from utils.cache import CacheService
+        CacheService.invalidate_feedback()
+
         return success_response(feedback.to_dict(include_admin=True), 'Status updated', 200)
 
     except Exception as e:
@@ -143,6 +160,10 @@ def delete_feedback(user_id, feedback_id):
 
         db.session.delete(feedback)
         db.session.commit()
+
+        # Invalidate cache
+        from utils.cache import CacheService
+        CacheService.invalidate_feedback()
 
         return success_response(None, 'Feedback deleted', 200)
 

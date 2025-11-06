@@ -3,10 +3,13 @@ Investor Request Routes
 """
 from flask import Blueprint, request, jsonify
 from datetime import datetime
+from sqlalchemy.orm import joinedload
 from extensions import db
 from models.investor_request import InvestorRequest
 from models.user import User
 from utils.decorators import token_required
+from utils.helpers import get_pagination_params
+from utils.cache import CacheService
 
 
 investor_requests_bp = Blueprint('investor_requests', __name__, url_prefix='/api/investor-requests')
@@ -137,6 +140,9 @@ def apply_for_investor(user_id):
         db.session.add(investor_request)
         db.session.commit()
 
+        # Invalidate investor requests cache
+        CacheService.invalidate_investor_requests()
+
         return jsonify({
             'status': 'success',
             'message': 'Investor request submitted successfully',
@@ -254,6 +260,9 @@ def update_pending_application(user_id):
 
         db.session.commit()
 
+        # Invalidate investor requests cache
+        CacheService.invalidate_investor_requests()
+
         return jsonify({
             'status': 'success',
             'message': 'Investor application updated successfully',
@@ -270,16 +279,38 @@ def update_pending_application(user_id):
 
 @investor_requests_bp.route('/pending', methods=['GET'])
 def get_pending_requests():
-    """Get all pending investor requests"""
+    """Get all pending investor requests with caching and pagination"""
     try:
-        requests = InvestorRequest.query.filter_by(status='pending').order_by(
-            InvestorRequest.created_at.desc()
-        ).all()
+        page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
 
-        return jsonify({
+        # Check cache first (10 minutes TTL)
+        cached = CacheService.get_cached_investor_requests('pending', page)
+        if cached:
+            return jsonify(cached), 200
+
+        # OPTIMIZED: Eager load user to prevent N+1 queries
+        query = InvestorRequest.query.filter_by(status='pending')\
+            .options(joinedload(InvestorRequest.user))
+
+        total = query.count()
+        requests = query.order_by(InvestorRequest.created_at.desc())\
+            .limit(per_page).offset((page - 1) * per_page).all()
+
+        response_data = {
             'status': 'success',
-            'data': [req.to_dict() for req in requests]
-        }), 200
+            'data': [req.to_dict() for req in requests],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+
+        # Cache the results (10 minutes)
+        CacheService.cache_investor_requests('pending', page, response_data, ttl=600)
+
+        return jsonify(response_data), 200
 
     except Exception as e:
         return jsonify({
@@ -290,20 +321,41 @@ def get_pending_requests():
 
 @investor_requests_bp.route('/all', methods=['GET'])
 def get_all_requests():
-    """Get all investor requests"""
+    """Get all investor requests with caching and pagination"""
     try:
-        status_filter = request.args.get('status')  # pending, approved, rejected
-        query = InvestorRequest.query
+        page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
+        status_filter = request.args.get('status', 'all')  # pending, approved, rejected, all
 
-        if status_filter:
+        # Check cache first (10 minutes TTL)
+        cached = CacheService.get_cached_investor_requests(status_filter, page)
+        if cached:
+            return jsonify(cached), 200
+
+        # OPTIMIZED: Eager load user to prevent N+1 queries
+        query = InvestorRequest.query.options(joinedload(InvestorRequest.user))
+
+        if status_filter and status_filter != 'all':
             query = query.filter_by(status=status_filter)
 
-        requests = query.order_by(InvestorRequest.created_at.desc()).all()
+        total = query.count()
+        requests = query.order_by(InvestorRequest.created_at.desc())\
+            .limit(per_page).offset((page - 1) * per_page).all()
 
-        return jsonify({
+        response_data = {
             'status': 'success',
-            'data': [req.to_dict() for req in requests]
-        }), 200
+            'data': [req.to_dict() for req in requests],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+
+        # Cache the results (10 minutes)
+        CacheService.cache_investor_requests(status_filter, page, response_data, ttl=600)
+
+        return jsonify(response_data), 200
 
     except Exception as e:
         return jsonify({
@@ -334,6 +386,9 @@ def approve_request(request_id):
             user.is_investor = True
 
         db.session.commit()
+
+        # Invalidate investor requests cache
+        CacheService.invalidate_investor_requests()
 
         return jsonify({
             'status': 'success',
@@ -366,6 +421,9 @@ def reject_request(request_id):
         investor_request.reviewed_at = datetime.utcnow()
 
         db.session.commit()
+
+        # Invalidate investor requests cache
+        CacheService.invalidate_investor_requests()
 
         return jsonify({
             'status': 'success',

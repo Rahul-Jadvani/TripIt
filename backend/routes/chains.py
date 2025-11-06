@@ -279,6 +279,13 @@ def update_chain(user_id, slug):
         chain.updated_at = datetime.utcnow()
         db.session.commit()
 
+        # Invalidate chain caches
+        from utils.cache import CacheService
+        CacheService.invalidate_chain_posts(slug)  # Chain posts may show chain details
+        if 'name' in validated_data and validated_data['name'] != chain.name:
+            # If slug changed, invalidate old slug too
+            CacheService.invalidate_chain_posts(chain.slug)
+
         return success_response(
             chain.to_dict(include_creator=True, user_id=user_id),
             'Chain updated successfully',
@@ -309,6 +316,10 @@ def delete_chain(user_id, slug):
 
         db.session.delete(chain)
         db.session.commit()
+
+        # Invalidate chain caches
+        from utils.cache import CacheService
+        CacheService.invalidate_chain_posts(slug)
 
         return success_response(None, 'Chain deleted successfully', 200)
 

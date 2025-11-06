@@ -4,13 +4,14 @@ Badge routes
 from flask import Blueprint, request
 from datetime import datetime
 from marshmallow import ValidationError
+from sqlalchemy.orm import joinedload
 
 from extensions import db
 from models.badge import ValidationBadge
 from models.project import Project
 from schemas.badge import BadgeAwardSchema
 from utils.decorators import admin_required, token_required
-from utils.helpers import success_response, error_response
+from utils.helpers import success_response, error_response, get_pagination_params
 from utils.scores import ProofScoreCalculator
 from utils.cache import CacheService
 
@@ -47,6 +48,7 @@ def award_badge(user_id):
         db.session.commit()
         CacheService.invalidate_project(validated_data['project_id'])
         CacheService.invalidate_leaderboard()  # Badges affect leaderboard
+        CacheService.invalidate_project_badges(validated_data['project_id'])  # Invalidate badges cache
 
         # Emit Socket.IO event for real-time badge notifications
         from services.socket_service import SocketService
@@ -64,10 +66,23 @@ def award_badge(user_id):
 
 @badges_bp.route('/<project_id>', methods=['GET'])
 def get_project_badges(project_id):
-    """Get badges for a project"""
+    """Get badges for a project with caching"""
     try:
-        badges = ValidationBadge.query.filter_by(project_id=project_id).all()
+        # Check cache first (1 hour TTL)
+        cached = CacheService.get_cached_project_badges(project_id)
+        if cached:
+            return success_response(cached, 'Badges retrieved', 200)
+
+        # OPTIMIZED: Eager load validator to prevent N+1 queries
+        badges = ValidationBadge.query.filter_by(project_id=project_id)\
+            .options(joinedload(ValidationBadge.validator))\
+            .order_by(ValidationBadge.created_at.desc())\
+            .all()
+
         data = [b.to_dict(include_validator=True) for b in badges]
+
+        # Cache the results
+        CacheService.cache_project_badges(project_id, data, ttl=3600)
 
         return success_response(data, 'Badges retrieved', 200)
     except Exception as e:

@@ -171,12 +171,16 @@ def get_conversation_with_user(user_id, other_user_id):
                 'message': 'User not found'
             }), 404
 
-        # Get all messages between current user and specified user
+        # OPTIMIZED: Get all messages with eager loading to prevent N+1 queries
+        from sqlalchemy.orm import joinedload
         messages = DirectMessage.query.filter(
             or_(
                 and_(DirectMessage.sender_id == user_id, DirectMessage.recipient_id == other_user_id),
                 and_(DirectMessage.sender_id == other_user_id, DirectMessage.recipient_id == user_id)
             )
+        ).options(
+            joinedload(DirectMessage.sender),
+            joinedload(DirectMessage.recipient)
         ).order_by(DirectMessage.created_at.asc()).all()
 
         # Mark messages as read

@@ -26,18 +26,33 @@ def get_comments(user_id):
 
         page, per_page = get_pagination_params(request)
 
+        # OPTIMIZED: Check cache first (10 min TTL)
+        from utils.cache import CacheService
+        cached = CacheService.get_cached_comments(project_id, page)
+        if cached:
+            from flask import jsonify
+            return jsonify(cached), 200
+
         project = Project.query.get(project_id)
         if not project:
             return error_response('Not found', 'Project not found', 404)
 
-        # Get root-level comments (not replies)
+        # OPTIMIZED: Eager load author to avoid N+1 queries
+        from sqlalchemy.orm import joinedload
         query = Comment.query.filter_by(project_id=project_id, parent_id=None, is_deleted=False)
+        query = query.options(joinedload(Comment.author))  # Eager load authors
+
         total = query.count()
         comments = query.order_by(Comment.created_at.desc()).limit(per_page).offset((page - 1) * per_page).all()
 
         data = [c.to_dict(include_author=True) for c in comments]
 
-        return paginated_response(data, total, page, per_page)
+        response = paginated_response(data, total, page, per_page)
+
+        # Cache for 10 minutes
+        CacheService.cache_comments(project_id, page, response.get_json(), ttl=600)
+
+        return response
     except Exception as e:
         return error_response('Error', str(e), 500)
 
@@ -67,9 +82,10 @@ def create_comment(user_id):
         db.session.add(comment)
         db.session.commit()
 
-        # Invalidate project cache (comment count changed)
+        # Invalidate project cache and comments cache
         from utils.cache import CacheService
         CacheService.invalidate_project(validated_data['project_id'])
+        CacheService.invalidate_project_comments(validated_data['project_id'])
 
         # Emit Socket.IO event for real-time updates
         from services.socket_service import SocketService
@@ -105,9 +121,10 @@ def update_comment(user_id, comment_id):
 
         db.session.commit()
 
-        # Invalidate project cache
+        # Invalidate project cache and comments cache
         from utils.cache import CacheService
         CacheService.invalidate_project(comment.project_id)
+        CacheService.invalidate_project_comments(comment.project_id)
 
         # Emit Socket.IO event for real-time updates
         from services.socket_service import SocketService
@@ -137,9 +154,10 @@ def delete_comment(user_id, comment_id):
         comment.is_deleted = True
         db.session.commit()
 
-        # Invalidate project cache
+        # Invalidate project cache and comments cache
         from utils.cache import CacheService
         CacheService.invalidate_project(comment.project_id)
+        CacheService.invalidate_project_comments(comment.project_id)
 
         # Emit Socket.IO event for real-time updates
         from services.socket_service import SocketService
@@ -172,9 +190,10 @@ def vote_comment(user_id, comment_id):
 
         db.session.commit()
 
-        # Invalidate project cache (comment votes changed)
+        # Invalidate project cache and comments cache
         from utils.cache import CacheService
         CacheService.invalidate_project(comment.project_id)
+        CacheService.invalidate_project_comments(comment.project_id)
 
         # Emit Socket.IO event for real-time updates
         from services.socket_service import SocketService

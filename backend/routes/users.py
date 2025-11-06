@@ -72,8 +72,15 @@ def get_user_profile(user_id, username):
         if not user:
             return error_response('Not found', 'User not found', 404)
 
+        # OPTIMIZED: Use a single query with count instead of lazy loading
+        from sqlalchemy import func
+        project_count = db.session.query(func.count(Project.id)).filter(
+            Project.user_id == user.id,
+            Project.is_deleted == False
+        ).scalar() or 0
+
         profile = user.to_dict()
-        profile['project_count'] = user.projects.count()
+        profile['project_count'] = project_count
         profile['karma'] = user.karma
 
         # Build response data
@@ -137,15 +144,34 @@ def get_user_stats(user_id):
         if not user:
             return error_response('Not found', 'User not found', 404)
 
+        # OPTIMIZED: Single query to get all counts at once
+        from sqlalchemy import func
+        from models.comment import Comment
+        from models.badge import ValidationBadge
+        from models.intro import Intro
+
+        counts = db.session.query(
+            func.count(Project.id.distinct()).label('project_count'),
+            func.count(Comment.id.distinct()).label('comment_count'),
+            func.count(ValidationBadge.id.distinct()).label('badges_awarded'),
+        ).outerjoin(Project, db.and_(Project.user_id == user_id, Project.is_deleted == False))\
+         .outerjoin(Comment, Comment.user_id == user_id)\
+         .outerjoin(ValidationBadge, ValidationBadge.validator_id == user_id)\
+         .first()
+
+        # Get intro counts separately (simpler query)
+        intros_sent = db.session.query(func.count(Intro.id)).filter(Intro.requester_id == user_id).scalar() or 0
+        intros_received = db.session.query(func.count(Intro.id)).filter(Intro.recipient_id == user_id).scalar() or 0
+
         stats = {
             'user_id': user_id,
             'username': user.username,
-            'project_count': user.projects.count(),
-            'comment_count': user.comments.count(),
+            'project_count': counts.project_count or 0,
+            'comment_count': counts.comment_count or 0,
             'karma': user.karma,
-            'badges_awarded': user.badges_awarded.count(),
-            'intros_sent': user.intros_sent.count(),
-            'intros_received': user.intros_received.count(),
+            'badges_awarded': counts.badges_awarded or 0,
+            'intros_sent': intros_sent,
+            'intros_received': intros_received,
         }
 
         return success_response(stats, 'User stats retrieved', 200)
@@ -167,10 +193,13 @@ def get_user_projects(current_user_id, user_id):
             from flask import jsonify
             return jsonify(cached), 200
 
-        # Query projects for this user
+        # OPTIMIZED: Eager load creator to avoid N+1
+        from sqlalchemy.orm import joinedload
         query = Project.query.filter_by(user_id=user_id, is_deleted=False)
+        query = query.options(joinedload(Project.creator))
         query = query.order_by(Project.created_at.desc())
 
+        # OPTIMIZED: Get count efficiently
         total = query.count()
         projects = query.limit(per_page).offset((page - 1) * per_page).all()
 
@@ -218,14 +247,16 @@ def get_user_tagged_projects(current_user_id, user_id):
         # Note: team_members is JSON, so we need to cast it to JSONB first
         from sqlalchemy import cast
         from sqlalchemy.dialects.postgresql import JSONB
+        from sqlalchemy.orm import joinedload
 
+        # OPTIMIZED: Eager load creator to avoid N+1
         query = Project.query.filter(
             and_(
                 Project.user_id != user_id,  # Not the author
                 Project.is_deleted == False,
                 cast(Project.team_members, JSONB).op('@>')(cast([{'user_id': user_id}], JSONB))  # User is in team_members
             )
-        ).order_by(Project.created_at.desc())
+        ).options(joinedload(Project.creator)).order_by(Project.created_at.desc())
 
         total = query.count()
         projects = query.limit(per_page).offset((page - 1) * per_page).all()

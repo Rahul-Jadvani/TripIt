@@ -90,16 +90,26 @@ def get_cert_info(user_id, wallet_address):
         if not validate_ethereum_address(wallet_address):
             return error_response('Invalid address', 'Invalid Ethereum address format', 400)
 
+        # Check cache first (30 minutes TTL to reduce blockchain calls)
+        cached = CacheService.get_cached_cert_info(wallet_address)
+        if cached:
+            return success_response(cached, 'Cert info retrieved', 200)
+
         result = BlockchainService.check_oxcert_ownership(wallet_address)
 
         if result['error']:
             return error_response('Check failed', result['error'], 500)
 
-        return success_response({
+        response_data = {
             'wallet_address': wallet_address,
             'has_cert': result['has_cert'],
             'balance': result['balance']
-        }, 'Cert info retrieved', 200)
+        }
+
+        # Cache the result
+        CacheService.cache_cert_info(wallet_address, response_data, ttl=1800)
+
+        return success_response(response_data, 'Cert info retrieved', 200)
 
     except Exception as e:
         return error_response('Error', str(e), 500)

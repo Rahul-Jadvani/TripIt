@@ -92,6 +92,41 @@ export function usePrefetch() {
           }),
         ];
 
+        // Prefetch chains (public data) - MUST match useChains query key format
+        const chainsPromises = [
+          queryClient.prefetchQuery({
+            queryKey: ['chains', {
+              search: '',
+              sort: 'trending',
+              category: undefined,
+              featured: false,
+              page: 1,
+              limit: 12
+            }],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/chains?page=1&limit=12&sort=trending`);
+              const data = await response.json();
+              return data.status === 'success' ? data.data : { chains: [], total: 0 };
+            },
+            staleTime: 1000 * 60 * 5,
+          }),
+        ];
+
+        // Prefetch investors directory (public data)
+        const investorsPromises = [
+          queryClient.prefetchQuery({
+            queryKey: ['investors', 'public'],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/investor-requests/public`);
+              const data = await response.json();
+              return data.status === 'success' ? data.data : [];
+            },
+            staleTime: 1000 * 60 * 5,
+          }),
+        ];
+
         // Prefetch intros and messages (for logged-in users)
         const token = localStorage.getItem('token');
         const userDataPromises = token ? [
@@ -102,7 +137,7 @@ export function usePrefetch() {
               const response = await introsService.getReceived();
               return response.data;
             },
-            staleTime: 1000 * 60 * 2,
+            staleTime: 1000 * 60 * 5,
           }),
           // Prefetch sent intros
           queryClient.prefetchQuery({
@@ -111,7 +146,37 @@ export function usePrefetch() {
               const response = await introsService.getSent();
               return response.data;
             },
-            staleTime: 1000 * 60 * 2,
+            staleTime: 1000 * 60 * 5,
+          }),
+          // Prefetch intro requests (received)
+          queryClient.prefetchQuery({
+            queryKey: ['intro-requests', 'received'],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/intro-requests/received`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data.data : [];
+            },
+            staleTime: 1000 * 60 * 5,
+          }),
+          // Prefetch intro requests (sent)
+          queryClient.prefetchQuery({
+            queryKey: ['intro-requests', 'sent'],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/intro-requests/sent`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data.data : [];
+            },
+            staleTime: 1000 * 60 * 5,
           }),
           // Prefetch message conversations
           queryClient.prefetchQuery({
@@ -126,7 +191,7 @@ export function usePrefetch() {
               const data = await response.json();
               return data.status === 'success' ? data.data : [];
             },
-            staleTime: 1000 * 30,
+            staleTime: 1000 * 60 * 5,
           }),
         ] : [];
 
@@ -135,6 +200,8 @@ export function usePrefetch() {
         const results = await Promise.allSettled([
           ...feedPromises,
           ...leaderboardPromises,
+          ...chainsPromises,
+          ...investorsPromises,
           ...userDataPromises,
         ]);
 
@@ -144,11 +211,17 @@ export function usePrefetch() {
         const successful = results.filter(r => r.status === 'fulfilled').length;
         const failed = results.filter(r => r.status === 'rejected').length;
 
-        console.log(`[Prefetch] Completed in ${duration}ms`);
-        console.log(`[Prefetch] Successful: ${successful}, Failed: ${failed}`);
+        console.log(`%c[Prefetch] Completed in ${duration}ms`, 'color: #10b981; font-weight: bold');
+        console.log(`%c[Prefetch] ✓ Successful: ${successful} | ✗ Failed: ${failed}`, 'color: #6366f1');
+        console.log(`%c[Prefetch] Cached: Feed (5 pages), Leaderboards (2), Chains (1), Investors (1)${token ? ', Intros (4), Messages (1)' : ''}`, 'color: #8b5cf6');
 
         if (failed > 0) {
           console.warn('[Prefetch] Some requests failed, but app will continue normally');
+          results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+              console.error(`[Prefetch] Failed request ${index}:`, result.reason);
+            }
+          });
         }
       } catch (error) {
         // Silent fail - prefetch errors shouldn't break the app

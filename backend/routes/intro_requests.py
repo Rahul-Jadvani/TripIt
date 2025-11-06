@@ -2,12 +2,15 @@
 Intro Request Routes
 """
 from flask import Blueprint, request, jsonify
+from sqlalchemy.orm import joinedload
 from extensions import db
 from models.intro_request import IntroRequest
 from models.project import Project
 from models.user import User
 from models.direct_message import DirectMessage
 from utils.decorators import token_required
+from utils.helpers import get_pagination_params, paginated_response
+from utils.cache import CacheService
 
 
 intro_requests_bp = Blueprint('intro_requests', __name__, url_prefix='/api/intro-requests')
@@ -80,6 +83,10 @@ def send_intro_request(user_id):
         db.session.add(intro_request)
         db.session.commit()
 
+        # Invalidate cache for both users
+        CacheService.invalidate_intro_requests(user_id)
+        CacheService.invalidate_intro_requests(project.user_id)
+
         return jsonify({
             'status': 'success',
             'message': 'Intro request sent successfully',
@@ -97,20 +104,46 @@ def send_intro_request(user_id):
 @intro_requests_bp.route('/received', methods=['GET'])
 @token_required
 def get_received_requests(user_id):
-    """Get intro requests received by current user (as builder)"""
+    """Get intro requests received by current user (as builder) with caching and pagination"""
     try:
-        status_filter = request.args.get('status')  # pending, accepted, declined
-        query = IntroRequest.query.filter_by(builder_id=user_id)
+        page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
+        status_filter = request.args.get('status', 'all')  # pending, accepted, declined, all
 
-        if status_filter:
+        # Check cache first
+        cached = CacheService.get_cached_intro_requests(user_id, f'received:{status_filter}', page)
+        if cached:
+            return jsonify(cached), 200
+
+        # OPTIMIZED: Eager load relationships to prevent N+1 queries
+        query = IntroRequest.query.filter_by(builder_id=user_id)\
+            .options(
+                joinedload(IntroRequest.investor),
+                joinedload(IntroRequest.builder),
+                joinedload(IntroRequest.project)
+            )
+
+        if status_filter and status_filter != 'all':
             query = query.filter_by(status=status_filter)
 
-        requests = query.order_by(IntroRequest.created_at.desc()).all()
+        total = query.count()
+        requests = query.order_by(IntroRequest.created_at.desc())\
+            .limit(per_page).offset((page - 1) * per_page).all()
 
-        return jsonify({
+        response_data = {
             'status': 'success',
-            'data': [req.to_dict(include_project=True, include_users=True) for req in requests]
-        }), 200
+            'data': [req.to_dict(include_project=True, include_users=True) for req in requests],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+
+        # Cache the results (5 minutes)
+        CacheService.cache_intro_requests(user_id, f'received:{status_filter}', page, response_data, ttl=300)
+
+        return jsonify(response_data), 200
 
     except Exception as e:
         return jsonify({
@@ -122,20 +155,46 @@ def get_received_requests(user_id):
 @intro_requests_bp.route('/sent', methods=['GET'])
 @token_required
 def get_sent_requests(user_id):
-    """Get intro requests sent by current user (as investor)"""
+    """Get intro requests sent by current user (as investor) with caching and pagination"""
     try:
-        status_filter = request.args.get('status')  # pending, accepted, declined
-        query = IntroRequest.query.filter_by(investor_id=user_id)
+        page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
+        status_filter = request.args.get('status', 'all')  # pending, accepted, declined, all
 
-        if status_filter:
+        # Check cache first
+        cached = CacheService.get_cached_intro_requests(user_id, f'sent:{status_filter}', page)
+        if cached:
+            return jsonify(cached), 200
+
+        # OPTIMIZED: Eager load relationships to prevent N+1 queries
+        query = IntroRequest.query.filter_by(investor_id=user_id)\
+            .options(
+                joinedload(IntroRequest.investor),
+                joinedload(IntroRequest.builder),
+                joinedload(IntroRequest.project)
+            )
+
+        if status_filter and status_filter != 'all':
             query = query.filter_by(status=status_filter)
 
-        requests = query.order_by(IntroRequest.created_at.desc()).all()
+        total = query.count()
+        requests = query.order_by(IntroRequest.created_at.desc())\
+            .limit(per_page).offset((page - 1) * per_page).all()
 
-        return jsonify({
+        response_data = {
             'status': 'success',
-            'data': [req.to_dict(include_project=True, include_users=True) for req in requests]
-        }), 200
+            'data': [req.to_dict(include_project=True, include_users=True) for req in requests],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': (total + per_page - 1) // per_page
+            }
+        }
+
+        # Cache the results (5 minutes)
+        CacheService.cache_intro_requests(user_id, f'sent:{status_filter}', page, response_data, ttl=300)
+
+        return jsonify(response_data), 200
 
     except Exception as e:
         return jsonify({
@@ -177,6 +236,10 @@ def accept_request(user_id, request_id):
         db.session.add(initial_message)
         db.session.commit()
 
+        # Invalidate cache for both users
+        CacheService.invalidate_intro_requests(user_id)
+        CacheService.invalidate_intro_requests(intro_request.investor_id)
+
         return jsonify({
             'status': 'success',
             'message': 'Intro request accepted and conversation started',
@@ -213,6 +276,10 @@ def decline_request(user_id, request_id):
         # Update status
         intro_request.status = 'declined'
         db.session.commit()
+
+        # Invalidate cache for both users
+        CacheService.invalidate_intro_requests(user_id)
+        CacheService.invalidate_intro_requests(intro_request.investor_id)
 
         return jsonify({
             'status': 'success',

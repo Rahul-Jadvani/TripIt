@@ -487,6 +487,8 @@ def upvote_project(user_id, project_id):
         db.session.commit()
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_leaderboard()  # Vote affects leaderboard
+        CacheService.invalidate_user_votes(user_id)  # User's votes changed
+        CacheService.invalidate_project_feed()  # Vote score affects feed sorting
 
         # Emit Socket.IO event for real-time vote updates
         from services.socket_service import SocketService

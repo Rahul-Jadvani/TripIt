@@ -23,6 +23,16 @@ def get_notifications(user_id):
         unread_only = request.args.get('unread_only', '').lower() == 'true'
         types = request.args.get('types', '').strip()
 
+        # OPTIMIZED: Create cache key from filters
+        from utils.cache import CacheService
+        filters_key = f"{unread_only}:{types}"
+
+        # Check cache first (5 min TTL)
+        cached = CacheService.get_cached_notifications(user_id, page, filters_key)
+        if cached:
+            from flask import jsonify
+            return jsonify(cached), 200
+
         # Build query
         query = Notification.query.filter_by(user_id=user_id)
 
@@ -48,19 +58,31 @@ def get_notifications(user_id):
             notif.to_dict(include_relations=True) for notif in notifications
         ]
 
-        # Get unread count
-        unread_count = get_unread_count(user_id)
+        # OPTIMIZED: Check cached unread count first
+        unread_count = CacheService.get_cached_unread_count(user_id)
+        if unread_count is None:
+            unread_count = get_unread_count(user_id)
+            CacheService.cache_unread_count(user_id, unread_count, ttl=300)
 
-        return success_response({
-            'notifications': notifications_data,
-            'unread_count': unread_count,
-            'pagination': {
-                'page': page,
-                'limit': per_page,
-                'total': total,
-                'pages': (total + per_page - 1) // per_page
+        response_data = {
+            'status': 'success',
+            'message': 'Notifications retrieved successfully',
+            'data': {
+                'notifications': notifications_data,
+                'unread_count': unread_count,
+                'pagination': {
+                    'page': page,
+                    'limit': per_page,
+                    'total': total,
+                    'pages': (total + per_page - 1) // per_page
+                }
             }
-        }, 'Notifications retrieved successfully', 200)
+        }
+
+        # Cache for 5 minutes
+        CacheService.cache_notifications(user_id, page, filters_key, response_data, ttl=300)
+
+        return success_response(response_data['data'], response_data['message'], 200)
 
     except Exception as e:
         return error_response('Error', str(e), 500)
@@ -68,7 +90,7 @@ def get_notifications(user_id):
 
 @notifications_bp.route('/<notification_id>/read', methods=['PUT'])
 @token_required
-def mark_notification_read(notification_id, user_id):
+def mark_notification_read(user_id, notification_id):
     """Mark notification as read"""
     try:
         notification = Notification.query.get(notification_id)
@@ -82,6 +104,10 @@ def mark_notification_read(notification_id, user_id):
 
         # Mark as read
         notification.mark_as_read()
+
+        # Invalidate cache
+        from utils.cache import CacheService
+        CacheService.invalidate_user_notifications(user_id)
 
         return success_response(
             notification.to_dict(include_relations=True),
@@ -101,6 +127,10 @@ def mark_all_notifications_read(user_id):
     try:
         count = mark_all_as_read(user_id)
 
+        # Invalidate cache
+        from utils.cache import CacheService
+        CacheService.invalidate_user_notifications(user_id)
+
         return success_response(
             {'count': count},
             f'{count} notifications marked as read',
@@ -117,7 +147,13 @@ def mark_all_notifications_read(user_id):
 def get_unread_notification_count(user_id):
     """Get unread notification count"""
     try:
-        count = get_unread_count(user_id)
+        # OPTIMIZED: Check cache first
+        from utils.cache import CacheService
+        count = CacheService.get_cached_unread_count(user_id)
+
+        if count is None:
+            count = get_unread_count(user_id)
+            CacheService.cache_unread_count(user_id, count, ttl=300)
 
         return success_response(
             {'unread_count': count},
