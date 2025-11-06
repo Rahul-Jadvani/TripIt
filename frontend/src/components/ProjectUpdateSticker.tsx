@@ -24,6 +24,10 @@ interface ProjectUpdateStickerProps {
   canDelete?: boolean;
   position?: { x: number; y: number };
   onPositionChange?: (id: string, position: { x: number; y: number }) => void;
+  // If provided, use this image as the note background (text overlays it)
+  noteImageSrc?: string;
+  // Optional safe insets for content when using an image background
+  contentSafeArea?: { top?: number; right?: number; bottom?: number; left?: number };
 }
 
 const colorClasses = {
@@ -45,10 +49,13 @@ const getIcon = (type: string) => {
   }
 };
 
-export function ProjectUpdateSticker({ update, index, onDelete, canDelete, position, onPositionChange }: ProjectUpdateStickerProps) {
+export function ProjectUpdateSticker({ update, index, onDelete, canDelete, position, onPositionChange, noteImageSrc, contentSafeArea }: ProjectUpdateStickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
+  const noteRef = useRef<HTMLDivElement | null>(null);
+  const posRef = useRef<{ x: number; y: number }>({ x: position?.x || 0, y: position?.y || 0 });
+  const rafRef = useRef<number | null>(null);
 
   // Rotation and position for post-it note effect
   const rotations = ['rotate-[-2deg]', 'rotate-[1deg]', 'rotate-[-1deg]', 'rotate-[2deg]', 'rotate-[-3deg]'];
@@ -56,77 +63,105 @@ export function ProjectUpdateSticker({ update, index, onDelete, canDelete, posit
 
   const colorClass = colorClasses[update.color as keyof typeof colorClasses] || colorClasses.yellow;
 
-  const handleDragStart = (e: React.MouseEvent) => {
-    // Only drag from the drag handle area (top part)
+  const renderAt = (x: number, y: number) => {
+    const el = noteRef.current;
+    if (!el) return;
+    el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  };
+
+  // Initialize position from prop and keep in sync
+  useEffect(() => {
+    posRef.current = { x: position?.x || 0, y: position?.y || 0 };
+    renderAt(posRef.current.x, posRef.current.y);
+  }, [position?.x, position?.y]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     if (!target.closest('.drag-handle')) return;
 
-    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setIsDragging(true);
-
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
-      initialX: position?.x || 0,
-      initialY: position?.y || 0,
+      startPosX: posRef.current.x,
+      startPosY: posRef.current.y,
     };
   };
 
-  const handleDragMove = (e: MouseEvent) => {
+  const handlePointerMove = (e: PointerEvent) => {
     if (!isDragging || !dragRef.current) return;
-
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    onPositionChange?.(update.id, {
-      x: dragRef.current.initialX + deltaX,
-      y: dragRef.current.initialY + deltaY,
-    });
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    const next = { x: dragRef.current.startPosX + dx, y: dragRef.current.startPosY + dy };
+    posRef.current = next;
+    if (rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        renderAt(posRef.current.x, posRef.current.y);
+      });
+    }
   };
 
-  const handleDragEnd = () => {
+  const handlePointerUp = () => {
     setIsDragging(false);
     dragRef.current = null;
+    // Persist final position to parent (optional)
+    onPositionChange?.(update.id, posRef.current);
   };
 
-  // Add/remove global mouse event listeners
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener('mousemove', handleDragMove);
-      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('pointermove', handlePointerMove, { passive: true } as any);
+      window.addEventListener('pointerup', handlePointerUp, { passive: true } as any);
     }
-
     return () => {
-      window.removeEventListener('mousemove', handleDragMove);
-      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('pointermove', handlePointerMove as any);
+      window.removeEventListener('pointerup', handlePointerUp as any);
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     };
   }, [isDragging]);
+
+  const sizeClasses = noteImageSrc
+    ? 'w-48 h-48 sm:w-52 sm:h-52 p-0'
+    : 'w-40 h-32 p-3 border-2 border-l-4 border-t-0';
+
+  const containerClasses = [
+    isDragging ? 'rotate-0 scale-105' : rotation,
+    'relative rounded-[12px] overflow-hidden will-change-transform shadow-lg',
+    sizeClasses,
+    'transition-all duration-200 hover:scale-105 hover:shadow-xl hover:rotate-0',
+    !noteImageSrc ? `${colorClass} before:absolute before:top-0 before:left-0 before:right-0 before:h-2 before:bg-gradient-to-b before:from-black/5 before:to-transparent` : ''
+  ].join(' ');
 
   return (
     <>
       {/* Post-it Note */}
       <div
-        className={`
-          ${colorClass} ${isDragging ? 'rotate-0 scale-105' : rotation}
-          relative w-40 h-32 p-3 border-2 border-l-4 border-t-0
-          shadow-lg
-          transition-all duration-200 hover:scale-105 hover:shadow-xl hover:rotate-0
-          before:absolute before:top-0 before:left-0 before:right-0 before:h-2
-          before:bg-gradient-to-b before:from-black/5 before:to-transparent
-        `}
+        className={containerClasses}
         style={{
-          fontFamily: "'Comic Sans MS', cursive",
+          fontFamily: "'Patrick Hand', 'Caveat', cursive",
           position: 'absolute',
-          left: `${position?.x || 0}px`,
-          top: `${position?.y || 0}px`,
         }}
+        ref={noteRef}
+        onPointerDown={handlePointerDown}
       >
+        {/* Background note image (replaces styled card) */}
+        {noteImageSrc && (
+          <img
+            src={noteImageSrc}
+            alt="Note"
+            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none z-10"
+          />
+        )}
         {/* Drag Handle - Pin effect area */}
         <div
-          className="drag-handle absolute -top-2 left-0 right-0 h-6 flex items-center justify-center cursor-grab active:cursor-grabbing"
-          onMouseDown={handleDragStart}
+          className="drag-handle absolute inset-x-0 top-0 h-8 flex items-center justify-center cursor-grab active:cursor-grabbing z-20"
         >
-          <div className="w-3 h-3 rounded-full bg-red-500 shadow-md border-2 border-white" />
+          {!noteImageSrc && (
+            <img src="/pin3.png" alt="Pin" className="h-5 w-5 select-none pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.45)]" />
+          )}
         </div>
 
         {/* Delete button (if can delete) */}
@@ -136,18 +171,26 @@ export function ProjectUpdateSticker({ update, index, onDelete, canDelete, posit
               e.stopPropagation();
               onDelete?.(update.id);
             }}
-            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center hover:scale-110 transition-transform"
+            className="absolute top-2 right-2 z-30 w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center hover:scale-110 transition-transform shadow-md"
+            aria-label="Remove note"
+            type="button"
           >
-            <X className="h-3 w-3" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
 
         {/* Content - clickable to open dialog */}
         <div
           onClick={() => !isDragging && setIsOpen(true)}
-          className="cursor-pointer"
+          className={noteImageSrc ? 'cursor-pointer absolute z-30' : 'cursor-pointer relative z-30'}
+          style={noteImageSrc ? {
+            top: `${contentSafeArea?.top ?? 68}px`,
+            left: `${contentSafeArea?.left ?? 16}px`,
+            right: `${contentSafeArea?.right ?? 16}px`,
+            bottom: `${contentSafeArea?.bottom ?? 36}px`,
+          } : undefined}
         >
-          <div className="flex items-start gap-2 mb-2">
+          <div className="flex items-start gap-2 mb-2 overflow-hidden">
             <div className="text-gray-700 flex-shrink-0">
               {getIcon(update.update_type)}
             </div>
@@ -157,15 +200,17 @@ export function ProjectUpdateSticker({ update, index, onDelete, canDelete, posit
           </div>
 
           {update.content && (
-            <p className="text-xs text-gray-700 line-clamp-3">
+            <p className="text-xs text-gray-700 line-clamp-3 overflow-hidden">
               {update.content}
             </p>
           )}
 
-          <div className="absolute bottom-2 right-2 text-xs text-gray-600">
+          <div className="absolute bottom-3 right-3 text-xs text-gray-600">
             {new Date(update.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </div>
         </div>
+        {/* folded corner */}
+        <span className="pointer-events-none absolute bottom-0 right-0 w-0 h-0 border-l-[16px] border-t-[16px] border-l-transparent border-t-white/40" />
       </div>
 
       {/* Expanded Dialog */}

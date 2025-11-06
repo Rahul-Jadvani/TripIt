@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useChain, useChainProjects } from '@/hooks/useChains';
 import { useBanChain, useSuspendChain, useUnbanChain, useDeleteChainAdmin, useToggleChainFeatured } from '@/hooks/useAdminChains';
 import { ChainHeader } from '@/components/ChainHeader';
+import { ChainHeaderSkeleton } from '@/components/ChainHeaderSkeleton';
+import { GallerySkeletonGrid } from '@/components/ProjectCardSkeleton';
 import { ProjectCard } from '@/components/ProjectCard';
 import { AddProjectToChainDialog } from '@/components/AddProjectToChainDialog';
 import { ChainPostList } from '@/components/ChainPostList';
@@ -13,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, TrendingUp, Clock, ThumbsUp, Zap, Shield, Ban, Star, Trash2, BarChart3 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
@@ -97,8 +100,24 @@ export default function ChainDetailPage() {
 
   if (chainLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <Button asChild variant="ghost" className="gap-2 w-fit">
+          <Link to="/chains">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Chains
+          </Link>
+        </Button>
+
+        <ChainHeaderSkeleton />
+
+        {/* Projects skeleton grid */}
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-6 w-24 rounded" />
+            <Skeleton className="h-10 w-44 rounded" />
+          </div>
+          <GallerySkeletonGrid count={12} />
+        </div>
       </div>
     );
   }
@@ -278,9 +297,7 @@ export default function ChainDetailPage() {
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-6">
           {projectsLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <GallerySkeletonGrid count={12} />
           ) : projectsError ? (
             <Card className="p-8 text-center">
               <p className="text-destructive">Failed to load projects</p>

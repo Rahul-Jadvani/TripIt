@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Building2, MapPin, DollarSign, Target, Users, Twitter, Linkedin, Globe, Filter, MessageSquare, Send } from 'lucide-react';
+import { InvestorCardSkeletonGrid } from '@/components/InvestorCardSkeleton';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -310,10 +311,7 @@ export default function Investors() {
 
         {/* Investors Grid */}
         {loading ? (
-          <div className="text-center py-20">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-            <p className="mt-4 text-muted-foreground">Loading investors...</p>
-          </div>
+          <InvestorCardSkeletonGrid count={6} />
         ) : filteredInvestors.length === 0 ? (
           <Card>
             <CardContent className="py-20 text-center">
@@ -328,7 +326,10 @@ export default function Investors() {
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
             {filteredInvestors.map((investor) => (
-              <Card key={investor.id} className="hover:shadow-lg transition-all">
+              <Card
+                key={investor.id}
+                className="card-interactive hover:shadow-lg transition-all rounded-xl border border-border/60 bg-card/80"
+              >
                 <CardContent className="p-6">
                   {/* Header */}
                   <div className="flex items-start justify-between mb-4">
@@ -336,7 +337,12 @@ export default function Investors() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-xl font-bold">{investor.name || investor.user?.username}</h3>
                         {investor.open_to_requests && (
-                          <Badge className="text-xs">Open to Requests</Badge>
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase cursor-default select-none"
+                            aria-label="Open to Requests"
+                          >
+                            Open to Requests
+                          </span>
                         )}
                       </div>
                       {investor.position_title && (
@@ -349,7 +355,7 @@ export default function Investors() {
                         </p>
                       )}
                     </div>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded-full">
                       {investor.investor_type === 'individual' ? 'Individual' : 'Fund'}
                     </Badge>
                   </div>
@@ -448,14 +454,14 @@ export default function Investors() {
                   )}
 
                   {/* Links and Actions */}
-                  <div className="flex gap-2 pt-4 border-t flex-wrap">
+                  <div className="flex gap-2 pt-4 border-t border-border/40 flex-wrap items-center">
                     {/* Social Links */}
                     {investor.linkedin_url && (
                       <a
                         href={investor.linkedin_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-secondary text-xs px-3 py-1 flex items-center gap-1"
+                        className="btn-secondary text-xs px-3 py-1 h-8 flex items-center gap-1 rounded-full"
                       >
                         <Linkedin className="h-3 w-3" />
                         LinkedIn
@@ -466,7 +472,7 @@ export default function Investors() {
                         href={investor.twitter_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-secondary text-xs px-3 py-1 flex items-center gap-1"
+                        className="btn-secondary text-xs px-3 py-1 h-8 flex items-center gap-1 rounded-full"
                       >
                         <Twitter className="h-3 w-3" />
                         Twitter
@@ -477,7 +483,7 @@ export default function Investors() {
                         href={investor.website_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-secondary text-xs px-3 py-1 flex items-center gap-1"
+                        className="btn-secondary text-xs px-3 py-1 h-8 flex items-center gap-1 rounded-full"
                       >
                         <Globe className="h-3 w-3" />
                         Website
@@ -490,7 +496,7 @@ export default function Investors() {
                         size="sm"
                         variant="outline"
                         onClick={() => navigate(`/u/${investor.user?.username}`)}
-                        className="text-xs px-3 py-1 h-auto"
+                        className="text-xs px-3 py-1 h-8 rounded-full"
                       >
                         View Profile
                       </Button>
@@ -498,7 +504,7 @@ export default function Investors() {
                         size="sm"
                         variant="default"
                         onClick={() => navigate('/intros')}
-                        className="text-xs px-3 py-1 h-auto gap-1"
+                        className="text-xs px-3 py-1 h-8 gap-1 rounded-full"
                       >
                         <Send className="h-3 w-3" />
                         Request Intro
