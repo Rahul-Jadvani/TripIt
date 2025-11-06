@@ -138,43 +138,56 @@ def update_profile(user_id):
 @users_bp.route('/stats', methods=['GET'])
 @token_required
 def get_user_stats(user_id):
-    """Get user statistics"""
+    """Get user statistics (FAST - uses denormalized table)"""
     try:
         user = User.query.get(user_id)
         if not user:
             return error_response('Not found', 'User not found', 404)
 
-        # OPTIMIZED: Single query to get all counts at once
-        from sqlalchemy import func
-        from models.comment import Comment
-        from models.badge import ValidationBadge
-        from models.intro import Intro
+        # ULTRA-FAST: Query denormalized stats table (no joins, instant!)
+        from sqlalchemy import text
+        result = db.session.execute(
+            text("SELECT * FROM user_dashboard_stats WHERE user_id = :user_id"),
+            {'user_id': user_id}
+        ).fetchone()
 
-        counts = db.session.query(
-            func.count(Project.id.distinct()).label('project_count'),
-            func.count(Comment.id.distinct()).label('comment_count'),
-            func.count(ValidationBadge.id.distinct()).label('badges_awarded'),
-        ).outerjoin(Project, db.and_(Project.user_id == user_id, Project.is_deleted == False))\
-         .outerjoin(Comment, Comment.user_id == user_id)\
-         .outerjoin(ValidationBadge, ValidationBadge.validator_id == user_id)\
-         .first()
+        if result:
+            # Convert row to dict
+            stats = dict(result._mapping)
+            # Add username for convenience
+            stats['username'] = user.username
+            # Map field names to match existing API
+            stats['badges_awarded'] = stats.get('badges_given', 0)
 
-        # Get intro counts separately (simpler query)
-        intros_sent = db.session.query(func.count(Intro.id)).filter(Intro.requester_id == user_id).scalar() or 0
-        intros_received = db.session.query(func.count(Intro.id)).filter(Intro.recipient_id == user_id).scalar() or 0
+            return success_response(stats, 'User stats retrieved', 200)
+        else:
+            # First time user - create empty stats entry
+            db.session.execute(
+                text("INSERT INTO user_dashboard_stats (user_id) VALUES (:user_id) ON CONFLICT (user_id) DO NOTHING"),
+                {'user_id': user_id}
+            )
+            db.session.commit()
 
-        stats = {
-            'user_id': user_id,
-            'username': user.username,
-            'project_count': counts.project_count or 0,
-            'comment_count': counts.comment_count or 0,
-            'karma': user.karma,
-            'badges_awarded': counts.badges_awarded or 0,
-            'intros_sent': intros_sent,
-            'intros_received': intros_received,
-        }
+            # Return default stats
+            stats = {
+                'user_id': user_id,
+                'username': user.username,
+                'project_count': 0,
+                'active_projects': 0,
+                'total_proof_score': 0,
+                'comment_count': 0,
+                'badges_given': 0,
+                'badges_awarded': 0,
+                'badges_received': 0,
+                'intros_sent': 0,
+                'intros_received': 0,
+                'intro_requests_pending': 0,
+                'karma_score': 0,
+                'unread_messages': 0,
+                'unread_notifications': 0,
+            }
+            return success_response(stats, 'User stats initialized', 200)
 
-        return success_response(stats, 'User stats retrieved', 200)
     except Exception as e:
         return error_response('Error', str(e), 500)
 

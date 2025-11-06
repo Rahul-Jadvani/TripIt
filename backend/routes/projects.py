@@ -23,7 +23,7 @@ projects_bp = Blueprint('projects', __name__)
 @projects_bp.route('', methods=['GET'])
 @optional_auth
 def list_projects(user_id):
-    """List projects with advanced filtering and sorting"""
+    """List projects with advanced filtering and sorting (FAST - uses materialized views)"""
     try:
         page, per_page = get_pagination_params(request)
         sort = request.args.get('sort', 'trending')  # trending, newest, top-rated, most-voted
@@ -49,7 +49,57 @@ def list_projects(user_id):
                 from flask import jsonify
                 return jsonify(cached), 200
 
-        # Build query
+        # ULTRA-FAST: Use materialized view for base feed (no filters)
+        if not has_filters:
+            from sqlalchemy import text
+
+            # Determine sort order
+            if sort == 'trending' or sort == 'hot':
+                order_by = 'trending_score DESC, created_at DESC'
+            elif sort == 'newest' or sort == 'new':
+                order_by = 'created_at DESC'
+            elif sort == 'top-rated' or sort == 'top':
+                order_by = 'proof_score DESC'
+            elif sort == 'most-voted':
+                order_by = 'total_votes DESC'
+            else:
+                order_by = 'trending_score DESC, created_at DESC'
+
+            # Query materialized view (10x faster!)
+            offset = (page - 1) * per_page
+            result = db.session.execute(text(f"""
+                SELECT * FROM mv_feed_projects
+                ORDER BY {order_by}
+                LIMIT :limit OFFSET :offset
+            """), {'limit': per_page, 'offset': offset})
+
+            projects_data = [dict(row._mapping) for row in result.fetchall()]
+
+            # Get total count from materialized view
+            total_result = db.session.execute(text("SELECT COUNT(*) FROM mv_feed_projects"))
+            total = total_result.scalar()
+
+            # Build response
+            total_pages = (total + per_page - 1) // per_page
+            response_data = {
+                'status': 'success',
+                'message': 'Success',
+                'data': projects_data,
+                'pagination': {
+                    'total': total,
+                    'page': page,
+                    'per_page': per_page,
+                    'total_pages': total_pages,
+                }
+            }
+
+            # Cache response
+            CacheService.cache_feed(page, sort, response_data, ttl=3600)
+
+            from flask import jsonify
+            return jsonify(response_data), 200
+
+        # Build query (for filtered requests - use ORM)
         query = Project.query.filter_by(is_deleted=False)
 
         # Search in title, description, tagline

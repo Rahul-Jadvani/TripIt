@@ -20,7 +20,7 @@ votes_bp = Blueprint('votes', __name__)
 @votes_bp.route('', methods=['POST'])
 @token_required
 def cast_vote(user_id):
-    """Cast or remove vote"""
+    """Cast or remove vote (FAST - uses Redis cache)"""
     try:
         data = request.get_json()
         schema = VoteCreateSchema()
@@ -33,7 +33,11 @@ def cast_vote(user_id):
         if not project:
             return error_response('Not found', 'Project not found', 404)
 
-        # Check if vote exists
+        # ULTRA-FAST: Check Redis cache first for instant response
+        from services.redis_cache_service import RedisUserCache
+        has_upvoted_in_cache = RedisUserCache.has_upvoted(user_id, project_id)
+
+        # Check database for ground truth
         existing_vote = Vote.query.filter_by(user_id=user_id, project_id=project_id).first()
 
         if existing_vote:
@@ -41,6 +45,8 @@ def cast_vote(user_id):
             if existing_vote.vote_type == vote_type:
                 if vote_type == 'up':
                     project.upvotes = max(0, project.upvotes - 1)
+                    # Update Redis cache instantly
+                    RedisUserCache.remove_upvote(user_id, project_id, sync_db=False)
                 else:
                     project.downvotes = max(0, project.downvotes - 1)
 
@@ -60,6 +66,7 @@ def cast_vote(user_id):
                 # Change vote type
                 if existing_vote.vote_type == 'up':
                     project.upvotes = max(0, project.upvotes - 1)
+                    RedisUserCache.remove_upvote(user_id, project_id, sync_db=False)
                 else:
                     project.downvotes = max(0, project.downvotes - 1)
 
@@ -67,6 +74,8 @@ def cast_vote(user_id):
 
                 if vote_type == 'up':
                     project.upvotes += 1
+                    # Add to Redis cache
+                    RedisUserCache.add_upvote(user_id, project_id, sync_db=False)
                 else:
                     project.downvotes += 1
         else:
@@ -75,6 +84,8 @@ def cast_vote(user_id):
 
             if vote_type == 'up':
                 project.upvotes += 1
+                # Add to Redis cache instantly
+                RedisUserCache.add_upvote(user_id, project_id, sync_db=False)
             else:
                 project.downvotes += 1
 

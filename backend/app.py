@@ -75,19 +75,49 @@ def create_app(config_name=None):
         tables = inspector.get_table_names()
 
         if not tables:
-            print("⚠️  WARNING: No database tables found after db.create_all()")
-            print("   Check that models are properly defined and imported.")
+            print("WARNING: No database tables found after db.create_all()")
+            print("Check that models are properly defined and imported.")
 
         # Initialize default admins
         from utils.init_admins import init_default_admins
         init_default_admins()
 
+        # PERFORMANCE: Initialize Redis Cache (Instagram-style instant updates)
+        try:
+            redis_url = os.getenv('REDIS_URL')
+            if redis_url:
+                from services.redis_cache_service import RedisUserCache
+                RedisUserCache.initialize(redis_url)
+                print("[App] Redis cache initialized successfully")
+            else:
+                print("[App] WARNING: REDIS_URL not set in environment")
+        except Exception as e:
+            print(f"[App] WARNING: Redis initialization error: {e}")
+
         # PERFORMANCE: Start background cache warmer (sequential, stable)
-        if not app.config.get('TESTING'):
+        # Skip if disabled (e.g., during migrations to avoid deadlocks)
+        if not app.config.get('TESTING') and not os.environ.get('DISABLE_CACHE_WARMER'):
             from utils.cache_warmer import CacheWarmer
             # Start background warmer (runs every 5 minutes, sequential to avoid crashes)
             CacheWarmer.start_background_warmer(app, interval=300)
             print("[PERFORMANCE] Cache warmer started - warming every 5 minutes")
+
+        # PERFORMANCE: Start background MV refresh worker
+        # Skip if disabled (e.g., during testing or when running standalone worker)
+        if not app.config.get('TESTING') and not os.environ.get('DISABLE_MV_WORKER'):
+            from workers.mv_refresh_worker import MVRefreshWorker
+            # Start background worker (processes MV refresh queue every 2 seconds)
+            MVRefreshWorker.start_background_worker(app, poll_interval=2, max_workers=3)
+            print("[PERFORMANCE] MV refresh worker started - processing queue every 2s")
+
+        # PERFORMANCE: Start daily reconciliation scheduler
+        # Skip if disabled (e.g., during testing)
+        if not app.config.get('TESTING') and not os.environ.get('DISABLE_RECONCILIATION'):
+            from workers.reconciliation_scheduler import ReconciliationScheduler
+            # Schedule daily reconciliation at 3 AM
+            reconciliation_hour = int(os.environ.get('RECONCILIATION_HOUR', '3'))  # Default: 3 AM
+            ReconciliationScheduler.start_daily_scheduler(app, hour=reconciliation_hour)
+            print(f"[PERFORMANCE] Daily reconciliation scheduled at {reconciliation_hour}:00 AM")
 
     # Health check
     @app.route('/health', methods=['GET'])
