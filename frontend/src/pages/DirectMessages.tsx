@@ -73,8 +73,10 @@ export default function DirectMessages() {
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageCountRef = useRef(0);
+  const shouldScrollRef = useRef(true);
 
   // Initialize Socket.IO listeners for real-time message updates
   useRealTimeUpdates();
@@ -95,25 +97,27 @@ export default function DirectMessages() {
     }
   }, [searchParams, conversations, selectedUser]);
 
-  // Auto-scroll to bottom when messages change
-  const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
-  };
-
+  // Auto-scroll to bottom when NEW messages arrive from other person ONLY
   useEffect(() => {
+    if (!messagesContainerRef.current) return;
+
     if (messages.length > 0) {
-      // Only scroll if it's the first load OR if a new message arrived from the OTHER person
-      const isFirstLoad = lastMessageCountRef.current === 0;
       const messageCountChanged = messages.length > lastMessageCountRef.current;
 
-      if (isFirstLoad || messageCountChanged) {
-        // Check if the new message is from the OTHER person (not the current user sending)
+      // Only scroll if a new message arrived (not on initial load)
+      if (messageCountChanged) {
         const lastMessage = messages[messages.length - 1];
         const isFromOtherPerson = lastMessage?.sender_id !== user?.id;
 
-        if (isFirstLoad || isFromOtherPerson) {
-          // Use instant scroll for first load, smooth for new messages from other person
-          scrollToBottom(messageCountChanged);
+        // Only scroll if the message is from the other person
+        if (isFromOtherPerson) {
+          // Scroll to bottom smoothly
+          setTimeout(() => {
+            if (messagesContainerRef.current) {
+              messagesContainerRef.current.scrollTop =
+                messagesContainerRef.current.scrollHeight;
+            }
+          }, 0);
         }
       }
 
@@ -305,7 +309,10 @@ export default function DirectMessages() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-background to-secondary/10">
+                <div
+                  ref={messagesContainerRef}
+                  className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-background to-secondary/10"
+                >
                   {messagesLoading ? (
                     // Loading skeletons
                     <div className="space-y-4">
