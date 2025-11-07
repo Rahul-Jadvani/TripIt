@@ -208,6 +208,14 @@ def get_sent_requests(user_id):
 def accept_request(user_id, request_id):
     """Accept intro request (builder only)"""
     try:
+        # Get current user object (builder)
+        current_user = User.query.get(user_id)
+        if not current_user:
+            return jsonify({
+                'status': 'error',
+                'message': 'User not found'
+            }), 404
+
         intro_request = IntroRequest.query.get(request_id)
         if not intro_request:
             return jsonify({
