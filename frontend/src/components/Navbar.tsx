@@ -128,46 +128,50 @@ export const Navbar = memo(function Navbar() {
                 </Link>
 
                 {/* Intros */}
-                <Link
-                  to="/intros"
-                  aria-label="Open intros"
-                  title="Intros"
-                  onMouseEnter={() => prefetchRoute('/intros')}
-                  onFocus={() => prefetchRoute('/intros')}
-                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background relative"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Intros</span>
+                <div className="relative inline-flex">
+                  <Link
+                    to="/intros"
+                    aria-label="Open intros"
+                    title="Intros"
+                    onMouseEnter={() => prefetchRoute('/intros')}
+                    onFocus={() => prefetchRoute('/intros')}
+                    className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Intros</span>
+                  </Link>
                   {pendingIntrosCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-3 -right-3 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold z-10"
+                      className="absolute -top-2.5 -right-2.5 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
                     >
                       {pendingIntrosCount > 9 ? '9+' : pendingIntrosCount}
                     </Badge>
                   )}
-                </Link>
+                </div>
 
                 {/* Messages */}
-                <Link
-                  to="/messages"
-                  aria-label="Open messages"
-                  title="Messages"
-                  onMouseEnter={() => prefetchRoute('/messages')}
-                  onFocus={() => prefetchRoute('/messages')}
-                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background relative"
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Messages</span>
+                <div className="relative inline-flex">
+                  <Link
+                    to="/messages"
+                    aria-label="Open messages"
+                    title="Messages"
+                    onMouseEnter={() => prefetchRoute('/messages')}
+                    onFocus={() => prefetchRoute('/messages')}
+                    className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Messages</span>
+                  </Link>
                   {unreadMessagesCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-3 -right-3 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold z-10"
+                      className="absolute -top-2.5 -right-2.5 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
                     >
                       {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                     </Badge>
                   )}
-                </Link>
+                </div>
 
                 {/* Notifications */}
                 <NotificationBell />
