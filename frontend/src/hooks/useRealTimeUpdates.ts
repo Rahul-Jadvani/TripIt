@@ -20,18 +20,30 @@ export function useRealTimeUpdates() {
 
     // Initialize Socket.IO connection (only once)
     if (!socket) {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('token');
+
       socket = io(BACKEND_URL, {
         transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 5,
+        auth: {
+          token: token || '',
+        },
       });
       // Connection event handlers (dev-only logs)
       if (import.meta.env.DEV) {
         // light diagnostics during development
-        socket.on('connect', () => {});
-        socket.on('disconnect', () => {});
-        socket.on('connect_error', () => {});
+        socket.on('connect', () => {
+          console.log('[Socket.IO] Connected');
+        });
+        socket.on('disconnect', () => {
+          console.log('[Socket.IO] Disconnected');
+        });
+        socket.on('connect_error', (error: any) => {
+          console.log('[Socket.IO] Connection error:', error);
+        });
       }
     }
     // Attach listeners once

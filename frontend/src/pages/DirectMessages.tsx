@@ -74,6 +74,7 @@ export default function DirectMessages() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMessageCountRef = useRef(0);
 
   // Initialize Socket.IO listeners for real-time message updates
   useRealTimeUpdates();
@@ -101,11 +102,25 @@ export default function DirectMessages() {
 
   useEffect(() => {
     if (messages.length > 0) {
-      // Scroll instantly on first load, smoothly on new messages
-      const isFirstLoad = messages.length === 1;
-      scrollToBottom(!isFirstLoad);
+      // Only scroll if it's the first load OR if a new message arrived from the OTHER person
+      const isFirstLoad = lastMessageCountRef.current === 0;
+      const messageCountChanged = messages.length > lastMessageCountRef.current;
+
+      if (isFirstLoad || messageCountChanged) {
+        // Check if the new message is from the OTHER person (not the current user sending)
+        const lastMessage = messages[messages.length - 1];
+        const isFromOtherPerson = lastMessage?.sender_id !== user?.id;
+
+        if (isFirstLoad || isFromOtherPerson) {
+          // Use instant scroll for first load, smooth for new messages from other person
+          scrollToBottom(messageCountChanged);
+        }
+      }
+
+      // Update the ref to track the current message count
+      lastMessageCountRef.current = messages.length;
     }
-  }, [messages]);
+  }, [messages, user?.id]);
 
   // Handle typing indicator
   const handleTyping = () => {

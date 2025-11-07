@@ -127,6 +127,52 @@ def create_app(config_name=None):
     # Note: File uploads now handled via Pinata IPFS
     # Files are served directly from IPFS gateway (https://gateway.pinata.cloud/ipfs/...)
 
+    # Socket.IO event handlers for real-time updates
+    @socketio.on('connect')
+    def handle_connect(auth):
+        """Handle Socket.IO connection - authenticate user and join them to room"""
+        try:
+            from flask_jwt_extended import decode_token
+            from models.user import User
+
+            # Get token from auth
+            token = auth.get('token') if auth else None
+
+            if not token:
+                print(f"[Socket.IO] Connection failed - no token provided")
+                return False
+
+            try:
+                # Decode JWT token
+                decoded_token = decode_token(token)
+                user_id = decoded_token.get('sub')
+
+                # Verify user exists
+                user = User.query.get(user_id)
+                if not user:
+                    print(f"[Socket.IO] Connection failed - user not found: {user_id}")
+                    return False
+
+                # Join user to a room with their user_id (for targeted messaging)
+                from flask_socketio import join_room
+                join_room(str(user_id))
+
+                print(f"[Socket.IO] User {user_id} connected and joined room")
+                return True
+
+            except Exception as e:
+                print(f"[Socket.IO] Token decode error: {e}")
+                return False
+
+        except Exception as e:
+            print(f"[Socket.IO] Connection error: {e}")
+            return False
+
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        """Handle Socket.IO disconnection"""
+        print(f"[Socket.IO] User disconnected")
+
     return app
 
 
