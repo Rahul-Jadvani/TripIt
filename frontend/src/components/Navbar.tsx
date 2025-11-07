@@ -12,12 +12,15 @@ import {
 import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2 } from 'lucide-react';
 import { ConnectWallet } from '@/components/ConnectWallet';
 import { NotificationBell } from '@/components/NotificationBell';
+import { Badge } from '@/components/ui/badge';
+import { useNotificationCounts } from '@/hooks/useNotificationCounts';
 import { memo, useCallback, useState } from 'react';
 
 export const Navbar = memo(function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { unreadMessagesCount, pendingIntrosCount } = useNotificationCounts();
 
   // Prefetch route modules on hover/focus to speed up navigation
   const prefetchRoute = useCallback((path: string) => {
@@ -131,10 +134,18 @@ export const Navbar = memo(function Navbar() {
                   title="Intros"
                   onMouseEnter={() => prefetchRoute('/intros')}
                   onFocus={() => prefetchRoute('/intros')}
-                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background relative"
                 >
                   <Send className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Intros</span>
+                  {pendingIntrosCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
+                    >
+                      {pendingIntrosCount > 9 ? '9+' : pendingIntrosCount}
+                    </Badge>
+                  )}
                 </Link>
 
                 {/* Messages */}
@@ -144,10 +155,18 @@ export const Navbar = memo(function Navbar() {
                   title="Messages"
                   onMouseEnter={() => prefetchRoute('/messages')}
                   onFocus={() => prefetchRoute('/messages')}
-                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background relative"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Messages</span>
+                  {unreadMessagesCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
+                    >
+                      {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                    </Badge>
+                  )}
                 </Link>
 
                 {/* Notifications */}

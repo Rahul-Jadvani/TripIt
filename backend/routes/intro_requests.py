@@ -317,3 +317,25 @@ def decline_request(user_id, request_id):
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+@intro_requests_bp.route('/pending-count', methods=['GET'])
+@token_required
+def get_pending_count(user_id):
+    """Get count of pending intro requests for current user (as builder)"""
+    try:
+        count = IntroRequest.query.filter_by(
+            builder_id=user_id,
+            status='pending'
+        ).count()
+
+        return jsonify({
+            'status': 'success',
+            'data': {'pending_count': count}
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500

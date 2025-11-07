@@ -113,6 +113,8 @@ export function useRealTimeUpdates() {
       socket.on('intro:received', () => {
         toast('New intro request received!');
         queryClient.invalidateQueries({ queryKey: ['intros', 'received'] });
+        // Invalidate intro request count badge
+        queryClient.invalidateQueries({ queryKey: ['intro-requests', 'count'] });
       });
       socket.on('intro:accepted', (data) => {
         toast.success('Your intro request was accepted!', {
@@ -122,6 +124,8 @@ export function useRealTimeUpdates() {
         // Invalidate both intro requests and conversations to show new conversation immediately
         queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
         queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
+        // Invalidate message count badge since conversation was created
+        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
         // If initial message exists, add it to the conversation
         if (data.data?.initial_message && data.data?.builder_id) {
           queryClient.setQueryData(
@@ -137,6 +141,8 @@ export function useRealTimeUpdates() {
       socket.on('intro:declined', () => {
         toast('Your intro request was declined');
         queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
+        // Invalidate intro request count badge
+        queryClient.invalidateQueries({ queryKey: ['intro-requests', 'count'] });
       });
       socket.on('message:received', (data) => {
         const message = data.data;
@@ -150,15 +156,21 @@ export function useRealTimeUpdates() {
           queryClient.invalidateQueries({ queryKey: ['messages', 'conversation', senderId] });
         }
         queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
+        // Invalidate message count badge
+        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
       });
       socket.on('message:read', () => {
         queryClient.invalidateQueries({ queryKey: ['messages'] });
+        // Invalidate message count badge when messages are read
+        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
       });
       socket.on('messages:read', (data) => {
         if (data.sender_id) {
           queryClient.invalidateQueries({ queryKey: ['messages', 'conversation', data.sender_id] });
         }
         queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
+        // Invalidate message count badge when messages are read
+        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
       });
     }
 

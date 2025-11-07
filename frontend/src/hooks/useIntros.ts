@@ -144,17 +144,47 @@ export function useAcceptIntroRequest() {
       }
       return data;
     },
+    onMutate: async (requestId: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['intro-requests', 'received'] });
+
+      // Snapshot previous data
+      const previousData = queryClient.getQueryData(['intro-requests', 'received']);
+
+      // Optimistically update the UI - remove the accepted intro immediately
+      queryClient.setQueryData(
+        ['intro-requests', 'received'],
+        (old: any = []) => old.filter((req: any) => req.id !== requestId)
+      );
+
+      // Also update the intro requests count
+      queryClient.setQueryData(
+        ['intro-requests', 'count'],
+        (old: any = { pending_count: 0 }) => ({
+          pending_count: Math.max(0, (old?.pending_count || 0) - 1),
+        })
+      );
+
+      return { previousData };
+    },
     onSuccess: () => {
-      // Invalidate intro requests
+      // Invalidate intro requests to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['intro-requests', 'received'] });
       queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
 
       // CRITICAL: Invalidate conversations so new conversation appears immediately
       queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
 
+      // Invalidate counts
+      queryClient.invalidateQueries({ queryKey: ['intro-requests', 'count'] });
+
       toast.success('Intro request accepted! Check your messages.');
     },
-    onError: (error: any) => {
+    onError: (error: any, requestId: string, context: any) => {
+      // Rollback to previous data
+      if (context?.previousData) {
+        queryClient.setQueryData(['intro-requests', 'received'], context.previousData);
+      }
       toast.error(error.message || 'Failed to accept intro request');
     },
   });
