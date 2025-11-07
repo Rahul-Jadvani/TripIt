@@ -28,10 +28,11 @@ export function useNotificationCounts() {
       }
       return { unread_count: 0 };
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 0, // Always refetch - counts change frequently
+    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    refetchInterval: 1000 * 30, // Refetch every 30 seconds as fallback
   });
 
   // Get pending intro requests count
@@ -53,40 +54,25 @@ export function useNotificationCounts() {
       }
       return { pending_count: 0 };
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0, // Always refetch - counts change frequently
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    refetchInterval: 1000 * 30, // Refetch every 30 seconds as fallback
   });
 
   // Initialize socket listeners for real-time updates
   useRealTimeUpdates();
 
-  // Update counts when socket events fire
+  // Refetch counts when socket events fire
   useEffect(() => {
-    // Listen for message events to update count
-    const handleMessageReceived = () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
-    };
+    // Refetch both counts to ensure they're always up to date
+    const interval = setInterval(() => {
+      queryClient.refetchQueries({ queryKey: ['messages', 'count'] });
+      queryClient.refetchQueries({ queryKey: ['intro-requests', 'count'] });
+    }, 5000); // Refetch every 5 seconds
 
-    const handleMessagesRead = () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
-    };
-
-    // Listen for intro events
-    const handleIntroReceived = () => {
-      queryClient.invalidateQueries({ queryKey: ['intro-requests', 'count'] });
-    };
-
-    const handleIntroAccepted = () => {
-      queryClient.invalidateQueries({ queryKey: ['intro-requests', 'count'] });
-    };
-
-    // These event listeners would be handled by the socket in useRealTimeUpdates
-    // but we could also manually set the counts if needed
-    return () => {
-      // Cleanup if needed
-    };
+    return () => clearInterval(interval);
   }, [queryClient]);
 
   return {
