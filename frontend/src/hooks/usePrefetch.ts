@@ -4,7 +4,7 @@
  */
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { projectsService, leaderboardService, introsService } from '@/services/api';
+import { projectsService, leaderboardService } from '@/services/api';
 
 // Get backend URL
 const getBackendUrl = (): string => {
@@ -78,7 +78,24 @@ export function usePrefetch() {
             queryKey: ['leaderboard', 'projects', 50],
             queryFn: async () => {
               const response = await leaderboardService.getProjects(50);
-              return response.data.data || [];
+              // Transform data to match useProjectsLeaderboard format
+              const transformed = response.data.data?.map((backendProject: any) => ({
+                id: backendProject.id,
+                rank: backendProject.rank,
+                title: backendProject.title,
+                tagline: backendProject.tagline || '',
+                score: backendProject.upvotes || 0,
+                author: backendProject.creator ? {
+                  id: backendProject.creator.id,
+                  username: backendProject.creator.username,
+                  avatar: backendProject.creator.avatar_url,
+                } : {
+                  id: backendProject.user_id,
+                  username: 'Unknown',
+                  avatar: '',
+                },
+              })) || [];
+              return transformed;
             },
             staleTime: 1000 * 60 * 5, // 5 min, invalidated on badge awards
           }),
@@ -86,7 +103,16 @@ export function usePrefetch() {
             queryKey: ['leaderboard', 'builders', 50],
             queryFn: async () => {
               const response = await leaderboardService.getBuilders(50);
-              return response.data.data || [];
+              // Transform data to match useBuildersLeaderboard format
+              const transformed = response.data.data?.map((backendUser: any) => ({
+                rank: backendUser.rank,
+                id: backendUser.id,
+                username: backendUser.username,
+                avatar: backendUser.avatar_url,
+                score: backendUser.karma || 0,
+                projects: backendUser.project_count || 0,
+              })) || [];
+              return transformed;
             },
             staleTime: 1000 * 60 * 5,
           }),
@@ -107,7 +133,13 @@ export function usePrefetch() {
               const backendUrl = getBackendUrl();
               const response = await fetch(`${backendUrl}/api/chains?page=1&limit=12&sort=trending`);
               const data = await response.json();
-              return data.status === 'success' ? data.data : { chains: [], total: 0 };
+              // Return in the same format as chainApi.getChains (with data wrapper)
+              return {
+                data: data.status === 'success' ? data.data : {
+                  chains: [],
+                  pagination: { page: 1, limit: 12, total: 0, pages: 0 }
+                }
+              };
             },
             staleTime: 1000 * 60 * 5,
           }),
@@ -127,27 +159,9 @@ export function usePrefetch() {
           }),
         ];
 
-        // Prefetch intros and messages (for logged-in users)
+        // Prefetch intro requests and messages (for logged-in users)
         const token = localStorage.getItem('token');
         const userDataPromises = token ? [
-          // Prefetch received intros
-          queryClient.prefetchQuery({
-            queryKey: ['intros', 'received'],
-            queryFn: async () => {
-              const response = await introsService.getReceived();
-              return response.data;
-            },
-            staleTime: 1000 * 60 * 5,
-          }),
-          // Prefetch sent intros
-          queryClient.prefetchQuery({
-            queryKey: ['intros', 'sent'],
-            queryFn: async () => {
-              const response = await introsService.getSent();
-              return response.data;
-            },
-            staleTime: 1000 * 60 * 5,
-          }),
           // Prefetch intro requests (received)
           queryClient.prefetchQuery({
             queryKey: ['intro-requests', 'received'],
@@ -161,7 +175,7 @@ export function usePrefetch() {
               const data = await response.json();
               return data.status === 'success' ? data.data : [];
             },
-            staleTime: 1000 * 60 * 5,
+            staleTime: 1000 * 60, // 1 minute for real-time data
           }),
           // Prefetch intro requests (sent)
           queryClient.prefetchQuery({
@@ -176,7 +190,7 @@ export function usePrefetch() {
               const data = await response.json();
               return data.status === 'success' ? data.data : [];
             },
-            staleTime: 1000 * 60 * 5,
+            staleTime: 1000 * 60,
           }),
           // Prefetch message conversations
           queryClient.prefetchQuery({
@@ -191,6 +205,100 @@ export function usePrefetch() {
               const data = await response.json();
               return data.status === 'success' ? data.data : [];
             },
+            staleTime: 1000 * 60,
+          }),
+        ] : [];
+
+        // Prefetch Admin panel data (for admins only, but will fail gracefully for non-admins)
+        const adminPanelPromises = token ? [
+          // Admin stats
+          queryClient.prefetchQuery({
+            queryKey: ['admin', 'stats'],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/admin/stats`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data.data : {};
+            },
+            staleTime: 1000 * 60 * 5,
+          }),
+          // Admin users
+          queryClient.prefetchQuery({
+            queryKey: ['admin', 'users', { search: '', role: 'all', perPage: 100 }],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/admin/users?perPage=100`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data.data : [];
+            },
+            staleTime: 1000 * 60 * 3,
+          }),
+          // Admin validators
+          queryClient.prefetchQuery({
+            queryKey: ['admin', 'validators'],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/admin/validators`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data.data : [];
+            },
+            staleTime: 1000 * 60 * 5,
+          }),
+          // Admin projects
+          queryClient.prefetchQuery({
+            queryKey: ['admin', 'projects', { search: '', perPage: 100 }],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/admin/projects?perPage=100`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data.data : [];
+            },
+            staleTime: 1000 * 60 * 3,
+          }),
+          // Admin investor requests
+          queryClient.prefetchQuery({
+            queryKey: ['admin', 'investor-requests'],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/admin/investor-requests`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data.data : [];
+            },
+            staleTime: 1000 * 60 * 2,
+          }),
+          // Admin chains
+          queryClient.prefetchQuery({
+            queryKey: ['adminChains', { page: 1, per_page: 50, search: '', status: '' }],
+            queryFn: async () => {
+              const backendUrl = getBackendUrl();
+              const response = await fetch(`${backendUrl}/api/admin/chains?page=1&per_page=50`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              const data = await response.json();
+              return data.status === 'success' ? data : {};
+            },
             staleTime: 1000 * 60 * 5,
           }),
         ] : [];
@@ -203,6 +311,7 @@ export function usePrefetch() {
           ...chainsPromises,
           ...investorsPromises,
           ...userDataPromises,
+          ...adminPanelPromises,
         ]);
 
         // Log results for diagnostics
@@ -213,7 +322,7 @@ export function usePrefetch() {
 
         console.log(`%c[Prefetch] Completed in ${duration}ms`, 'color: #10b981; font-weight: bold');
         console.log(`%c[Prefetch] ✓ Successful: ${successful} | ✗ Failed: ${failed}`, 'color: #6366f1');
-        console.log(`%c[Prefetch] Cached: Feed (5 pages), Leaderboards (2), Chains (1), Investors (1)${token ? ', Intros (4), Messages (1)' : ''}`, 'color: #8b5cf6');
+        console.log(`%c[Prefetch] Cached: Feed (5 pages), Leaderboards (2), Chains (1), Investors (1)${token ? ', Intro Requests (2), Messages (1), Admin Panel (6)' : ''}`, 'color: #8b5cf6');
 
         if (failed > 0) {
           console.warn('[Prefetch] Some requests failed, but app will continue normally');

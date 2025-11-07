@@ -2,17 +2,71 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { introsService } from '@/services/api';
 import { toast } from 'sonner';
 
+// Get backend URL
+const getBackendUrl = (): string => {
+  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
+  return isDev ? 'http://localhost:5000' : 'https://discovery-platform.onrender.com';
+};
+
 export function useReceivedIntros() {
   return useQuery({
     queryKey: ['intros', 'received'],
     queryFn: () => introsService.getReceived(),
-    staleTime: 1000 * 60 * 5, // Fresh for 5 minutes (Socket.IO handles real-time)
-    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
-    refetchInterval: false, // NO polling - Socket.IO handles invalidation
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+// Intro requests (different from intros)
+export function useReceivedIntroRequests() {
+  return useQuery({
+    queryKey: ['intro-requests', 'received'],
+    queryFn: async () => {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/intro-requests/received`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        return data.data;
+      }
+      throw new Error(data.message || 'Failed to fetch intro requests');
+    },
+    staleTime: 1000 * 60, // Fresh for 1 minute
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+    refetchOnMount: false, // Don't refetch on mount if data is fresh
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true, // Refetch if internet reconnects
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useSentIntroRequests() {
+  return useQuery({
+    queryKey: ['intro-requests', 'sent'],
+    queryFn: async () => {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/intro-requests/sent`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        return data.data;
+      }
+      throw new Error(data.message || 'Failed to fetch sent intro requests');
+    },
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    refetchOnMount: 'always', // Always check for fresh data
-    placeholderData: (previousData) => previousData, // Keep old data visible
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -20,13 +74,9 @@ export function useSentIntros() {
   return useQuery({
     queryKey: ['intros', 'sent'],
     queryFn: () => introsService.getSent(),
-    staleTime: 1000 * 60 * 5, // Fresh for 5 minutes (Socket.IO handles real-time)
-    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
-    refetchInterval: false, // NO polling - Socket.IO handles invalidation
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchOnMount: 'always', // Always check for fresh data
-    placeholderData: (previousData) => previousData, // Keep old data visible
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -71,6 +121,65 @@ export function useDeclineIntro() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to decline intro');
+    },
+  });
+}
+
+// Intro request mutations
+export function useAcceptIntroRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/intro-requests/${requestId}/accept`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await response.json();
+      if (data.status !== 'success') {
+        throw new Error(data.message || 'Failed to accept request');
+      }
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intro-requests', 'received'] });
+      queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
+      toast.success('Intro request accepted!');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to accept intro request');
+    },
+  });
+}
+
+export function useDeclineIntroRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/intro-requests/${requestId}/decline`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await response.json();
+      if (data.status !== 'success') {
+        throw new Error(data.message || 'Failed to decline request');
+      }
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intro-requests', 'received'] });
+      queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
+      toast.success('Intro request declined');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to decline intro request');
     },
   });
 }

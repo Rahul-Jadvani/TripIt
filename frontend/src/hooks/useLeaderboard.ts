@@ -48,7 +48,8 @@ export function useProjectsLeaderboard(limit: number = 50) {
     refetchInterval: false, // NO polling - Socket.IO handles invalidation
     refetchOnWindowFocus: true, // Refresh when user returns to tab
     refetchOnReconnect: true,
-    refetchOnMount: 'always', // Always check for updates
+    // Don't force refetch if data is fresh (allows prefetch to work)
+    refetchOnMount: true, // Only refetch if stale
 
     // Keep old data during refetch
     placeholderData: (previousData) => previousData,
@@ -70,7 +71,8 @@ export function useBuildersLeaderboard(limit: number = 50) {
     refetchInterval: false, // NO polling - Socket.IO handles invalidation
     refetchOnWindowFocus: true, // Refresh when user returns to tab
     refetchOnReconnect: true,
-    refetchOnMount: 'always', // Always check for updates
+    // Don't force refetch if data is fresh (allows prefetch to work)
+    refetchOnMount: true, // Only refetch if stale
 
     // Keep old data during refetch
     placeholderData: (previousData) => previousData,

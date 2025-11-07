@@ -11,10 +11,8 @@ export function useAdminStats() {
       const response = await adminService.getStats();
       return response.data.data;
     },
-    staleTime: 1000 * 60 * 5, // 5 min - refresh every 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 min cache
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
     placeholderData: (previousData) => previousData,
   });
 }
@@ -26,10 +24,8 @@ export function useAdminUsers(params: { search?: string; role?: string; perPage?
       const response = await adminService.getUsers(params);
       return response.data.data;
     },
-    staleTime: 1000 * 60 * 3, // 3 min - users change frequently
+    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
     placeholderData: (previousData) => previousData,
   });
 }
@@ -41,10 +37,8 @@ export function useAdminValidators() {
       const response = await adminService.getValidators();
       return response.data.data;
     },
-    staleTime: 1000 * 60 * 5, // 5 min - validators don't change often
+    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
     placeholderData: (previousData) => previousData,
   });
 }
@@ -56,10 +50,8 @@ export function useAdminProjects(params: { search?: string; perPage?: number } =
       const response = await adminService.getProjects(params);
       return response.data.data;
     },
-    staleTime: 1000 * 60 * 3, // 3 min
+    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
     placeholderData: (previousData) => previousData,
   });
 }
@@ -71,10 +63,8 @@ export function useAdminInvestorRequests() {
       const response = await adminService.getInvestorRequests();
       return response.data.data;
     },
-    staleTime: 1000 * 60 * 2, // 2 min - requests need quicker updates
+    staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
     placeholderData: (previousData) => previousData,
   });
 }

@@ -1263,7 +1263,7 @@ export default function Admin() {
             </Select>
           </div>
 
-          {usersLoading ? (
+          {usersLoading && users.length === 0 ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
@@ -1325,7 +1325,7 @@ export default function Admin() {
             </CardContent>
           </Card>
 
-          {validatorsLoading ? (
+          {validatorsLoading && validators.length === 0 ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
@@ -1538,7 +1538,7 @@ export default function Admin() {
                               </div>
 
                               {/* Project List */}
-                              {projectsLoading ? (
+                              {projectsLoading && projects.length === 0 ? (
                                 <div className="flex justify-center py-8">
                                   <Loader2 className="h-6 w-6 animate-spin" />
                                 </div>
@@ -1706,7 +1706,7 @@ export default function Admin() {
             />
           </div>
 
-          {projectsLoading ? (
+          {projectsLoading && projects.length === 0 ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>

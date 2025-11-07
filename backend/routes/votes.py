@@ -52,6 +52,16 @@ def cast_vote(user_id):
 
                 db.session.delete(existing_vote)
                 db.session.commit()
+
+                # Queue materialized view refresh (debounced to 5 seconds)
+                try:
+                    from sqlalchemy import text
+                    db.session.execute(text("SELECT queue_mv_refresh('mv_feed_projects', 'vote_removed')"))
+                    db.session.commit()
+                except Exception as e:
+                    # Don't fail vote if MV refresh queue fails
+                    print(f"[WARNING] Failed to queue MV refresh: {e}")
+
                 CacheService.invalidate_project(project_id)
                 CacheService.invalidate_leaderboard()  # Vote removal affects leaderboard
                 CacheService.invalidate_user_votes(user_id)  # Invalidate user votes cache
@@ -95,6 +105,16 @@ def cast_vote(user_id):
         ProofScoreCalculator.update_project_scores(project)
 
         db.session.commit()
+
+        # Queue materialized view refresh (debounced to 5 seconds)
+        try:
+            from sqlalchemy import text
+            db.session.execute(text("SELECT queue_mv_refresh('mv_feed_projects', 'vote_cast')"))
+            db.session.commit()
+        except Exception as e:
+            # Don't fail vote if MV refresh queue fails
+            print(f"[WARNING] Failed to queue MV refresh: {e}")
+
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_leaderboard()  # Vote affects leaderboard
         CacheService.invalidate_user_votes(user_id)  # Invalidate user votes cache

@@ -26,12 +26,12 @@ export function useConversations() {
       }
       throw new Error(data.message || 'Failed to fetch conversations');
     },
-    staleTime: 1000 * 60 * 5, // Fresh for 5 minutes (Socket.IO handles real-time updates)
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
-    // No refetchInterval - rely on Socket.IO for real-time updates
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    placeholderData: (previousData) => previousData, // Keep old data visible
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -53,12 +53,12 @@ export function useMessagesWithUser(userId: string) {
       throw new Error(data.message || 'Failed to fetch messages');
     },
     enabled: !!userId,
-    staleTime: 1000 * 60 * 5, // Fresh for 5 minutes (Socket.IO handles real-time updates)
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
-    // No refetchInterval - rely on Socket.IO for real-time updates
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    placeholderData: (previousData) => previousData, // Keep old data visible
+    placeholderData: (previousData) => previousData,
   });
 }
 

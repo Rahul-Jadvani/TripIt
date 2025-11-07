@@ -22,7 +22,7 @@ class SocketService:
                 'type': 'project_created',
                 'data': project_data,
                 'message': f"New project: {project_data.get('title', 'Untitled')}"
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted project:created - {project_data.get('title')}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting project:created: {e}")
@@ -37,7 +37,7 @@ class SocketService:
                 'type': 'project_updated',
                 'project_id': project_id,
                 'data': project_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted project:updated - ID {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting project:updated: {e}")
@@ -51,7 +51,7 @@ class SocketService:
             socketio.emit('project:deleted', {
                 'type': 'project_deleted',
                 'project_id': project_id,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted project:deleted - ID {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting project:deleted: {e}")
@@ -68,7 +68,7 @@ class SocketService:
                 'project_id': project_id,
                 'vote_type': vote_type,  # 'up' or 'down'
                 'new_score': new_score,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted vote:cast - Project {project_id}, {vote_type}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting vote:cast: {e}")
@@ -83,7 +83,7 @@ class SocketService:
                 'type': 'comment_added',
                 'project_id': project_id,
                 'data': comment_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted comment:added - Project {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting comment:added: {e}")
@@ -98,7 +98,7 @@ class SocketService:
             socketio.emit('leaderboard:updated', {
                 'type': 'leaderboard_updated',
                 'message': 'Leaderboard rankings have changed',
-            }, namespace='/', broadcast=True)
+            })
             print("[Socket.IO] Emitted leaderboard:updated")
         except Exception as e:
             print(f"[Socket.IO] Error emitting leaderboard:updated: {e}")
@@ -113,7 +113,7 @@ class SocketService:
                 'type': 'user_updated',
                 'user_id': user_id,
                 'data': user_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted user:updated - User {user_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting user:updated: {e}")
@@ -131,7 +131,7 @@ class SocketService:
                 'type': 'intro_received',
                 'recipient_id': recipient_id,
                 'data': intro_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted intro:received - Recipient {recipient_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting intro:received: {e}")
@@ -144,7 +144,7 @@ class SocketService:
                 'type': 'intro_accepted',
                 'requester_id': requester_id,
                 'data': intro_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted intro:accepted - Requester {requester_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting intro:accepted: {e}")
@@ -157,7 +157,7 @@ class SocketService:
                 'type': 'intro_declined',
                 'requester_id': requester_id,
                 'data': intro_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted intro:declined - Requester {requester_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting intro:declined: {e}")
@@ -170,7 +170,7 @@ class SocketService:
                 'type': 'message_received',
                 'recipient_id': recipient_id,
                 'data': message_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted message:received - Recipient {recipient_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting message:received: {e}")
@@ -183,7 +183,7 @@ class SocketService:
                 'type': 'message_read',
                 'sender_id': sender_id,
                 'message_id': message_id,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted message:read - Message {message_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting message:read: {e}")
@@ -197,7 +197,7 @@ class SocketService:
                 'sender_id': sender_id,
                 'reader_id': reader_id,
                 'count': count,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted messages:read - {count} messages by {reader_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting messages:read: {e}")
@@ -210,7 +210,7 @@ class SocketService:
                 'type': 'comment_updated',
                 'project_id': project_id,
                 'data': comment_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted comment:updated - Project {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting comment:updated: {e}")
@@ -223,7 +223,7 @@ class SocketService:
                 'type': 'comment_deleted',
                 'project_id': project_id,
                 'comment_id': comment_id,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted comment:deleted - Comment {comment_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting comment:deleted: {e}")
@@ -237,7 +237,7 @@ class SocketService:
                 'project_id': project_id,
                 'comment_id': comment_id,
                 'vote_type': vote_type,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted comment:voted - Comment {comment_id}, {vote_type}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting comment:voted: {e}")
@@ -249,7 +249,7 @@ class SocketService:
             socketio.emit('vote:removed', {
                 'type': 'vote_removed',
                 'project_id': project_id,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted vote:removed - Project {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting vote:removed: {e}")
@@ -261,7 +261,7 @@ class SocketService:
             socketio.emit('project:featured', {
                 'type': 'project_featured',
                 'project_id': project_id,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted project:featured - Project {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting project:featured: {e}")
@@ -274,7 +274,7 @@ class SocketService:
                 'type': 'badge_awarded',
                 'project_id': project_id,
                 'data': badge_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted badge:awarded - Project {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting badge:awarded: {e}")
@@ -287,7 +287,7 @@ class SocketService:
                 'type': 'badge_updated',
                 'project_id': project_id,
                 'data': badge_data,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted badge:updated - Project {project_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting badge:updated: {e}")
@@ -300,7 +300,7 @@ class SocketService:
                 'type': 'badge_removed',
                 'project_id': project_id,
                 'badge_id': badge_id,
-            }, namespace='/', broadcast=True)
+            })
             print(f"[Socket.IO] Emitted badge:removed - Project {project_id}, Badge {badge_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting badge:removed: {e}")

@@ -87,6 +87,9 @@ class Config:
     GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
     GITHUB_REDIRECT_URI = os.getenv('GITHUB_REDIRECT_URI', 'http://localhost:5000/api/auth/github/callback')
 
+    # Performance Optimization - Materialized Views
+    ENABLE_FEED_MV = os.getenv('ENABLE_FEED_MV', 'true').lower() == 'true'
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""

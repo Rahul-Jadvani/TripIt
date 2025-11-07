@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { adminService } from '@/services/api';
+import { usePublicInvestors } from '@/hooks/useInvestors';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,13 +26,7 @@ export default function InvestorDirectory() {
   const [selectedStage, setSelectedStage] = useState<string>('');
 
   // Fetch public investors
-  const { data: investors, isLoading } = useQuery({
-    queryKey: ['publicInvestors'],
-    queryFn: async () => {
-      const response = await adminService.getPublicInvestors();
-      return response.data.data;
-    },
-  });
+  const { data: investors = [], isLoading } = usePublicInvestors();
 
   // Extract unique industries and stages for filters
   const allIndustries = investors
@@ -160,7 +153,7 @@ export default function InvestorDirectory() {
         )}
 
         {/* Loading State */}
-        {isLoading && (
+        {isLoading && investors.length === 0 && (
           <div className="card-elevated p-20 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Loading investors...</p>

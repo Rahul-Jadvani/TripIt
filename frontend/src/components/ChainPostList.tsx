@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChainPostCard } from './ChainPostCard';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +14,12 @@ interface ChainPostListProps {
 export function ChainPostList({ chainSlug, isOwner = false }: ChainPostListProps) {
   const [sort, setSort] = useState<'hot' | 'new' | 'top' | 'active'>('hot');
   const [page, setPage] = useState(1);
+
+  // Reset state when chainSlug changes (navigating to different chain)
+  useEffect(() => {
+    setPage(1);
+    setSort('hot');
+  }, [chainSlug]);
 
   const { data, isLoading, error } = useChainPosts(chainSlug, {
     sort,

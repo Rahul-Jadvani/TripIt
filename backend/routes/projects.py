@@ -1,7 +1,7 @@
 """
 Project routes
 """
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 from datetime import datetime, timedelta
@@ -43,6 +43,12 @@ def list_projects(user_id):
                           has_demo is not None, has_github is not None,
                           featured_only, badge_type])
 
+        # Check config to see if materialized view usage is enabled (defaults to True with enhanced MV)
+        enable_feed_mv = current_app.config.get('ENABLE_FEED_MV', True)
+        # We only use the materialized view for pure feed requests with supported sorts
+        sorts_using_mv = {'trending', 'hot', 'newest', 'new', 'top-rated', 'top'} if enable_feed_mv else set()
+        use_materialized_view = enable_feed_mv and (not has_filters) and (sort in sorts_using_mv)
+
         if not has_filters:
             cached = CacheService.get_cached_feed(page, sort)
             if cached:
@@ -50,30 +56,202 @@ def list_projects(user_id):
                 return jsonify(cached), 200
 
         # ULTRA-FAST: Use materialized view for base feed (no filters)
-        if not has_filters:
+        if use_materialized_view:
             from sqlalchemy import text
 
-            # Determine sort order
+            # Determine sort order (using columns that exist in mv_feed_projects)
             if sort == 'trending' or sort == 'hot':
                 order_by = 'trending_score DESC, created_at DESC'
             elif sort == 'newest' or sort == 'new':
                 order_by = 'created_at DESC'
             elif sort == 'top-rated' or sort == 'top':
-                order_by = 'proof_score DESC'
-            elif sort == 'most-voted':
-                order_by = 'total_votes DESC'
+                order_by = 'net_score DESC, proof_score DESC, created_at DESC'
             else:
                 order_by = 'trending_score DESC, created_at DESC'
 
             # Query materialized view (10x faster!)
             offset = (page - 1) * per_page
-            result = db.session.execute(text(f"""
-                SELECT * FROM mv_feed_projects
-                ORDER BY {order_by}
-                LIMIT :limit OFFSET :offset
-            """), {'limit': per_page, 'offset': offset})
+            try:
+                result = db.session.execute(text(f"""
+                    SELECT * FROM mv_feed_projects
+                    ORDER BY {order_by}
+                    LIMIT :limit OFFSET :offset
+                """), {'limit': per_page, 'offset': offset})
 
-            projects_data = [dict(row._mapping) for row in result.fetchall()]
+                # Transform materialized view data to match expected format
+                raw_projects = [dict(row._mapping) for row in result.fetchall()]
+            except Exception as e:
+                # If materialized view query fails, fall back to regular query
+                print(f"[ERROR] Materialized view query failed: {e}")
+                db.session.rollback()
+                raw_projects = []
+            
+            # Handle empty results
+            if not raw_projects:
+                total = 0
+                total_pages = 0
+                response_data = {
+                    'status': 'success',
+                    'message': 'Success',
+                    'data': [],
+                    'pagination': {
+                        'total': total,
+                        'page': page,
+                        'per_page': per_page,
+                        'total_pages': total_pages,
+                    }
+                }
+                from flask import jsonify
+                return jsonify(response_data), 200
+            
+            # Batch fetch users and projects to avoid N+1 queries
+            project_ids = [row.get('id') for row in raw_projects if row.get('id')]
+            user_ids = list(set([row.get('user_id') for row in raw_projects if row.get('user_id')]))
+            
+            # Batch fetch users
+            users_dict = {}
+            if user_ids:
+                users = User.query.filter(User.id.in_(user_ids)).all()
+                users_dict = {user.id: user.to_dict() for user in users}
+            
+            # Batch fetch projects for additional fields
+            projects_dict = {}
+            if project_ids:
+                projects = Project.query.filter(Project.id.in_(project_ids)).all()
+                projects_dict = {p.id: p for p in projects}
+            
+            # Batch fetch user votes if authenticated
+            votes_dict = {}
+            if user_id and project_ids:
+                from models.vote import Vote
+                votes = Vote.query.filter(
+                    Vote.user_id == user_id,
+                    Vote.project_id.in_(project_ids)
+                ).all()
+                votes_dict = {vote.project_id: vote.vote_type for vote in votes}
+            
+            # Transform each project
+            projects_data = []
+            for row in raw_projects:
+                try:
+                    # Skip rows with missing required fields
+                    if not row.get('id') or not row.get('user_id'):
+                        continue
+
+                    # Build project data from materialized view (now has ALL fields!)
+                    project_data = {
+                        'id': row.get('id'),
+                        'title': row.get('title', ''),
+                        'tagline': row.get('tagline'),  # Now from MV!
+                        'description': row.get('description', ''),
+                        'tech_stack': row.get('tech_stack') or [],  # Now from MV!
+                        'demo_url': row.get('demo_url'),  # Now from MV!
+                        'github_url': row.get('github_url'),  # Now from MV!
+                        'created_at': row.get('created_at').isoformat() if row.get('created_at') else None,
+                        'updated_at': row.get('updated_at').isoformat() if row.get('updated_at') else None,
+                        'is_featured': row.get('is_featured', False),
+                        'user_id': row.get('user_id'),
+                        'proof_score': row.get('proof_score') or 0,
+                        'comment_count': row.get('comment_count') or 0,
+                        'upvotes': row.get('upvote_count') or 0,
+                        'downvotes': row.get('downvote_count') or 0,  # Now from MV!
+                        'badge_count': row.get('badge_count') or 0,
+                        'net_score': row.get('net_score') or 0,  # upvotes - downvotes
+                        'trending_score': float(row.get('trending_score', 0)) if row.get('trending_score') is not None else 0.0,
+                    }
+
+                    # Build creator object from denormalized MV fields
+                    user_id_val = row.get('user_id')
+                    creator_data = users_dict.get(user_id_val)
+                    if not creator_data:
+                        # Use denormalized data from materialized view
+                        creator_data = {
+                            'id': user_id_val,
+                            'username': row.get('creator_username') or 'Unknown',
+                            'display_name': row.get('creator_display_name'),
+                            'avatar_url': row.get('creator_avatar_url'),
+                            'email_verified': row.get('creator_is_verified') or False,
+                            'bio': None,
+                            'karma': 0,
+                            'is_admin': False,
+                            'is_investor': False,
+                            'is_validator': False,
+                            'has_oxcert': False,
+                            'github_connected': False,
+                            'github_username': None,
+                            'wallet_address': None,
+                            'full_wallet_address': None,
+                            'created_at': None,
+                        }
+
+                    project_data['creator'] = creator_data
+                    project_data['author'] = creator_data  # Alias for frontend compatibility
+
+                    # Add chain info from MV (if project is in a chain)
+                    if row.get('chain_id'):
+                        project_data['chain'] = {
+                            'id': row.get('chain_id'),
+                            'name': row.get('chain_name'),
+                            'slug': row.get('chain_slug'),
+                            'logo_url': row.get('chain_logo_url'),
+                        }
+                    else:
+                        project_data['chain'] = None
+
+                    # Get user's vote if authenticated
+                    project_data['user_vote'] = votes_dict.get(row.get('id'))
+
+                    # Get additional project fields that aren't in materialized view (optional data)
+                    project = projects_dict.get(row.get('id'))
+                    if project:
+                        # Get screenshots and badges separately to avoid N+1
+                        try:
+                            screenshots = [ss.to_dict() for ss in project.screenshots] if hasattr(project, 'screenshots') else []
+                        except:
+                            screenshots = []
+
+                        try:
+                            badges = [b.to_dict(include_validator=True) for b in project.badges] if hasattr(project, 'badges') else []
+                        except:
+                            badges = []
+
+                        project_data.update({
+                            'hackathon_name': project.hackathon_name,
+                            'hackathon_date': project.hackathon_date.isoformat() if project.hackathon_date else None,
+                            'hackathons': project.hackathons or [],
+                            'team_members': project.team_members or [],
+                            'categories': project.categories or [],
+                            'verification_score': project.verification_score or 0,
+                            'community_score': project.community_score or 0,
+                            'validation_score': project.validation_score or 0,
+                            'quality_score': project.quality_score or 0,
+                            'view_count': project.view_count or 0,
+                            'screenshots': screenshots,
+                            'badges': badges,
+                        })
+                    else:
+                        # Set defaults if project not found
+                        project_data.update({
+                            'hackathon_name': None,
+                            'hackathon_date': None,
+                            'hackathons': [],
+                            'team_members': [],
+                            'categories': [],
+                            'verification_score': 0,
+                            'community_score': 0,
+                            'validation_score': 0,
+                            'quality_score': 0,
+                            'view_count': 0,
+                            'screenshots': [],
+                            'badges': [],
+                        })
+
+                    projects_data.append(project_data)
+                except Exception as e:
+                    # Log error but continue processing other projects
+                    print(f"[ERROR] Failed to transform project row: {e}")
+                    print(f"[ERROR] Row data: {row}")
+                    continue
 
             # Get total count from materialized view
             total_result = db.session.execute(text("SELECT COUNT(*) FROM mv_feed_projects"))

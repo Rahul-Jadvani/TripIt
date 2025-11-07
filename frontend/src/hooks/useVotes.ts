@@ -28,7 +28,8 @@ export function useVote(projectId: string) {
 
       // Snapshot the previous values for rollback
       const previousProject = queryClient.getQueryData(['project', projectId]);
-      const previousProjects = queryClient.getQueryData(['projects']);
+      // Get all projects queries (different sort/page combinations)
+      const previousProjectsQueries = queryClient.getQueriesData({ queryKey: ['projects'] });
       const previousUserVotes = queryClient.getQueryData(['userVotes']);
 
       // Get current user vote state
@@ -73,8 +74,58 @@ export function useVote(projectId: string) {
 
         project.upvotes = Math.max(0, (project.upvotes || 0) + upvotesDelta);
         project.downvotes = Math.max(0, (project.downvotes || 0) + downvotesDelta);
+        project.user_vote = existingVote && existingVote.vote_type === voteType ? null : voteType;
 
         return { ...old, data: project };
+      });
+
+      // Also update projects list cache (for feed)
+      queryClient.setQueriesData({ queryKey: ['projects'] }, (old: any) => {
+        if (!old?.data?.data) return old;
+
+        const projects = [...old.data.data];
+        const projectIndex = projects.findIndex((p: any) => p.id === projectId);
+        
+        if (projectIndex !== -1) {
+          const project = { ...projects[projectIndex] };
+          let upvotesDelta = 0;
+          let downvotesDelta = 0;
+
+          if (existingVote) {
+            if (existingVote.vote_type === voteType) {
+              if (voteType === 'up') {
+                upvotesDelta = -1;
+              } else {
+                downvotesDelta = -1;
+              }
+            } else {
+              if (existingVote.vote_type === 'up') {
+                upvotesDelta = -1;
+                downvotesDelta = 1;
+              } else {
+                upvotesDelta = 1;
+                downvotesDelta = -1;
+              }
+            }
+          } else {
+            if (voteType === 'up') {
+              upvotesDelta = 1;
+            } else {
+              downvotesDelta = 1;
+            }
+          }
+
+          project.upvotes = Math.max(0, (project.upvotes || 0) + upvotesDelta);
+          project.downvotes = Math.max(0, (project.downvotes || 0) + downvotesDelta);
+          project.voteCount = (project.upvotes || 0) - (project.downvotes || 0);
+          project.user_vote = existingVote && existingVote.vote_type === voteType ? null : voteType;
+          project.userVote = project.user_vote;
+
+          projects[projectIndex] = project;
+          return { ...old, data: { ...old.data, data: projects } };
+        }
+
+        return old;
       });
 
       // Optimistically update user votes
@@ -91,7 +142,7 @@ export function useVote(projectId: string) {
       });
 
       // Return context for rollback
-      return { previousProject, previousProjects, previousUserVotes };
+      return { previousProject, previousProjectsQueries, previousUserVotes };
     },
 
     // ROLLBACK: On error, restore previous state
@@ -100,8 +151,11 @@ export function useVote(projectId: string) {
       if (context?.previousProject) {
         queryClient.setQueryData(['project', projectId], context.previousProject);
       }
-      if (context?.previousProjects) {
-        queryClient.setQueryData(['projects'], context.previousProjects);
+      if (context?.previousProjectsQueries) {
+        // Restore all projects queries
+        context.previousProjectsQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
       if (context?.previousUserVotes) {
         queryClient.setQueryData(['userVotes'], context.previousUserVotes);
@@ -112,12 +166,22 @@ export function useVote(projectId: string) {
       toast.error(errorMessage);
     },
 
-    // SETTLED: Always refetch to ensure data consistency
+    // SETTLED: Always refetch to ensure data consistency (but don't force refetch)
     onSettled: () => {
-      // Refetch in background to sync with server
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['userVotes'] });
+      // Mark queries as stale but don't force immediate refetch
+      // This allows background refetch without blocking UI
+      queryClient.invalidateQueries({ 
+        queryKey: ['project', projectId],
+        refetchType: 'none' // Don't refetch immediately
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['projects'],
+        refetchType: 'none' // Don't refetch immediately
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['userVotes'],
+        refetchType: 'none' // Don't refetch immediately
+      });
     },
   });
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useChain, useChainProjects } from '@/hooks/useChains';
 import { useBanChain, useSuspendChain, useUnbanChain, useDeleteChainAdmin, useToggleChainFeatured } from '@/hooks/useAdminChains';
@@ -26,6 +26,13 @@ export default function ChainDetailPage() {
   const [sort, setSort] = useState('trending');
   const [page, setPage] = useState(1);
   const [showAddProjectDialog, setShowAddProjectDialog] = useState(false);
+
+  // Reset state when navigating to a different chain
+  useEffect(() => {
+    setPage(1);
+    setSort('trending');
+    setShowAddProjectDialog(false);
+  }, [slug]);
 
   // Admin mutations
   const banChainMutation = useBanChain();

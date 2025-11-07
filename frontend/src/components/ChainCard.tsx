@@ -1,17 +1,37 @@
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Chain } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Folder, Users, Eye, Lock, Star } from 'lucide-react';
+import { chainApi } from '@/services/chainApi';
 
 interface ChainCardProps {
   chain: Chain;
 }
 
 export function ChainCard({ chain }: ChainCardProps) {
+  const queryClient = useQueryClient();
+
+  const handleMouseEnter = () => {
+    // Prefetch chain details on hover for instant navigation
+    queryClient.prefetchQuery({
+      queryKey: ['chain', chain.slug],
+      queryFn: () => chainApi.getChain(chain.slug),
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    // Prefetch chain projects
+    queryClient.prefetchQuery({
+      queryKey: ['chainProjects', chain.slug, { sort: 'trending', page: 1, limit: 12 }],
+      queryFn: () => chainApi.getChainProjects(chain.slug, { sort: 'trending', page: 1, limit: 12 }),
+      staleTime: 1000 * 60 * 5,
+    });
+  };
+
   return (
-    <Link to={`/chains/${chain.slug}`}>
+    <Link to={`/chains/${chain.slug}`} onMouseEnter={handleMouseEnter}>
       <Card className="card-interactive overflow-hidden relative h-full transition-all duration-300 hover:shadow-lg">
         {/* Banner */}
         {chain.banner_url && (

@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, Loader2, Mail, Clock, CheckCircle, XCircle, Send, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
-
-// Helper function to get the backend URL
-const getBackendUrl = (): string => {
-  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-  return isDev ? 'http://localhost:5000' : 'https://discovery-platform.onrender.com';
-};
+import {
+  useReceivedIntroRequests,
+  useSentIntroRequests,
+  useAcceptIntroRequest,
+  useDeclineIntroRequest
+} from '@/hooks/useIntros';
 
 interface IntroRequest {
   id: string;
@@ -42,93 +40,21 @@ export default function Intros() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<'received' | 'sent'>('received');
-  const [receivedRequests, setReceivedRequests] = useState<IntroRequest[]>([]);
-  const [sentRequests, setSentRequests] = useState<IntroRequest[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchReceivedRequests();
-    if (user?.is_investor) {
-      fetchSentRequests();
-    }
-  }, [user]);
+  // React Query hooks
+  const { data: receivedRequests = [], isLoading: receivedLoading } = useReceivedIntroRequests();
+  const { data: sentRequests = [], isLoading: sentLoading } = useSentIntroRequests();
+  const acceptMutation = useAcceptIntroRequest();
+  const declineMutation = useDeclineIntroRequest();
 
-  const fetchReceivedRequests = async () => {
-    try {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/received`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        setReceivedRequests(data.data);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const loading = tab === 'received' ? receivedLoading : sentLoading;
+
+  const handleAccept = (requestId: string) => {
+    acceptMutation.mutate(requestId);
   };
 
-  const fetchSentRequests = async () => {
-    try {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/sent`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        setSentRequests(data.data);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleAccept = async (requestId: string) => {
-    try {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/${requestId}/accept`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        toast.success('Intro request accepted!');
-        fetchReceivedRequests();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      toast.error('Failed to accept request');
-    }
-  };
-
-  const handleDecline = async (requestId: string) => {
-    try {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/${requestId}/decline`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        toast.success('Intro request declined');
-        fetchReceivedRequests();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      toast.error('Failed to decline request');
-    }
+  const handleDecline = (requestId: string) => {
+    declineMutation.mutate(requestId);
   };
 
   const getStatusIcon = (status: string) => {
@@ -157,7 +83,9 @@ export default function Intros() {
     }
   };
 
-  if (loading) {
+  // Only show loading if there's NO cached data
+  const hasData = tab === 'received' ? receivedRequests.length > 0 : sentRequests.length > 0;
+  if (loading && !hasData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -165,7 +165,8 @@ export default function DirectMessages() {
     setSelectedUser(conv.user);
   };
 
-  if (conversationsLoading) {
+  // Only show loading if there's NO cached data
+  if (conversationsLoading && conversations.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

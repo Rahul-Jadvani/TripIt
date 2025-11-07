@@ -109,6 +109,12 @@ export function VoteButtons({ projectId, voteCount, userVote = null, onVoteChang
             } else {
               // Vote was removed (backend returns null)
               setCurrentVote(null);
+              // Recalculate count based on current state
+              if (previousVote === 'up') {
+                setCurrentCount(prev => Math.max(0, prev - 1));
+              } else if (previousVote === 'down') {
+                setCurrentCount(prev => prev + 1);
+              }
             }
             onVoteChange?.();
           },
@@ -120,11 +126,16 @@ export function VoteButtons({ projectId, voteCount, userVote = null, onVoteChang
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3">
+    <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3" onClick={(e) => e.stopPropagation()}>
       <Button
         variant={currentVote === 'up' ? 'default' : 'ghost'}
         size="sm"
-        onClick={() => handleVote('up')}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleVote('up');
+        }}
+        type="button"
         className="h-8 w-8 p-0 transition-all active:scale-95"
       >
         <ThumbsUp className="h-4 w-4" />
@@ -137,7 +148,12 @@ export function VoteButtons({ projectId, voteCount, userVote = null, onVoteChang
       <Button
         variant={currentVote === 'down' ? 'default' : 'ghost'}
         size="sm"
-        onClick={() => handleVote('down')}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleVote('down');
+        }}
+        type="button"
         className="h-8 w-8 p-0 transition-all active:scale-95"
       >
         <ThumbsDown className="h-4 w-4" />
