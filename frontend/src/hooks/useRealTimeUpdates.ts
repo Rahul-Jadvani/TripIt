@@ -169,40 +169,104 @@ export function useRealTimeUpdates() {
       });
 
       // Intros & messages
-      socket.on('intro:received', () => {
+      socket.on('intro:received', (data) => {
         // Play notification chime
         playNotificationSound('intro');
 
         toast('New intro request received!');
-        queryClient.invalidateQueries({ queryKey: ['intros', 'received'] });
-        // Invalidate intro request count badge
-        queryClient.refetchQueries({ queryKey: ['intro-requests', 'count'] });
+
+        // Immediately add intro to received list
+        if (data.data) {
+          queryClient.setQueryData(
+            ['intro-requests', 'received'],
+            (old: any = []) => {
+              // Check if intro already exists
+              const exists = old.some((intro: any) => intro.id === data.data.id);
+              return exists ? old : [data.data, ...old]; // Add to top
+            }
+          );
+        }
+
+        // Update intro request count badge
+        queryClient.setQueryData(
+          ['intro-requests', 'count'],
+          (old: any = { pending_count: 0 }) => ({
+            pending_count: (old?.pending_count || 0) + 1,
+          })
+        );
       });
       socket.on('intro:accepted', (data) => {
         toast.success('Your intro request was accepted!', {
           description: `${data.data?.builder_name || 'Someone'} accepted your intro request. Check your messages!`,
           duration: 5000,
         });
-        // Invalidate both intro requests and conversations to show new conversation immediately
-        queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
-        queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
-        // Invalidate message count badge since conversation was created
-        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
-        // If initial message exists, add it to the conversation
+
+        const requestId = data.request_id || data.data?.request_id || data.data?.id;
+
+        // Immediately remove intro from sent list
+        if (requestId) {
+          queryClient.setQueryData(
+            ['intro-requests', 'sent'],
+            (old: any = []) => old.filter((req: any) => req.id !== requestId)
+          );
+        }
+
+        // Add conversation with new message immediately
         if (data.data?.initial_message && data.data?.builder_id) {
           queryClient.setQueryData(
             ['messages', 'conversation', data.data.builder_id],
             (old: any[] = []) => {
-              // Avoid duplicates
               const exists = old.some((msg) => msg.id === data.data.initial_message.id);
               return exists ? old : [...old, data.data.initial_message];
             }
           );
         }
+
+        // Add to conversations list
+        if (data.data?.builder_id && data.data?.builder_name) {
+          queryClient.setQueryData(
+            ['messages', 'conversations'],
+            (old: any[] = []) => {
+              const exists = old.some((conv: any) => conv.user?.id === data.data.builder_id);
+              if (exists) return old;
+              return [
+                {
+                  user: {
+                    id: data.data.builder_id,
+                    username: data.data.builder_username || 'Builder',
+                    display_name: data.data.builder_name,
+                    avatar_url: data.data.builder_avatar,
+                  },
+                  last_message: data.data.initial_message,
+                  unread_count: 0,
+                },
+                ...old,
+              ];
+            }
+          );
+        }
+
+        // Update message count
+        queryClient.setQueryData(
+          ['messages', 'count'],
+          (old: any = { unread_count: 0 }) => ({
+            unread_count: (old?.unread_count || 0) + 1,
+          })
+        );
       });
-      socket.on('intro:declined', () => {
+
+      socket.on('intro:declined', (data) => {
         toast('Your intro request was declined');
-        queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
+
+        const requestId = data.request_id || data.data?.request_id || data.data?.id;
+
+        // Immediately remove intro from sent list
+        if (requestId) {
+          queryClient.setQueryData(
+            ['intro-requests', 'sent'],
+            (old: any = []) => old.filter((req: any) => req.id !== requestId)
+          );
+        }
         // Invalidate intro request count badge
         queryClient.invalidateQueries({ queryKey: ['intro-requests', 'count'] });
       });
@@ -236,17 +300,34 @@ export function useRealTimeUpdates() {
         queryClient.refetchQueries({ queryKey: ['messages', 'count'] });
       });
       socket.on('message:read', () => {
-        queryClient.invalidateQueries({ queryKey: ['messages'] });
-        // Invalidate message count badge when messages are read
-        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
+        // Refetch message count as a message was marked read
+        queryClient.refetchQueries({ queryKey: ['messages', 'count'] });
       });
       socket.on('messages:read', (data) => {
+        // Mark messages as read in conversation cache
         if (data.sender_id) {
-          queryClient.invalidateQueries({ queryKey: ['messages', 'conversation', data.sender_id] });
+          queryClient.setQueryData(
+            ['messages', 'conversation', data.sender_id],
+            (old: any[] = []) =>
+              old.map((msg: any) =>
+                msg.sender_id === data.sender_id ? { ...msg, is_read: true } : msg
+              )
+          );
         }
-        queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
-        // Invalidate message count badge when messages are read
-        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
+
+        // Update conversations list to show messages are read
+        queryClient.setQueryData(
+          ['messages', 'conversations'],
+          (old: any[] = []) =>
+            old.map((conv: any) =>
+              conv.user?.id === data.sender_id
+                ? { ...conv, unread_count: 0 }
+                : conv
+            )
+        );
+
+        // Refetch message count
+        queryClient.refetchQueries({ queryKey: ['messages', 'count'] });
       });
     }
 
