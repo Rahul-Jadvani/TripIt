@@ -3,6 +3,7 @@ import { MessageSquare, Send, Loader2, ArrowLeft, Sparkles, Clock, Check, CheckC
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useConversations, useMessagesWithUser, useSendMessage } from '@/hooks/useMessages';
+import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
@@ -73,6 +74,9 @@ export default function DirectMessages() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize Socket.IO listeners for real-time message updates
+  useRealTimeUpdates();
 
   // React Query hooks
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations();

@@ -138,67 +138,72 @@ class SocketService:
 
     @staticmethod
     def emit_intro_accepted(requester_id, intro_data):
-        """Emit event when intro request is accepted"""
+        """Emit event when intro request is accepted to the requester"""
         try:
+            # Emit to specific requester user only
             socketio.emit('intro:accepted', {
                 'type': 'intro_accepted',
                 'requester_id': requester_id,
                 'data': intro_data,
-            })
+            }, to=str(requester_id))
             print(f"[Socket.IO] Emitted intro:accepted - Requester {requester_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting intro:accepted: {e}")
 
     @staticmethod
     def emit_intro_declined(requester_id, intro_data):
-        """Emit event when intro request is declined"""
+        """Emit event when intro request is declined to the requester"""
         try:
+            # Emit to specific requester user only
             socketio.emit('intro:declined', {
                 'type': 'intro_declined',
                 'requester_id': requester_id,
                 'data': intro_data,
-            })
+            }, to=str(requester_id))
             print(f"[Socket.IO] Emitted intro:declined - Requester {requester_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting intro:declined: {e}")
 
     @staticmethod
     def emit_message_received(recipient_id, message_data):
-        """Emit event when direct message is received"""
+        """Emit event when direct message is received to the specific recipient"""
         try:
+            # Emit to specific recipient user only
             socketio.emit('message:received', {
                 'type': 'message_received',
                 'recipient_id': recipient_id,
                 'data': message_data,
-            })
+            }, to=str(recipient_id))
             print(f"[Socket.IO] Emitted message:received - Recipient {recipient_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting message:received: {e}")
 
     @staticmethod
     def emit_message_read(sender_id, message_id):
-        """Emit event when message is marked as read"""
+        """Emit event when message is marked as read to the sender"""
         try:
+            # Emit to sender user only
             socketio.emit('message:read', {
                 'type': 'message_read',
                 'sender_id': sender_id,
                 'message_id': message_id,
-            })
-            print(f"[Socket.IO] Emitted message:read - Message {message_id}")
+            }, to=str(sender_id))
+            print(f"[Socket.IO] Emitted message:read - Sender {sender_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting message:read: {e}")
 
     @staticmethod
     def emit_messages_read(sender_id, reader_id, count):
-        """Emit event when multiple messages are marked as read"""
+        """Emit event when multiple messages are marked as read to the sender"""
         try:
+            # Emit to sender user only
             socketio.emit('messages:read', {
                 'type': 'messages_read',
                 'sender_id': sender_id,
                 'reader_id': reader_id,
                 'count': count,
-            })
-            print(f"[Socket.IO] Emitted messages:read - {count} messages by {reader_id}")
+            }, to=str(sender_id))
+            print(f"[Socket.IO] Emitted messages:read - {count} messages read by {reader_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting messages:read: {e}")
 
