@@ -22,7 +22,7 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="bg-background min-h-screen overflow-hidden">
+    <div className="min-h-screen overflow-hidden">
       <div className="container mx-auto px-6 py-12 overflow-hidden">
         <div className="mx-auto max-w-5xl w-full box-border">
           {/* Header section */}

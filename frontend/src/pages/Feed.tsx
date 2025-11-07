@@ -1,13 +1,51 @@
-import { useEffect, useMemo } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ProjectCarousel } from '@/components/ProjectCarousel';
-import { TopRatedCarousel } from '@/components/TopRatedCarousel';
+// Lazy load heavy carousels (named exports -> map to default)
+const ProjectCarousel = lazy(() =>
+  import('@/components/ProjectCarousel').then((m) => ({ default: m.ProjectCarousel }))
+);
+const TopRatedCarousel = lazy(() =>
+  import('@/components/TopRatedCarousel').then((m) => ({ default: m.TopRatedCarousel }))
+);
 import { ProjectCardSkeletonGrid, TopRatedCarouselSkeleton } from '@/components/ProjectCardSkeleton';
 import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/context/AuthContext';
 import { projectsService } from '@/services/api';
 import { Project } from '@/types';
+
+// Render children only when visible in viewport; shows placeholder until then
+function LazyOnVisible({
+  children,
+  placeholder,
+  rootMargin = '200px',
+}: {
+  children: React.ReactNode;
+  placeholder: React.ReactNode;
+  rootMargin?: string;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current || visible) return;
+    const el = ref.current;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { root: null, rootMargin, threshold: 0.01 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [visible]);
+
+  return <div ref={ref}>{visible ? children : placeholder}</div>;
+}
 
 export default function Feed() {
   const { user } = useAuth();
@@ -120,63 +158,95 @@ export default function Feed() {
             {/* Top Rated Projects Carousel - Featured at the top with enhanced styling */}
             {categorizedProjects.topScored.length > 0 && (
               <section>
-                <TopRatedCarousel
-                  projects={categorizedProjects.topScored}
-                  categoryName="top-rated"
-                />
+                <LazyOnVisible placeholder={
+                  <div className="flex justify-center">
+                    <div className="w-full sm:w-[600px] h-[320px]">
+                      <TopRatedCarouselSkeleton />
+                    </div>
+                  </div>
+                }>
+                  <Suspense fallback={
+                    <div className="flex justify-center">
+                      <div className="w-full sm:w-[600px] h-[320px]">
+                        <TopRatedCarouselSkeleton />
+                      </div>
+                    </div>
+                  }>
+                    <TopRatedCarousel
+                      projects={categorizedProjects.topScored}
+                      categoryName="top-rated"
+                    />
+                  </Suspense>
+                </LazyOnVisible>
               </section>
             )}
 
             {/* Trending Carousel */}
             {categorizedProjects.hot.length > 0 && (
               <section className="carousel-cinema">
-                <ProjectCarousel
-                  projects={categorizedProjects.hot}
-                  categoryTitle="Trending"
-                  categoryName="trending"
-                  categoryIcon={<Sparkles className="h-5 w-5" />}
-                  autoplay={true}
-                />
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}> 
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.hot}
+                      categoryTitle="Trending"
+                      categoryName="trending"
+                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
               </section>
             )}
 
             {/* New Launches Carousel */}
             {categorizedProjects.newLaunches.length > 0 && (
               <section className="carousel-cinema">
-                <ProjectCarousel
-                  projects={categorizedProjects.newLaunches}
-                  categoryTitle="New Launches"
-                  categoryName="new-launches"
-                  categoryIcon={<Clock className="h-5 w-5" />}
-                  autoplay={true}
-                />
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.newLaunches}
+                      categoryTitle="New Launches"
+                      categoryName="new-launches"
+                      categoryIcon={<Clock className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
               </section>
             )}
 
             {/* AI & Smart Contracts Carousel */}
             {categorizedProjects.aiSmartContracts.length > 0 && (
               <section className="carousel-cinema">
-                <ProjectCarousel
-                  projects={categorizedProjects.aiSmartContracts}
-                  categoryTitle="AI & Smart Contracts"
-                  categoryName="ai-smart-contracts"
-                  categoryIcon={<Sparkles className="h-5 w-5" />}
-                  autoplay={true}
-                  enableTagFiltering={true}
-                />
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.aiSmartContracts}
+                      categoryTitle="AI & Smart Contracts"
+                      categoryName="ai-smart-contracts"
+                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      autoplay={true}
+                      enableTagFiltering={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
               </section>
             )}
 
             {/* Most Requested Intros Carousel */}
             {categorizedProjects.mostRequested.length > 0 && (
               <section className="carousel-cinema">
-                <ProjectCarousel
-                  projects={categorizedProjects.mostRequested}
-                  categoryTitle="Most Requested Intros"
-                  categoryName="most-requested"
-                  categoryIcon={<MessageCircle className="h-5 w-5" />}
-                  autoplay={true}
-                />
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.mostRequested}
+                      categoryTitle="Most Requested Intros"
+                      categoryName="most-requested"
+                      categoryIcon={<MessageCircle className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
               </section>
             )}
 

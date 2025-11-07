@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Ensure API base always ends with /api
-const getApiBase = () => {
+export const getApiBase = () => {
   // Priority: Environment variable > URL detection > Fallback
   let baseUrl = import.meta.env.VITE_API_URL;
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -17,7 +17,7 @@ const getApiBase = () => {
     }
   }
 
-  console.log('🌐 API Base URL configured:', {
+  if (import.meta.env.DEV) console.log('🌐 API Base URL configured:', {
     currentHost: currentHost,
     isDevelopment: isDev,
     baseUrl: baseUrl,
@@ -26,11 +26,11 @@ const getApiBase = () => {
   });
 
   const finalUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
-  console.log('🌐 Final API Base URL:', finalUrl);
+  if (import.meta.env.DEV) console.log('🌐 Final API Base URL:', finalUrl);
   return finalUrl;
 };
 
-const API_BASE = getApiBase();
+export const API_BASE = getApiBase();
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -45,20 +45,20 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, config.data || {});
+  if (import.meta.env.DEV) console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
   return config;
 });
 
 // Handle responses and errors
 api.interceptors.response.use(
   (response) => {
-    console.log(`[API Response] ${response.status}`, response.data);
+    if (import.meta.env.DEV) console.log(`[API Response] ${response.status}`, response.data);
     return response;
   },
   async (error) => {
     const config = error.config;
 
-    console.error(`[API Error] ${error.response?.status || 'Network'}:`, {
+    if (import.meta.env.DEV) console.error(`[API Error] ${error.response?.status || 'Network'}:`, {
       url: config?.url,
       method: config?.method,
       status: error.response?.status,
@@ -79,7 +79,7 @@ api.interceptors.response.use(
           // Backend returns { status, message, data: { access } }
           const newAccessToken = response.data?.data?.access;
           if (newAccessToken) {
-            console.log('[Auth] Token refreshed successfully');
+            if (import.meta.env.DEV) console.log('[Auth] Token refreshed successfully');
             localStorage.setItem('token', newAccessToken);
             api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
             config.headers['Authorization'] = `Bearer ${newAccessToken}`;
@@ -87,7 +87,7 @@ api.interceptors.response.use(
           }
         }
       } catch (refreshError) {
-        console.error('[Auth] Token refresh failed:', refreshError);
+        if (import.meta.env.DEV) console.error('[Auth] Token refresh failed:', refreshError);
         // Refresh failed, clear auth and redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
@@ -325,4 +325,20 @@ export const adminService = {
   deleteFeedback: (feedbackId: string) => api.delete(`/feedback/admin/${feedbackId}`),
 };
 
+// Public Investors (non-admin convenience wrapper)
+export const publicInvestorsService = {
+  getAll: () => api.get('/investor-requests/public'),
+};
+
+// Messages
+export const messagesService = {
+  getConversations: () => api.get('/messages/conversations'),
+  getConversation: (userId: string) => api.get(`/messages/conversation/${userId}`),
+  send: (recipientId: string, message: string) =>
+    api.post('/messages/send', { recipient_id: recipientId, message }),
+  markRead: (messageId: string) => api.put(`/messages/${messageId}/read`),
+};
+
 export default api;
+
+

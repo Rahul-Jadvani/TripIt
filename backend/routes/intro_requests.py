@@ -240,6 +240,22 @@ def accept_request(user_id, request_id):
         CacheService.invalidate_intro_requests(user_id)
         CacheService.invalidate_intro_requests(intro_request.investor_id)
 
+        # CRITICAL: Emit real-time Socket.IO event to notify investor immediately
+        from services.socket_service import SocketService
+        SocketService.emit_intro_accepted(
+            intro_request.investor_id,  # Send to investor
+            {
+                'request_id': str(intro_request.id),
+                'builder_id': str(intro_request.builder_id),
+                'builder_name': current_user.display_name or current_user.username,
+                'builder_username': current_user.username,
+                'builder_avatar': current_user.avatar_url,
+                'project_id': str(intro_request.project_id),
+                'project_title': intro_request.project.title,
+                'initial_message': initial_message.to_dict(include_users=True)
+            }
+        )
+
         return jsonify({
             'status': 'success',
             'message': 'Intro request accepted and conversation started',

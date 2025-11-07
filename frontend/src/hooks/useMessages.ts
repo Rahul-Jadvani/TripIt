@@ -1,31 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/services/api';
+import api, { messagesService } from '@/services/api';
 import { toast } from 'sonner';
-
-// Get backend URL
-const getBackendUrl = (): string => {
-  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-  return isDev ? 'http://localhost:5000' : 'https://discovery-platform.onrender.com';
-};
 
 // Fetch conversations
 export function useConversations() {
   return useQuery({
     queryKey: ['messages', 'conversations'],
-    queryFn: async () => {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/messages/conversations`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        return data.data;
-      }
-      throw new Error(data.message || 'Failed to fetch conversations');
-    },
+    queryFn: async () => (await messagesService.getConversations()).data?.data || [],
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 5,
     refetchOnMount: false,
@@ -39,19 +20,7 @@ export function useConversations() {
 export function useMessagesWithUser(userId: string) {
   return useQuery({
     queryKey: ['messages', 'conversation', userId],
-    queryFn: async () => {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/messages/conversation/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        return data.data.messages;
-      }
-      throw new Error(data.message || 'Failed to fetch messages');
-    },
+    queryFn: async () => (await messagesService.getConversation(userId)).data?.data?.messages || [],
     enabled: !!userId,
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 5,
@@ -68,23 +37,8 @@ export function useSendMessage() {
 
   return useMutation({
     mutationFn: async ({ recipientId, message }: { recipientId: string; message: string }) => {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/messages/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          recipient_id: recipientId,
-          message: message,
-        }),
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        return data.data;
-      }
-      throw new Error(data.message || 'Failed to send message');
+      const { data } = await messagesService.send(recipientId, message);
+      return data?.data;
     },
     onSuccess: (_, variables) => {
       // Invalidate conversations and specific conversation
@@ -104,18 +58,8 @@ export function useMarkMessageRead() {
 
   return useMutation({
     mutationFn: async (messageId: string) => {
-      const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/messages/${messageId}/read`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        return data.data;
-      }
-      throw new Error(data.message || 'Failed to mark message as read');
+      const { data } = await messagesService.markRead(messageId);
+      return data?.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });

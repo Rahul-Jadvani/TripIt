@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { usePublicInvestors } from '@/hooks/useInvestors';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,32 +26,40 @@ export default function InvestorDirectory() {
   const [selectedStage, setSelectedStage] = useState<string>('');
 
   // Fetch public investors
-  const { data: investors = [], isLoading } = usePublicInvestors();
+  const { data, isLoading } = usePublicInvestors();
+  const investors: any[] = useMemo(() => {
+    // defensively coerce to array
+    if (Array.isArray(data)) return data;
+    // support shapes like { investors: [] }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const obj: any = data as any;
+    if (obj && Array.isArray(obj.investors)) return obj.investors;
+    return [];
+  }, [data]);
 
   // Extract unique industries and stages for filters
-  const allIndustries = investors
-    ? Array.from(new Set(investors.flatMap((inv: any) => inv.industries || [])))
-    : [];
-  const allStages = investors
-    ? Array.from(new Set(investors.flatMap((inv: any) => inv.investment_stages || [])))
-    : [];
+  const allIndustries = useMemo(() => (
+    Array.from(new Set((investors as any[]).flatMap((inv: any) => inv?.industries || [])))
+  ), [investors]);
+  const allStages = useMemo(() => (
+    Array.from(new Set((investors as any[]).flatMap((inv: any) => inv?.investment_stages || [])))
+  ), [investors]);
 
   // Filter investors
-  const filteredInvestors = investors?.filter((investor: any) => {
-    const matchesSearch = !searchQuery ||
-      investor.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      investor.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      investor.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      investor.bio?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredInvestors = useMemo(() => (
+    investors?.filter((investor: any) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery ||
+        investor.name?.toLowerCase().includes(q) ||
+        investor.user?.username?.toLowerCase().includes(q) ||
+        investor.company_name?.toLowerCase().includes(q) ||
+        investor.bio?.toLowerCase().includes(q);
 
-    const matchesIndustry = !selectedIndustry ||
-      investor.industries?.includes(selectedIndustry);
-
-    const matchesStage = !selectedStage ||
-      investor.investment_stages?.includes(selectedStage);
-
-    return matchesSearch && matchesIndustry && matchesStage;
-  });
+      const matchesIndustry = !selectedIndustry || investor.industries?.includes(selectedIndustry);
+      const matchesStage = !selectedStage || investor.investment_stages?.includes(selectedStage);
+      return matchesSearch && matchesIndustry && matchesStage;
+    })
+  ), [investors, searchQuery, selectedIndustry, selectedStage]);
 
   return (
     <div className="min-h-screen bg-background pt-20 px-4 pb-12">
@@ -75,6 +83,7 @@ export default function InvestorDirectory() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search investors..."
+                aria-label="Search investors"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -83,7 +92,10 @@ export default function InvestorDirectory() {
 
             {/* Industry Filter */}
             <div>
+              <label htmlFor="industry-filter" className="block text-xs font-semibold text-muted-foreground mb-1">Industry</label>
               <select
+                id="industry-filter"
+                aria-label="Filter by industry"
                 value={selectedIndustry}
                 onChange={(e) => setSelectedIndustry(e.target.value)}
                 className="w-full h-10 px-3 rounded-md border-3 border-black bg-background text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary"
@@ -99,7 +111,10 @@ export default function InvestorDirectory() {
 
             {/* Stage Filter */}
             <div>
+              <label htmlFor="stage-filter" className="block text-xs font-semibold text-muted-foreground mb-1">Stage</label>
               <select
+                id="stage-filter"
+                aria-label="Filter by stage"
                 value={selectedStage}
                 onChange={(e) => setSelectedStage(e.target.value)}
                 className="w-full h-10 px-3 rounded-md border-3 border-black bg-background text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary"
@@ -172,7 +187,7 @@ export default function InvestorDirectory() {
                 {/* Header */}
                 <div className="flex items-start gap-4 mb-4">
                   <Avatar className="h-16 w-16 border-3 border-primary flex-shrink-0">
-                    <AvatarImage src={investor.user?.avatar_url} alt={investor.name} />
+                    <AvatarImage src={investor.user?.avatar_url} alt={investor.name} loading="lazy" />
                     <AvatarFallback className="text-lg font-black bg-primary text-black">
                       {investor.name?.slice(0, 2).toUpperCase()}
                     </AvatarFallback>

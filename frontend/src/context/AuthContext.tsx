@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Helper to transform backend user data
   const transformUser = (backendUser: any): User => {
-    console.log('🔍 AuthContext transformUser - Backend user data:', backendUser);
+    
 
     const transformed = {
       id: backendUser.id,
@@ -56,12 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updated_at: backendUser.updated_at,
     };
 
-    console.log('✅ AuthContext transformUser - Transformed user:', {
-      username: transformed.username,
-      is_investor: transformed.is_investor,
-      is_admin: transformed.is_admin,
-      is_validator: transformed.is_validator
-    });
+    
 
     return transformed;
   };
@@ -85,20 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('🔐 AuthContext.login - Starting login process');
+    
     const response = await authService.login(email, password);
-    console.log('🔐 AuthContext.login - Response received:', {
-      status: response.status,
-      dataStructure: Object.keys(response.data),
-      fullData: response.data
-    });
+    
 
     const { tokens, user: newUser } = response.data.data;
-    console.log('🔐 AuthContext.login - Extracted tokens and user:', {
-      hasTokens: !!tokens,
-      hasAccess: !!tokens?.access,
-      userName: newUser?.username
-    });
+    
 
     localStorage.setItem('token', tokens.access);
     if (tokens.refresh) {
@@ -107,24 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${tokens.access}`;
     setToken(tokens.access);
     setUser(transformUser(newUser));
-    console.log('✅ AuthContext.login - Login successful');
+    
   };
 
   const register = async (email: string, password: string, username: string) => {
-    console.log('🔐 AuthContext.register - Starting registration process');
+    
     const response = await authService.register(email, username, password);
-    console.log('🔐 AuthContext.register - Response received:', {
-      status: response.status,
-      dataStructure: Object.keys(response.data),
-      fullData: response.data
-    });
+    
 
     const { tokens, user: newUser } = response.data.data;
-    console.log('🔐 AuthContext.register - Extracted tokens and user:', {
-      hasTokens: !!tokens,
-      hasAccess: !!tokens?.access,
-      userName: newUser?.username
-    });
+    
 
     localStorage.setItem('token', tokens.access);
     if (tokens.refresh) {
@@ -133,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${tokens.access}`;
     setToken(tokens.access);
     setUser(transformUser(newUser));
-    console.log('✅ AuthContext.register - Registration successful');
+    
   };
 
   const logout = () => {
@@ -152,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await authService.getCurrentUser();
         setUser(transformUser(response.data.data));
       } catch (error) {
-        console.error('Failed to refresh user:', error);
+        if (import.meta.env.DEV) console.error('Failed to refresh user:', error);
       }
     }
   };
@@ -171,3 +150,5 @@ export function useAuth() {
   }
   return context;
 }
+
+

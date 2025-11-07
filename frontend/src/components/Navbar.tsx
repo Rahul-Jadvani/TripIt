@@ -12,26 +12,65 @@ import {
 import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2 } from 'lucide-react';
 import { ConnectWallet } from '@/components/ConnectWallet';
 import { NotificationBell } from '@/components/NotificationBell';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 
-export function Navbar() {
+export const Navbar = memo(function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
+  // Prefetch route modules on hover/focus to speed up navigation
+  const prefetchRoute = useCallback((path: string) => {
+    switch (path) {
+      case '/':
+      case '/feed':
+        import('@/pages/Feed');
+        break;
+      case '/leaderboard':
+        import('@/pages/Leaderboard');
+        break;
+      case '/chains':
+        import('@/pages/ChainsListPage');
+        break;
+      case '/search':
+        import('@/pages/Search');
+        break;
+      case '/investors':
+        import('@/pages/Investors');
+        break;
+      case '/publish':
+        import('@/pages/Publish');
+        break;
+      case '/intros':
+        import('@/pages/Intros');
+        break;
+      case '/messages':
+        import('@/pages/DirectMessages');
+        break;
+      case '/login':
+        import('@/pages/Login');
+        break;
+      case '/register':
+        import('@/pages/Register');
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
     logout();
     navigate('/');
     setMobileMenuOpen(false);
-  };
+  }, [logout, navigate]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b-4 border-black bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container mx-auto px-6">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 transition-quick hover:opacity-80 flex-shrink-0">
-            <img src="/logo.png" alt="ZERO" className="h-8 w-8" />
+          <Link to="/" onMouseEnter={() => prefetchRoute('/')} onFocus={() => prefetchRoute('/')} className="flex items-center gap-2 transition-quick hover:opacity-80 flex-shrink-0">
+            <img src="/logo.png" alt="ZERO" className="h-8 w-8" loading="lazy" />
             <span className="text-xl font-black text-primary" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>
               ZER0
             </span>
@@ -39,25 +78,25 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            <Link to="/" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+            <Link to="/" onMouseEnter={() => prefetchRoute('/')} onFocus={() => prefetchRoute('/')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <TrendingUp className="h-4 w-4" />
               <span>Feed</span>
             </Link>
-            <Link to="/leaderboard" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+            <Link to="/leaderboard" onMouseEnter={() => prefetchRoute('/leaderboard')} onFocus={() => prefetchRoute('/leaderboard')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <Trophy className="h-4 w-4" />
               <span>Leaderboard</span>
             </Link>
-            <Link to="/chains" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+            <Link to="/chains" onMouseEnter={() => prefetchRoute('/chains')} onFocus={() => prefetchRoute('/chains')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <Link2 className="h-4 w-4" />
               <span>Chains</span>
             </Link>
             {user && (
-              <Link to="/investors" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+              <Link to="/investor-directory" onMouseEnter={() => prefetchRoute('/investor-directory')} onFocus={() => prefetchRoute('/investor-directory')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
                 <Building2 className="h-4 w-4" />
                 <span>Investors</span>
               </Link>
             )}
-            <Link to="/search" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+            <Link to="/search" onMouseEnter={() => prefetchRoute('/search')} onFocus={() => prefetchRoute('/search')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <Search className="h-4 w-4" />
               <span>Search</span>
             </Link>
@@ -73,22 +112,43 @@ export function Navbar() {
                 </div>
 
                 {/* Publish Button */}
-                <a href="/publish" className="btn-primary hidden md:inline-flex gap-2 px-3 py-2 text-xs">
+                <Link
+                  to="/publish"
+                  aria-label="Publish a new project"
+                  title="Publish"
+                  onMouseEnter={() => prefetchRoute('/publish')}
+                  onFocus={() => prefetchRoute('/publish')}
+                  className="btn-primary hidden md:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   <Plus className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Publish</span>
-                </a>
+                </Link>
 
                 {/* Intros */}
-                <a href="/intros" className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs">
+                <Link
+                  to="/intros"
+                  aria-label="Open intros"
+                  title="Intros"
+                  onMouseEnter={() => prefetchRoute('/intros')}
+                  onFocus={() => prefetchRoute('/intros')}
+                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   <Send className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Intros</span>
-                </a>
+                </Link>
 
                 {/* Messages */}
-                <a href="/messages" className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs">
+                <Link
+                  to="/messages"
+                  aria-label="Open messages"
+                  title="Messages"
+                  onMouseEnter={() => prefetchRoute('/messages')}
+                  onFocus={() => prefetchRoute('/messages')}
+                  className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Messages</span>
-                </a>
+                </Link>
 
                 {/* Notifications */}
                 <NotificationBell />
@@ -96,7 +156,11 @@ export function Navbar() {
                 {/* User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 rounded-full transition-quick hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-primary">
+                    <button
+                      aria-label="Open user menu"
+                      title="User menu"
+                      className="flex items-center gap-2 rounded-full transition-quick hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+                    >
                       <Avatar className="h-8 w-8 border-3 border-primary">
                         <AvatarImage src={user.avatar} alt={user.username} />
                         <AvatarFallback className="bg-primary text-black font-bold text-xs">
@@ -200,12 +264,26 @@ export function Navbar() {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <a href="/login" className="btn-secondary px-3 py-2 text-xs">
+                <Link
+                  to="/login"
+                  aria-label="Login"
+                  title="Login"
+                  onMouseEnter={() => prefetchRoute('/login')}
+                  onFocus={() => prefetchRoute('/login')}
+                  className="btn-secondary px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   Login
-                </a>
-                <a href="/register" className="btn-primary px-3 py-2 text-xs">
+                </Link>
+                <Link
+                  to="/register"
+                  aria-label="Sign up"
+                  title="Sign up"
+                  onMouseEnter={() => prefetchRoute('/register')}
+                  onFocus={() => prefetchRoute('/register')}
+                  className="btn-primary px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   Sign Up
-                </a>
+                </Link>
               </div>
             )}
           </div>
@@ -213,4 +291,4 @@ export function Navbar() {
       </div>
     </header>
   );
-}
+});

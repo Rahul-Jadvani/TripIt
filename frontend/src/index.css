@@ -35,6 +35,14 @@ All colors MUST be HSL.
     --destructive: 0 100% 60%; /* #FF3333 - Bold red */
     --destructive-foreground: 0 0% 0%;
 
+    /* Info: Bright blue */
+    --info: 210 100% 65%; /* ~#5FB3FF */
+    --info-foreground: 0 0% 0%;
+
+    /* Warning: Vibrant orange */
+    --warning: 30 100% 60%; /* ~#FFA54D */
+    --warning-foreground: 0 0% 0%;
+
     --success: 45 97% 70%; /* #F9D46A - Golden yellow */
     --success-foreground: 0 0% 0%;
 
@@ -45,9 +53,14 @@ All colors MUST be HSL.
     --radius: 0.938rem; /* 15px - Rounded but not too much */
 
     /* Gradients and effects */
-    --gradient-primary: linear-gradient(135deg, #F9D46A 0%, #E8B74F 100%);
-    --gradient-secondary: linear-gradient(135deg, #F9D46A 0%, #D49A2A 100%);
-    --border-thick: 4px solid #000000;
+    /* Base ink (pure black) for borders/shadows */
+    --ink: 0 0% 0%;
+    /* Slightly darker/lighter primary variant for gradients */
+    --primary-alt: 39 77% 62%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-alt)) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-alt)) 100%);
+    --border-thick: 4px solid hsl(var(--ink));
     --shadow-button: 4px 6px 0px rgba(0, 0, 0, 0.8);
     --shadow-button-hover: 2px 3px 0px rgba(0, 0, 0, 0.8);
     --shadow-card: 6px 8px 0px rgba(0, 0, 0, 0.6);
@@ -62,7 +75,7 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply text-foreground font-sans antialiased bg-black;
+    @apply text-foreground font-sans antialiased bg-background;
   }
 
   /* Scrollbar styling for dark theme - Bold */
@@ -77,7 +90,7 @@ All colors MUST be HSL.
 
   ::-webkit-scrollbar-thumb {
     @apply bg-primary rounded-full;
-    border: 2px solid #000000;
+    border: 2px solid hsl(var(--ink));
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -120,7 +133,7 @@ All colors MUST be HSL.
   /* Form elements - Bold style */
   input, textarea, select {
     @apply rounded-[15px];
-    border: 2px solid #000000;
+    border: 2px solid hsl(var(--ink));
     background-color: hsl(var(--input));
     color: hsl(var(--foreground));
     font-weight: 500;
@@ -154,7 +167,7 @@ All colors MUST be HSL.
     content: "";
     position: absolute;
     inset: 0;
-    background-color: #E8B74F;
+    background-color: hsl(var(--primary));
     transform: translateX(-100%);
     z-index: -1;
     transition: var(--transition-quick);
@@ -188,7 +201,7 @@ All colors MUST be HSL.
     content: "";
     position: absolute;
     inset: 0;
-    background-color: var(--muted);
+    background-color: hsl(var(--muted));
     transform: translateX(-100%);
     z-index: -1;
     transition: var(--transition-quick);
@@ -234,7 +247,7 @@ All colors MUST be HSL.
   }
 
   .card-interactive:hover {
-    outline: 2px solid #F9D46A;
+    outline: 2px solid hsl(var(--primary));
     outline-offset: 2px;
   }
 
@@ -253,20 +266,43 @@ All colors MUST be HSL.
   }
 
   /* Badge styles - Bold */
-  .badge-primary {
-    @apply inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold bg-primary text-primary-foreground;
+  .badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold;
     border: 2px solid #000000;
   }
 
-  .badge-success {
-    @apply inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold bg-success text-success-foreground;
-    border: 2px solid #000000;
+  .badge-dash {
+    border-style: dashed;
   }
 
-  .badge-muted {
-    @apply inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold bg-secondary text-secondary-foreground;
-    border: 2px solid #000000;
+  .badge-primary { @apply bg-primary text-primary-foreground; }
+  .badge-secondary { @apply bg-secondary text-secondary-foreground; }
+  .badge-accent { @apply bg-accent text-accent-foreground; }
+  .badge-info { @apply bg-info text-info-foreground; }
+  .badge-success { @apply bg-success text-success-foreground; }
+  .badge-warning { @apply bg-warning text-warning-foreground; }
+  .badge-error { @apply bg-destructive text-destructive-foreground; }
+
+  /* Backward-compat alias */
+  .badge-muted { @apply bg-secondary text-secondary-foreground; }
+
+  /* Chat bubbles (daisyUI-like) */
+  .chat { @apply w-full flex items-end gap-3; }
+  .chat-start { @apply justify-start text-left; }
+  .chat-end { @apply justify-end text-right; }
+  .chat-image.avatar .w-10 { @apply overflow-hidden border-2 border-black; }
+  .chat-header { @apply text-xs opacity-70 mb-1 font-medium; }
+  .chat-footer { @apply text-xs opacity-60 mt-1; }
+  .chat-bubble {
+    @apply max-w-[75%] px-4 py-3 rounded-[15px] border-2 shadow-sm text-sm font-medium;
   }
+  .chat-bubble-primary { @apply bg-primary text-primary-foreground border-black; }
+  .chat-bubble-secondary { @apply bg-secondary text-secondary-foreground border-black; }
+  .chat-bubble-accent { @apply bg-accent text-accent-foreground border-black; }
+  .chat-bubble-info { @apply bg-info text-info-foreground border-black; }
+  .chat-bubble-success { @apply bg-success text-success-foreground border-black; }
+  .chat-bubble-warning { @apply bg-warning text-warning-foreground border-black; }
+  .chat-bubble-error { @apply bg-destructive text-destructive-foreground border-black; }
 
   /* Links with interactive style */
   a {
@@ -422,7 +458,7 @@ All colors MUST be HSL.
 
   /* Cinematic title effect */
   .title-cinematic {
-    background: linear-gradient(135deg, #F9D46A 0%, #E8B74F 100%);
+    background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

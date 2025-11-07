@@ -208,13 +208,39 @@ export default function Intros() {
 
                   {intro.status === 'pending' && (
                     <div className="flex gap-3">
-                      <button onClick={() => handleAccept(intro.id)} className="btn-primary flex-1 gap-2 group/btn hover:scale-105 transition-transform">
-                        <Check className="h-4 w-4 group-hover/btn:scale-125 transition-transform" />
-                        <span className="font-bold">Accept & Start Chat</span>
+                      <button
+                        onClick={() => handleAccept(intro.id)}
+                        disabled={acceptMutation.isPending || declineMutation.isPending}
+                        className="btn-primary flex-1 gap-2 group/btn hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                      >
+                        {acceptMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="font-bold">Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 group-hover/btn:scale-125 transition-transform" />
+                            <span className="font-bold">Accept & Start Chat</span>
+                          </>
+                        )}
                       </button>
-                      <button onClick={() => handleDecline(intro.id)} className="btn-secondary flex-1 gap-2 hover:scale-105 transition-transform">
-                        <X className="h-4 w-4" />
-                        <span className="font-bold">Decline</span>
+                      <button
+                        onClick={() => handleDecline(intro.id)}
+                        disabled={acceptMutation.isPending || declineMutation.isPending}
+                        className="btn-secondary flex-1 gap-2 hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                      >
+                        {declineMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="font-bold">Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <X className="h-4 w-4" />
+                            <span className="font-bold">Decline</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}

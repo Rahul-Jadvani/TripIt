@@ -145,9 +145,14 @@ export function useAcceptIntroRequest() {
       return data;
     },
     onSuccess: () => {
+      // Invalidate intro requests
       queryClient.invalidateQueries({ queryKey: ['intro-requests', 'received'] });
       queryClient.invalidateQueries({ queryKey: ['intro-requests', 'sent'] });
-      toast.success('Intro request accepted!');
+
+      // CRITICAL: Invalidate conversations so new conversation appears immediately
+      queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
+
+      toast.success('Intro request accepted! Check your messages.');
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to accept intro request');

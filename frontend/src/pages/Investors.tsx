@@ -163,7 +163,7 @@ export default function Investors() {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-20 px-4 pb-12">
+    <div className="min-h-screen pt-20 px-4 pb-12">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
@@ -337,12 +337,9 @@ export default function Investors() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-xl font-bold">{investor.name || investor.user?.username}</h3>
                         {investor.open_to_requests && (
-                          <span
-                            className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase cursor-default select-none"
-                            aria-label="Open to Requests"
-                          >
+                          <Badge variant="success" className="text-[11px] px-2 py-0.5 rounded-full">
                             Open to Requests
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       {investor.position_title && (
@@ -355,7 +352,10 @@ export default function Investors() {
                         </p>
                       )}
                     </div>
-                    <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded-full">
+                    <Badge
+                      variant={investor.investor_type === 'individual' ? 'primary' : 'accent'}
+                      className="text-[11px] px-2 py-0.5 rounded-full"
+                    >
                       {investor.investor_type === 'individual' ? 'Individual' : 'Fund'}
                     </Badge>
                   </div>

@@ -4,7 +4,10 @@
  */
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { projectsService, leaderboardService } from '@/services/api';
+import api, { projectsService, leaderboardService, publicInvestorsService, messagesService, adminService } from '@/services/api';
+import { chainApi } from '@/services/chainApi';
+import { useAuth } from '@/context/AuthContext';
+import { logger } from '@/utils/logger';
 
 // Get backend URL
 const getBackendUrl = (): string => {
@@ -15,6 +18,7 @@ const getBackendUrl = (): string => {
 
 export function usePrefetch() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   useEffect(() => {
     const startTime = performance.now();
@@ -34,14 +38,7 @@ export function usePrefetch() {
             },
             staleTime: 1000 * 60 * 5, // 5 min for real-time feel
           }),
-          queryClient.prefetchQuery({
-            queryKey: ['projects', 'trending', 2],
-            queryFn: async () => {
-              const response = await projectsService.getAll('trending', 2);
-              return response.data;
-            },
-            staleTime: 1000 * 60 * 5,
-          }),
+          /* deferred: trending page 2 (idle on fast networks) */
 
           // Top Rated - pages 1-2
           queryClient.prefetchQuery({
@@ -52,14 +49,7 @@ export function usePrefetch() {
             },
             staleTime: 1000 * 60 * 5,
           }),
-          queryClient.prefetchQuery({
-            queryKey: ['projects', 'top-rated', 2],
-            queryFn: async () => {
-              const response = await projectsService.getAll('top-rated', 2);
-              return response.data;
-            },
-            staleTime: 1000 * 60 * 5,
-          }),
+          /* deferred: top-rated page 2 (idle on fast networks) */
 
           // Newest - page 1
           queryClient.prefetchQuery({
@@ -121,26 +111,8 @@ export function usePrefetch() {
         // Prefetch chains (public data) - MUST match useChains query key format
         const chainsPromises = [
           queryClient.prefetchQuery({
-            queryKey: ['chains', {
-              search: '',
-              sort: 'trending',
-              category: undefined,
-              featured: false,
-              page: 1,
-              limit: 12
-            }],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/chains?page=1&limit=12&sort=trending`);
-              const data = await response.json();
-              // Return in the same format as chainApi.getChains (with data wrapper)
-              return {
-                data: data.status === 'success' ? data.data : {
-                  chains: [],
-                  pagination: { page: 1, limit: 12, total: 0, pages: 0 }
-                }
-              };
-            },
+            queryKey: ['chains', { search: '', sort: 'trending', category: undefined, featured: false, page: 1, limit: 12 }],
+            queryFn: async () => chainApi.getChains({ page: 1, limit: 12, sort: 'trending' }),
             staleTime: 1000 * 60 * 5,
           }),
         ];
@@ -149,12 +121,7 @@ export function usePrefetch() {
         const investorsPromises = [
           queryClient.prefetchQuery({
             queryKey: ['investors', 'public'],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/investor-requests/public`);
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
+            queryFn: async () => (await publicInvestorsService.getAll()).data?.data || [],
             staleTime: 1000 * 60 * 5,
           }),
         ];
@@ -165,154 +132,114 @@ export function usePrefetch() {
           // Prefetch intro requests (received)
           queryClient.prefetchQuery({
             queryKey: ['intro-requests', 'received'],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/intro-requests/received`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
-            staleTime: 1000 * 60, // 1 minute for real-time data
+            queryFn: async () => (await api.get('/intro-requests/received')).data?.data || [],
+            staleTime: 1000 * 60,
           }),
           // Prefetch intro requests (sent)
           queryClient.prefetchQuery({
             queryKey: ['intro-requests', 'sent'],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/intro-requests/sent`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
+            queryFn: async () => (await api.get('/intro-requests/sent')).data?.data || [],
             staleTime: 1000 * 60,
           }),
           // Prefetch message conversations
           queryClient.prefetchQuery({
             queryKey: ['messages', 'conversations'],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/messages/conversations`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
+            queryFn: async () => (await messagesService.getConversations()).data?.data || [],
             staleTime: 1000 * 60,
           }),
         ] : [];
 
         // Prefetch Admin panel data (for admins only, but will fail gracefully for non-admins)
-        const adminPanelPromises = token ? [
+        const adminPanelPromises = token && user?.isAdmin ? [
           // Admin stats
           queryClient.prefetchQuery({
             queryKey: ['admin', 'stats'],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/admin/stats`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : {};
-            },
+            queryFn: async () => (await adminService.getStats()).data?.data || {},
             staleTime: 1000 * 60 * 5,
           }),
           // Admin users
           queryClient.prefetchQuery({
             queryKey: ['admin', 'users', { search: '', role: 'all', perPage: 100 }],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/admin/users?perPage=100`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
+            queryFn: async () => (await adminService.getUsers({ perPage: 100 })).data?.data || [],
             staleTime: 1000 * 60 * 3,
           }),
           // Admin validators
           queryClient.prefetchQuery({
             queryKey: ['admin', 'validators'],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/admin/validators`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
+            queryFn: async () => (await adminService.getValidators()).data?.data || [],
             staleTime: 1000 * 60 * 5,
           }),
           // Admin projects
           queryClient.prefetchQuery({
             queryKey: ['admin', 'projects', { search: '', perPage: 100 }],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/admin/projects?perPage=100`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
+            queryFn: async () => (await adminService.getProjects({ perPage: 100 })).data?.data || [],
             staleTime: 1000 * 60 * 3,
           }),
           // Admin investor requests
           queryClient.prefetchQuery({
             queryKey: ['admin', 'investor-requests'],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/admin/investor-requests`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data.data : [];
-            },
+            queryFn: async () => (await adminService.getInvestorRequests()).data?.data || [],
             staleTime: 1000 * 60 * 2,
           }),
           // Admin chains
           queryClient.prefetchQuery({
             queryKey: ['adminChains', { page: 1, per_page: 50, search: '', status: '' }],
-            queryFn: async () => {
-              const backendUrl = getBackendUrl();
-              const response = await fetch(`${backendUrl}/api/admin/chains?page=1&per_page=50`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              const data = await response.json();
-              return data.status === 'success' ? data : {};
-            },
+            queryFn: async () => (await api.get('/admin/chains?page=1&per_page=50')).data || {},
             staleTime: 1000 * 60 * 5,
           }),
         ] : [];
 
-        // Execute all prefetches in parallel (non-blocking)
-        // Use Promise.allSettled to prevent one failure from blocking others
+        // Build deferred tasks (run in idle if network is fast)
+        const feedDeferred = [
+          () => queryClient.prefetchQuery({
+            queryKey: ['projects', 'trending', 2],
+            queryFn: async () => {
+              const response = await projectsService.getAll('trending', 2);
+              return response.data;
+            },
+            staleTime: 1000 * 60 * 5,
+          }),
+          () => queryClient.prefetchQuery({
+            queryKey: ['projects', 'top-rated', 2],
+            queryFn: async () => {
+              const response = await projectsService.getAll('top-rated', 2);
+              return response.data;
+            },
+            staleTime: 1000 * 60 * 5,
+          }),
+        ];
+
+        const connection: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
+        const saveData: boolean = !!connection?.saveData;
+        const effectiveType: string | undefined = connection?.effectiveType; // 'slow-2g' | '2g' | '3g' | '4g'
+        const isFastNetwork = !saveData && (!effectiveType || effectiveType === '4g');
+
+        const scheduleIdle = (cb: () => void) => {
+          const win: any = typeof window !== 'undefined' ? window : undefined;
+          if (win && typeof win.requestIdleCallback === 'function') {
+            win.requestIdleCallback(cb, { timeout: 2000 });
+          } else {
+            setTimeout(cb, 0);
+          }
+        };
+
+        // Execute critical prefetches immediately; defer heavy batches
         const results = await Promise.allSettled([
           ...feedPromises,
-          ...leaderboardPromises,
-          ...chainsPromises,
-          ...investorsPromises,
-          ...userDataPromises,
-          ...adminPanelPromises,
         ]);
+
+        if (isFastNetwork) {
+          scheduleIdle(() => {
+            Promise.allSettled([
+              ...leaderboardPromises,
+              ...chainsPromises,
+              ...investorsPromises,
+              ...feedDeferred.map((fn) => fn()),
+              ...userDataPromises,
+              ...adminPanelPromises,
+            ]).catch(() => {});
+          });
+        }
 
         // Log results for diagnostics
         const endTime = performance.now();
@@ -320,21 +247,21 @@ export function usePrefetch() {
         const successful = results.filter(r => r.status === 'fulfilled').length;
         const failed = results.filter(r => r.status === 'rejected').length;
 
-        console.log(`%c[Prefetch] Completed in ${duration}ms`, 'color: #10b981; font-weight: bold');
-        console.log(`%c[Prefetch] ✓ Successful: ${successful} | ✗ Failed: ${failed}`, 'color: #6366f1');
-        console.log(`%c[Prefetch] Cached: Feed (5 pages), Leaderboards (2), Chains (1), Investors (1)${token ? ', Intro Requests (2), Messages (1), Admin Panel (6)' : ''}`, 'color: #8b5cf6');
+        logger.log(`%c[Prefetch] Completed in ${duration}ms`, 'color: #10b981; font-weight: bold');
+        logger.log(`%c[Prefetch] ✓ Successful: ${successful} | ✗ Failed: ${failed}`, 'color: #6366f1');
+        logger.log(`%c[Prefetch] Cached: Feed (5 pages), Leaderboards (2), Chains (1), Investors (1)${token ? ', Intro Requests (2), Messages (1), Admin Panel (6)' : ''}`, 'color: #8b5cf6');
 
         if (failed > 0) {
-          console.warn('[Prefetch] Some requests failed, but app will continue normally');
+          logger.warn('[Prefetch] Some requests failed, but app will continue normally');
           results.forEach((result, index) => {
             if (result.status === 'rejected') {
-              console.error(`[Prefetch] Failed request ${index}:`, result.reason);
+              logger.error(`[Prefetch] Failed request ${index}:`, result.reason);
             }
           });
         }
       } catch (error) {
         // Silent fail - prefetch errors shouldn't break the app
-        console.error('[Prefetch] Error during prefetch:', error);
+        logger.error('[Prefetch] Error during prefetch:', error);
       }
     };
 
@@ -344,3 +271,4 @@ export function usePrefetch() {
 
   // This hook doesn't return anything - it just runs in the background
 }
+

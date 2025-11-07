@@ -2,49 +2,51 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { WagmiProvider } from "wagmi";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { MainLayout } from "./layouts/MainLayout";
 import { ProtectedRoute, AdminRoute, ValidatorRoute } from "./components/ProtectedRoute";
 import { PageScrollBackground } from "./components/PageScrollBackground";
 import { wagmiConfig } from "./config/wagmi";
 import { usePrefetch } from "./hooks/usePrefetch";
 import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
+import { Suspense, lazy } from "react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
-// Pages
-import Feed from "./pages/Feed";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ProjectDetail from "./pages/ProjectDetail";
-import UserProfile from "./pages/UserProfile";
-import Search from "./pages/Search";
-import Leaderboard from "./pages/Leaderboard";
-import About from "./pages/About";
-import Dashboard from "./pages/Dashboard";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import MyProjects from "./pages/MyProjects";
-import Publish from "./pages/Publish";
-import EditProject from "./pages/EditProject";
-import Intros from "./pages/Intros";
-import Admin from "./pages/Admin";
-import AdminValidator from "./pages/AdminValidator";
-import Validator from "./pages/Validator";
-import InvestorPlans from "./pages/InvestorPlans";
-import InvestorDashboard from "./pages/InvestorDashboard";
-import InvestorDirectory from "./pages/InvestorDirectory";
-import Investors from "./pages/Investors";
-import DirectMessages from "./pages/DirectMessages";
-import GalleryView from "./pages/GalleryView";
-import NotFound from "./pages/NotFound";
-import ChainsListPage from "./pages/ChainsListPage";
-import ChainDetailPage from "./pages/ChainDetailPage";
-import ChainAnalytics from "./pages/ChainAnalytics";
-import CreateChainPage from "./pages/CreateChainPage";
-import EditChainPage from "./pages/EditChainPage";
-import ChainRequestsPage from "./pages/ChainRequestsPage";
-import NotificationsPage from "./pages/NotificationsPage";
+// Pages (lazy-loaded)
+const Feed = lazy(() => import("./pages/Feed"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const Search = lazy(() => import("./pages/Search"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const About = lazy(() => import("./pages/About"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const MyProjects = lazy(() => import("./pages/MyProjects"));
+const Publish = lazy(() => import("./pages/Publish"));
+const EditProject = lazy(() => import("./pages/EditProject"));
+const Intros = lazy(() => import("./pages/Intros"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminValidator = lazy(() => import("./pages/AdminValidator"));
+const Validator = lazy(() => import("./pages/Validator"));
+const InvestorPlans = lazy(() => import("./pages/InvestorPlans"));
+const InvestorDashboard = lazy(() => import("./pages/InvestorDashboard"));
+const InvestorDirectory = lazy(() => import("./pages/InvestorDirectory"));
+const Investors = lazy(() => import("./pages/Investors"));
+const DirectMessages = lazy(() => import("./pages/DirectMessages"));
+const GalleryView = lazy(() => import("./pages/GalleryView"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const ChainsListPage = lazy(() => import("./pages/ChainsListPage"));
+const ChainDetailPage = lazy(() => import("./pages/ChainDetailPage"));
+const ChainAnalytics = lazy(() => import("./pages/ChainAnalytics"));
+const CreateChainPage = lazy(() => import("./pages/CreateChainPage"));
+const EditChainPage = lazy(() => import("./pages/EditChainPage"));
+const ChainRequestsPage = lazy(() => import("./pages/ChainRequestsPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,22 +68,48 @@ function PrefetchWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Public investors route that redirects logged-in users to the protected directory
+function InvestorsGateway() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+  if (user) {
+    return <Navigate to="/investor-directory" replace />;
+  }
+  return <Investors />;
+}
+
 const App = () => (
   <WagmiProvider config={wagmiConfig}>
     <QueryClientProvider client={queryClient}>
-      <PrefetchWrapper>
-        <AuthProvider>
+      <AuthProvider>
+        <PrefetchWrapper>
           <PageScrollBackground />
           <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <Suspense
+                fallback={
+                  <div className="flex min-h-[40vh] items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                }
+              >
+              <ErrorBoundary>
               <Routes>
                 <Route element={<MainLayout />}>
               {/* Public Routes */}
               <Route path="/" element={<Feed />} />
               <Route path="/feed" element={<Feed />} />
               <Route path="/gallery/:category" element={<GalleryView />} />
+              {/* Helpful redirects */}
+              <Route path="/investor" element={<Navigate to="/investor-directory" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
@@ -90,7 +118,7 @@ const App = () => (
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/about" element={<About />} />
               <Route path="/investor-plans" element={<InvestorPlans />} />
-              <Route path="/investors" element={<Investors />} />
+              <Route path="/investors" element={<InvestorsGateway />} />
 
               {/* Chains Routes */}
               <Route path="/chains" element={<ChainsListPage />} />
@@ -103,10 +131,9 @@ const App = () => (
               <Route path="/my-projects" element={<ProtectedRoute><MyProjects /></ProtectedRoute>} />
               <Route path="/publish" element={<ProtectedRoute><Publish /></ProtectedRoute>} />
               <Route path="/project/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
-              <Route path="/edit-project/:id" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
               <Route path="/intros" element={<ProtectedRoute><Intros /></ProtectedRoute>} />
               <Route path="/investor-dashboard" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
-              <Route path="/investors" element={<ProtectedRoute><InvestorDirectory /></ProtectedRoute>} />
+              <Route path="/investor-directory" element={<ProtectedRoute><InvestorDirectory /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
               <Route path="/chains/create" element={<ProtectedRoute><CreateChainPage /></ProtectedRoute>} />
               <Route path="/chains/:slug/edit" element={<ProtectedRoute><EditChainPage /></ProtectedRoute>} />
@@ -120,17 +147,18 @@ const App = () => (
               {/* Validator Route (JWT Protected) */}
               <Route path="/validator" element={<ValidatorRoute><Validator /></ValidatorRoute>} />
 
-              {/* Legacy Admin+Validator Route (Deprecated - will be removed) */}
-              <Route path="/admin+validator" element={<AdminValidator />} />
+              
 
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Route>
               </Routes>
+              </ErrorBoundary>
+              </Suspense>
             </BrowserRouter>
           </TooltipProvider>
-        </AuthProvider>
-      </PrefetchWrapper>
+        </PrefetchWrapper>
+      </AuthProvider>
     </QueryClientProvider>
   </WagmiProvider>
 );

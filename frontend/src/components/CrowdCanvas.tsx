@@ -7,22 +7,31 @@ interface CrowdCanvasProps {
   src: string;
   rows?: number;
   cols?: number;
+  active?: boolean; // controls whether animation runs
 }
 
-const CrowdCanvas = ({ src, rows = 15, cols = 7 }: CrowdCanvasProps) => {
+const CrowdCanvas = ({ src, rows = 15, cols = 7, active = true }: CrowdCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    if (!active) {
+      return;
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Reduce particle count on small screens
+    const isMobile = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    const deviceRows = isMobile ? Math.max(6, Math.floor(rows * 0.6)) : rows;
+    const deviceCols = isMobile ? Math.max(3, Math.floor(cols * 0.6)) : cols;
+
     const config = {
       src,
-      rows,
-      cols,
+      rows: deviceRows,
+      cols: deviceCols,
     };
 
     // UTILS
@@ -228,16 +237,16 @@ const CrowdCanvas = ({ src, rows = 15, cols = 7 }: CrowdCanvasProps) => {
     const render = () => {
       if (!canvas) return;
 
-      // Fill dark background
-      ctx.fillStyle = '#1a1a1a';
+      // Fill darker background to reduce overall brightness
+      ctx.fillStyle = '#0d0d0d';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       crowd.forEach((peep) => {
         peep.render(ctx);
       });
 
-      // Apply strong yellow overlay to make illustrations appear golden/yellow
-      ctx.fillStyle = 'rgba(255, 200, 0, 0.4)';
+      // Apply subtler yellow overlay to reduce visual clutter/brightness
+      ctx.fillStyle = 'rgba(255, 200, 0, 0.2)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     };
 
@@ -268,8 +277,25 @@ const CrowdCanvas = ({ src, rows = 15, cols = 7 }: CrowdCanvasProps) => {
       gsap.ticker.add(render);
     };
 
+    // Try local assets first, then fallback to S3
+    const s3Fallback = "https://s3-us-west-2.amazonaws.com/s.cdpn.io/175711/open-peeps-sheet.png";
+    const candidates = Array.from(
+      new Set([
+        src || "/assets/open-peeps-sheet.png",
+        "/assets/open-peeps-sheet.png",
+        "/open-peeps-sheet.png",
+        s3Fallback,
+      ])
+    );
+    let idx = 0;
+    const tryNext = () => {
+      if (idx >= candidates.length) return;
+      img.src = candidates[idx++];
+    };
+
     img.onload = init;
-    img.src = config.src;
+    img.onerror = tryNext;
+    tryNext();
 
     const handleResize = () => resize();
     window.addEventListener("resize", handleResize);
@@ -281,7 +307,7 @@ const CrowdCanvas = ({ src, rows = 15, cols = 7 }: CrowdCanvasProps) => {
         if (peep.walk) peep.walk.kill();
       });
     };
-  }, [src, rows, cols]);
+  }, [src, rows, cols, active]);
 
   return (
     <canvas
@@ -292,7 +318,7 @@ const CrowdCanvas = ({ src, rows = 15, cols = 7 }: CrowdCanvasProps) => {
   );
 };
 
-const Skiper39 = () => {
+const Skiper39 = ({ active = true }: { active?: boolean }) => {
   return (
     <div className="relative h-full w-full bg-gray-900 text-yellow-400">
       {/* Background ZERO watermark */}
@@ -316,8 +342,19 @@ const Skiper39 = () => {
           Croud Canvas
         </span>
       </div>
+
+      {/* Demo badges overlay (uses new badge classes) */}
+      <div className="absolute top-4 right-4 z-20 flex flex-wrap gap-2">
+        <div className="badge badge-dash badge-primary">Primary</div>
+        <div className="badge badge-dash badge-secondary">Secondary</div>
+        <div className="badge badge-dash badge-accent">Accent</div>
+        <div className="badge badge-dash badge-info">Info</div>
+        <div className="badge badge-dash badge-success">Success</div>
+        <div className="badge badge-dash badge-warning">Warning</div>
+        <div className="badge badge-dash badge-error">Error</div>
+      </div>
       <div className="absolute bottom-0 h-full w-screen z-20">
-        <CrowdCanvas src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/175711/open-peeps-sheet.png" rows={15} cols={7} />
+        <CrowdCanvas active={active} src="/assets/open-peeps-sheet.png" rows={15} cols={7} />
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Github, Twitter, Mail, ExternalLink, MessageSquare, Lightbulb, HelpCircle, Flag } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { FeedbackModal } from './modals/FeedbackModal';
 import { useUserByUsername } from '../hooks/useUser';
 
 type FeedbackType = 'suggestion' | 'improvement' | 'contact' | 'report';
 
-export function Footer() {
+export const Footer = memo(function Footer() {
   const location = useLocation();
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('contact');
@@ -26,7 +26,7 @@ export function Footer() {
     }
   }, [profileUser, detectedUsername]);
 
-  const openFeedbackModal = (type: FeedbackType) => {
+  const openFeedbackModal = useCallback((type: FeedbackType) => {
     setFeedbackType(type);
 
     // Auto-detect project or user ID from current page URL
@@ -62,7 +62,7 @@ export function Footer() {
     }
 
     setFeedbackModalOpen(true);
-  };
+  }, [location.pathname, profileUser?.id, detectedUsername]);
 
   return (
     <>
@@ -251,4 +251,4 @@ export function Footer() {
       />
     </>
   );
-}
+});

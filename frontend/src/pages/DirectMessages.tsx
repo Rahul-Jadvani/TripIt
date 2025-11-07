@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useConversations, useMessagesWithUser, useSendMessage } from '@/hooks/useMessages';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -66,6 +67,7 @@ const MessageStatus = ({ message, isOwn }: { message: Message; isOwn: boolean })
 export default function DirectMessages() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -76,6 +78,17 @@ export default function DirectMessages() {
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
   const { data: messages = [], isLoading: messagesLoading } = useMessagesWithUser(selectedUser?.id || '');
   const sendMutation = useSendMessage();
+
+  // Auto-select user from query param (when coming from Intros page after accepting)
+  useEffect(() => {
+    const userId = searchParams.get('user');
+    if (userId && conversations.length > 0 && !selectedUser) {
+      const foundConversation = conversations.find((conv: any) => conv.user.id === userId);
+      if (foundConversation) {
+        setSelectedUser(foundConversation.user);
+      }
+    }
+  }, [searchParams, conversations, selectedUser]);
 
   // Auto-scroll to bottom when messages change
   const scrollToBottom = (smooth = true) => {
@@ -109,9 +122,9 @@ export default function DirectMessages() {
     }, 2000);
   };
 
-  // Send message with optimistic update
+  // Send message with optimistic update and spam prevention
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedUser) return;
+    if (!newMessage.trim() || !selectedUser || sendMutation.isPending) return;
 
     const messageText = newMessage;
     setNewMessage(''); // Clear input immediately
@@ -157,12 +170,16 @@ export default function DirectMessages() {
         ['messages', 'conversation', selectedUser.id],
         (old: Message[] = []) => old.filter((msg) => msg.id !== tempMessage.id)
       );
+      // Reset input on error
+      setNewMessage(messageText);
     }
   };
 
   // Handle conversation selection
   const selectConversation = (conv: any) => {
     setSelectedUser(conv.user);
+    // Clear the URL query param when manually selecting a conversation
+    window.history.replaceState({}, document.title, '/messages');
   };
 
   // Only show loading if there's NO cached data
@@ -290,25 +307,69 @@ export default function DirectMessages() {
                     </div>
                   ) : (
                     <>
-                      {messages.map((msg: Message) => {
+                      {messages.map((msg: Message, idx: number) => {
                         const isOwn = msg.sender_id === user?.id;
+                        const sender = isOwn ? user : selectedUser;
+                        const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                        // Check if this is the start of a message group (different sender or time gap)
+                        const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                        const isNewGroup = !prevMsg || prevMsg.sender_id !== msg.sender_id;
+
+                        // Check if next message is from same sender (to know if we should show avatar)
+                        const nextMsg = idx < messages.length - 1 ? messages[idx + 1] : null;
+                        const isLastInGroup = !nextMsg || nextMsg.sender_id !== msg.sender_id;
+
+                        const bubbleColor = isOwn ? 'bg-primary text-black' : 'bg-secondary text-foreground';
+
                         return (
-                          <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
-                            <div
-                              className={`max-w-[75%] p-4 rounded-[15px] border-2 shadow-sm ${
-                                isOwn
-                                  ? 'bg-primary text-black border-primary'
-                                  : 'bg-card border-border'
-                              }`}
-                            >
-                              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed font-medium">{msg.message}</p>
-                              <div className={`flex items-center gap-1.5 mt-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                                <p className={`text-xs font-medium ${isOwn ? 'text-black/70' : 'text-muted-foreground'}`}>
-                                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                                <MessageStatus message={msg} isOwn={isOwn} />
+                          <div
+                            key={msg.id}
+                            className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300 gap-2 group`}
+                          >
+                            {/* Avatar - only show for received messages and at the end of group */}
+                            {!isOwn && isLastInGroup && (
+                              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-xs font-bold text-black">
+                                {selectedUser?.username[0]?.toUpperCase()}
                               </div>
+                            )}
+                            {!isOwn && !isLastInGroup && (
+                              <div className="w-8 h-8 flex-shrink-0" />
+                            )}
+
+                            {/* Message bubble */}
+                            <div className={`max-w-[70%] ${isOwn ? 'flex flex-col items-end' : 'flex flex-col items-start'}`}>
+                              <div
+                                className={`px-4 py-2.5 rounded-[18px] break-words leading-relaxed ${bubbleColor} shadow-sm transition-all`}
+                              >
+                                <p className="text-sm">{msg.message}</p>
+                              </div>
+
+                              {/* Time and status - only show at end of group */}
+                              {isLastInGroup && (
+                                <div className={`text-xs text-muted-foreground mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
+                                  <span>{time}</span>
+                                  {isOwn && (
+                                    <>
+                                      <span className="mx-1">•</span>
+                                      <span>
+                                        {msg.status === 'sending' ? 'Sending...' : msg.is_read ? 'Seen' : 'Delivered'}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
+
+                            {/* Avatar for own messages - placeholder for alignment */}
+                            {isOwn && isLastInGroup && (
+                              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-xs font-bold text-black opacity-0">
+                                {user?.username?.[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            {isOwn && !isLastInGroup && (
+                              <div className="w-8 h-8 flex-shrink-0" />
+                            )}
                           </div>
                         );
                       })}
@@ -330,7 +391,7 @@ export default function DirectMessages() {
                         handleTyping();
                       }}
                       onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
+                        if (e.key === 'Enter' && !e.shiftKey && !sendMutation.isPending) {
                           e.preventDefault();
                           sendMessage();
                         }
@@ -342,10 +403,13 @@ export default function DirectMessages() {
                     <button
                       onClick={sendMessage}
                       disabled={sendMutation.isPending || !newMessage.trim()}
-                      className="btn-primary px-6 group hover:scale-105 transition-transform disabled:hover:scale-100 disabled:opacity-50"
+                      title={sendMutation.isPending ? 'Sending message...' : !newMessage.trim() ? 'Type a message first' : 'Send message (Enter)'}
+                      className="btn-primary px-6 group hover:scale-105 transition-transform disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {sendMutation.isPending ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        </>
                       ) : (
                         <Send className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                       )}
