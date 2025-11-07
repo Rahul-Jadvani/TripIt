@@ -11,6 +11,53 @@ import { toast } from 'sonner';
 let socket: Socket | null = null;
 let listenersAttached = false; // prevent duplicate listener registration across mounts/HMR
 
+/**
+ * Play notification sound for messages and intros
+ */
+function playNotificationSound(type: 'message' | 'intro') {
+  try {
+    // Create a simple beep sound using Web Audio API
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    if (type === 'message') {
+      // Message chime: two quick beeps
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+
+      // Second beep
+      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.12);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + 0.12);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.22);
+      oscillator.start(audioContext.currentTime + 0.12);
+      oscillator.stop(audioContext.currentTime + 0.22);
+    } else {
+      // Intro chime: three musical notes
+      const notes = [600, 800, 1000];
+      notes.forEach((freq, idx) => {
+        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + idx * 0.12);
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + idx * 0.12);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + idx * 0.12 + 0.1
+        );
+        oscillator.start(audioContext.currentTime + idx * 0.12);
+        oscillator.stop(audioContext.currentTime + idx * 0.12 + 0.1);
+      });
+    }
+  } catch (error) {
+    // Silently fail if audio context is not available
+    console.debug('[Audio] Notification sound error:', error);
+  }
+}
+
 export function useRealTimeUpdates() {
   const queryClient = useQueryClient();
 
@@ -123,10 +170,13 @@ export function useRealTimeUpdates() {
 
       // Intros & messages
       socket.on('intro:received', () => {
+        // Play notification chime
+        playNotificationSound('intro');
+
         toast('New intro request received!');
         queryClient.invalidateQueries({ queryKey: ['intros', 'received'] });
         // Invalidate intro request count badge
-        queryClient.invalidateQueries({ queryKey: ['intro-requests', 'count'] });
+        queryClient.refetchQueries({ queryKey: ['intro-requests', 'count'] });
       });
       socket.on('intro:accepted', (data) => {
         toast.success('Your intro request was accepted!', {
@@ -160,16 +210,30 @@ export function useRealTimeUpdates() {
         const message = data.data;
         const senderId = message?.sender_id || data.sender_id;
         const senderName = message?.sender?.username || data.sender_name || 'Someone';
+
+        // Play notification chime
+        playNotificationSound('message');
+
         toast(`New message from ${senderName}`, {
           description: message?.message?.substring(0, 50) || 'View message',
           duration: 4000,
         });
-        if (senderId) {
-          queryClient.invalidateQueries({ queryKey: ['messages', 'conversation', senderId] });
+
+        if (senderId && message) {
+          // Immediately add message to conversation cache (instant appearance)
+          queryClient.setQueryData(
+            ['messages', 'conversation', senderId],
+            (old: any[] = []) => {
+              // Check if message already exists
+              const exists = old.some((msg) => msg.id === message.id);
+              return exists ? old : [...old, message];
+            }
+          );
         }
+
         queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
         // Invalidate message count badge
-        queryClient.invalidateQueries({ queryKey: ['messages', 'count'] });
+        queryClient.refetchQueries({ queryKey: ['messages', 'count'] });
       });
       socket.on('message:read', () => {
         queryClient.invalidateQueries({ queryKey: ['messages'] });

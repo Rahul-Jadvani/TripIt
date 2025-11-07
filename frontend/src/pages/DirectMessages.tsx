@@ -169,8 +169,13 @@ export default function DirectMessages() {
       (old: Message[] = []) => [...old, tempMessage]
     );
 
-    // Scroll to bottom immediately
-    setTimeout(() => scrollToBottom(), 50);
+    // Scroll to sent message immediately (even if scrolled at top)
+    setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop =
+          messagesContainerRef.current.scrollHeight;
+      }
+    }, 0);
 
     try {
       // Send to backend
