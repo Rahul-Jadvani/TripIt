@@ -5,17 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  ArrowBigUp,
-  ArrowBigDown,
-  MessageSquare,
-  Pin,
-  Lock,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Flag,
-} from 'lucide-react';
+import { MessageSquare, Pin, Lock, MoreVertical, Edit, Trash2, Flag } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +14,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow } from 'date-fns';
-import { useReactToPost, useTogglePinPost, useToggleLockPost, useDeleteChainPost } from '@/hooks/useChainPosts';
+import { useTogglePinPost, useToggleLockPost, useDeleteChainPost, useChainPostReplies } from '@/hooks/useChainPosts';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { ReplyForm } from './ReplyForm';
@@ -37,6 +27,8 @@ interface ChainPostCardProps {
   isOwner?: boolean;
   showReplies?: boolean;
   compact?: boolean;
+  parentAuthor?: string;
+  expandAll?: boolean; // when true, auto-expand nested replies
 }
 
 export function ChainPostCard({
@@ -45,120 +37,29 @@ export function ChainPostCard({
   isOwner = false,
   showReplies = true,
   compact = false,
+  parentAuthor,
+  expandAll = false,
 }: ChainPostCardProps) {
   const { user } = useAuth();
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const [showAllReplies, setShowAllReplies] = useState(true); // Show all replies by default
+  const [showAllReplies, setShowAllReplies] = useState(false); // Start collapsed; toggle to reveal
   const [showEditDialog, setShowEditDialog] = useState(false);
 
-  // LOCAL STATE for instant UI updates (Instagram-style)
-  const [currentReaction, setCurrentReaction] = useState<'upvote' | 'downvote' | null>(post.user_reaction);
-  const [currentUpvotes, setCurrentUpvotes] = useState(post.upvote_count);
-  const [currentDownvotes, setCurrentDownvotes] = useState(post.downvote_count);
-  const pendingReactionRef = useRef<{ postId: string; reactionType: 'upvote' | 'downvote' | null } | null>(null);
-  const reactionTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const reactMutation = useReactToPost(chainSlug);
   const pinMutation = useTogglePinPost(chainSlug);
   const lockMutation = useToggleLockPost(chainSlug);
   const deleteMutation = useDeleteChainPost(chainSlug);
+  const { data: repliesPayload } = useChainPostReplies(chainSlug, post.id, { per_page: 50, sort: 'top' });
 
-  // Sync local state when post prop changes
+  // Persist expanded/collapsed state across refresh per-post
   useEffect(() => {
-    setCurrentReaction(post.user_reaction);
-    setCurrentUpvotes(post.upvote_count);
-    setCurrentDownvotes(post.downvote_count);
-  }, [post.user_reaction, post.upvote_count, post.downvote_count]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (reactionTimerRef.current) {
-        clearTimeout(reactionTimerRef.current);
-      }
-    };
-  }, []);
+    try {
+      const k = `chain.replies.expanded.${post.id}`;
+      const saved = localStorage.getItem(k);
+      if (saved === '1' || expandAll) setShowAllReplies(true);
+    } catch {}
+  }, [post.id, expandAll]);
 
   const isAuthor = user && post.author_id === user.id;
-  const isUpvoted = currentReaction === 'upvote';
-  const isDownvoted = currentReaction === 'downvote';
-
-  const handleReact = (reactionType: 'upvote' | 'downvote') => {
-    if (!user) {
-      // Could show login prompt here
-      return;
-    }
-
-    const wasReacted = currentReaction === reactionType;
-    const previousReaction = currentReaction;
-    const previousUpvotes = currentUpvotes;
-    const previousDownvotes = currentDownvotes;
-
-    // INSTANT UI UPDATE (optimistic)
-    if (wasReacted) {
-      // Remove reaction (toggle off)
-      setCurrentReaction(null);
-      if (reactionType === 'upvote') {
-        setCurrentUpvotes(prev => Math.max(0, prev - 1));
-      } else {
-        setCurrentDownvotes(prev => Math.max(0, prev - 1));
-      }
-      pendingReactionRef.current = { postId: post.id, reactionType: null };
-    } else if (currentReaction) {
-      // Change reaction from opposite type
-      setCurrentReaction(reactionType);
-      if (currentReaction === 'upvote' && reactionType === 'downvote') {
-        setCurrentUpvotes(prev => Math.max(0, prev - 1));
-        setCurrentDownvotes(prev => prev + 1);
-      } else if (currentReaction === 'downvote' && reactionType === 'upvote') {
-        setCurrentDownvotes(prev => Math.max(0, prev - 1));
-        setCurrentUpvotes(prev => prev + 1);
-      }
-      pendingReactionRef.current = { postId: post.id, reactionType };
-    } else {
-      // New reaction
-      setCurrentReaction(reactionType);
-      if (reactionType === 'upvote') {
-        setCurrentUpvotes(prev => prev + 1);
-      } else {
-        setCurrentDownvotes(prev => prev + 1);
-      }
-      pendingReactionRef.current = { postId: post.id, reactionType };
-    }
-
-    // Clear existing timer
-    if (reactionTimerRef.current) {
-      clearTimeout(reactionTimerRef.current);
-    }
-
-    // Debounce: wait 300ms after last click before sending request
-    reactionTimerRef.current = setTimeout(() => {
-      const finalReaction = pendingReactionRef.current?.reactionType;
-
-      // If final state matches original state, no need to send request
-      if (finalReaction === post.user_reaction) {
-        pendingReactionRef.current = null;
-        return;
-      }
-
-      // Send the final reaction state
-      if (finalReaction !== null) {
-        reactMutation.mutate(
-          { postId: post.id, reactionType: finalReaction },
-          {
-            onError: () => {
-              // Revert on error
-              setCurrentReaction(previousReaction);
-              setCurrentUpvotes(previousUpvotes);
-              setCurrentDownvotes(previousDownvotes);
-            },
-          }
-        );
-      }
-
-      pendingReactionRef.current = null;
-    }, 300);
-  };
 
   const handlePin = () => {
     pinMutation.mutate(post.id);
@@ -174,51 +75,13 @@ export function ChainPostCard({
     }
   };
 
-  const voteScore = currentUpvotes - currentDownvotes;
-
-  const visibleReplies = showAllReplies ? post.replies : post.replies?.slice(0, 3);
+  const mergedReplies = (post.replies && post.replies.length > 0) ? post.replies : (repliesPayload?.replies || []);
+  const visibleReplies = showAllReplies ? mergedReplies : mergedReplies?.slice(0, 3);
 
   return (
     <Card className={cn('overflow-hidden', post.is_pinned && 'border-primary/50 bg-primary/5')}>
       <CardContent className="p-4">
         <div className="flex gap-3">
-          {/* Vote Section */}
-          <div className="flex flex-col items-center gap-1 min-w-[40px]">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-8 w-8 p-0 hover:bg-orange-100',
-                isUpvoted && 'text-orange-500 bg-orange-100'
-              )}
-              onClick={() => handleReact('upvote')}
-              disabled={reactMutation.isPending}
-            >
-              <ArrowBigUp className="h-5 w-5" fill={isUpvoted ? 'currentColor' : 'none'} />
-            </Button>
-            <span
-              className={cn(
-                'text-sm font-semibold',
-                voteScore > 0 && 'text-orange-500',
-                voteScore < 0 && 'text-blue-500'
-              )}
-            >
-              {voteScore}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-8 w-8 p-0 hover:bg-blue-100',
-                isDownvoted && 'text-blue-500 bg-blue-100'
-              )}
-              onClick={() => handleReact('downvote')}
-              disabled={reactMutation.isPending}
-            >
-              <ArrowBigDown className="h-5 w-5" fill={isDownvoted ? 'currentColor' : 'none'} />
-            </Button>
-          </div>
-
           {/* Content Section */}
           <div className="flex-1 min-w-0">
             {/* Header */}
@@ -236,6 +99,9 @@ export function ChainPostCard({
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                 </span>
+                {parentAuthor && (
+                  <span className="text-xs text-muted-foreground">replying to <span className="font-semibold">@{parentAuthor}</span></span>
+                )}
                 {post.is_pinned && (
                   <Badge variant="secondary" className="text-xs gap-1">
                     <Pin className="h-3 w-3" />
@@ -340,10 +206,21 @@ export function ChainPostCard({
               </Button>
 
               {post.comment_count > 0 && (
-                <Badge variant="secondary" className="text-xs gap-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 gap-1 text-xs"
+                  onClick={() => {
+                    setShowAllReplies((v) => {
+                      const nv = !v;
+                      try { localStorage.setItem(`chain.replies.expanded.${post.id}`, nv ? '1' : '0'); } catch {}
+                      return nv;
+                    });
+                  }}
+                >
                   <MessageSquare className="h-3 w-3" />
-                  {post.comment_count} {post.comment_count === 1 ? 'reply' : 'replies'}
-                </Badge>
+                  {showAllReplies ? 'Hide replies' : `${post.comment_count} ${post.comment_count === 1 ? 'reply' : 'replies'}`}
+                </Button>
               )}
 
               {post.is_locked && (
@@ -367,29 +244,25 @@ export function ChainPostCard({
             )}
 
             {/* Replies */}
-            {showReplies && post.replies && post.replies.length > 0 && (
+            {showReplies && mergedReplies && mergedReplies.length > 0 && showAllReplies && (
               <div className="mt-4 space-y-3">
                 {visibleReplies?.map((reply) => (
-                  <div key={reply.id} className="pl-4 border-l-2 border-muted">
+                  <div
+                    key={reply.id}
+                    className="relative pl-4 border-l-2 border-border before:absolute before:left-0 before:top-5 before:w-4 before:h-px before:bg-border"
+                  >
                     <ChainPostCard
                       post={reply}
                       chainSlug={chainSlug}
                       isOwner={isOwner}
-                      showReplies={false}
+                      showReplies={true}
                       compact
+                      parentAuthor={post.author?.username}
+                      expandAll={showAllReplies}
                     />
                   </div>
                 ))}
-                {post.replies.length > 3 && !showAllReplies && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllReplies(true)}
-                    className="text-xs text-primary"
-                  >
-                    Show {post.replies.length - 3} more {post.replies.length - 3 === 1 ? 'reply' : 'replies'}
-                  </Button>
-                )}
+                {/* When expanded, we show full thread; collapsed state handled by toggle button above */}
               </div>
             )}
           </div>

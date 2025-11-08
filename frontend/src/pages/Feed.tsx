@@ -246,17 +246,24 @@ export default function Feed() {
               </section>
             )}
 
-            {/* Featured Investors section removed per request */}
-            {/* Stats snapshot */}
-            <FeedStatCards
-              projectsCount={(hotData?.data?.length || 0) + (topData?.data?.length || 0) + (newData?.data?.length || 0)}
-              buildersCount={topBuilders?.length || 0}
-            />
-
-            {/* Leading tag today */}
-            <div className="flex justify-center mt-4">
-              <FeedLeaderTagCard label={leader.label} count={leader.count} percent={leader.percent} icon={leader.icon} />
-            </div>
+            {/* Stats + Illustration */}
+            <section className="mt-2">
+              <FeedStatCards
+                projectsCount={(hotData?.data?.length || 0) + (topData?.data?.length || 0) + (newData?.data?.length || 0)}
+                buildersCount={topBuilders?.length || 0}
+              />
+              <div className="relative mt-6">
+                <img
+                  src="/assets/feed.png"
+                  alt="Feed Overview"
+                  className="hidden lg:block h-52 xl:h-64 2xl:h-72 select-none absolute left-0 bottom-0 translate-y-14"
+                  loading="lazy"
+                />
+                <div className="flex justify-center">
+                  <FeedLeaderTagCard label={leader.label} count={leader.count} percent={leader.percent} icon={leader.icon} />
+                </div>
+              </div>
+            </section>
 
             
 

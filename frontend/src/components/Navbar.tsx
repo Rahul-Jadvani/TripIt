@@ -192,12 +192,21 @@ export const Navbar = memo(function Navbar() {
                       </Avatar>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    <div className="px-3 py-3 space-y-1">
-                      <p className="text-sm font-bold text-foreground">{user.displayName || user.username}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                  <DropdownMenuContent align="end" className="min-w-[320px] rounded-2xl border-4 border-black p-0 overflow-hidden shadow-[10px_10px_0_0_#000]">
+                    {/* Header */}
+                    <div className="px-4 py-3 bg-secondary/60 border-b-2 border-black flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={user.avatar} alt={user.username} />
+                        <AvatarFallback className="text-xs font-black bg-primary text-black">
+                          {user.username.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-black truncate">{user.displayName || user.username}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
                     </div>
-                    <DropdownMenuSeparator />
+                    <div className="p-2">
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard" className="cursor-pointer flex items-center gap-2 font-medium">
                         <LayoutDashboard className="h-4 w-4" />
@@ -206,17 +215,17 @@ export const Navbar = memo(function Navbar() {
                     </DropdownMenuItem>
                     {user.is_admin && (
                       <DropdownMenuItem asChild>
-                        <Link to="/admin" className="cursor-pointer flex items-center gap-2 font-medium bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-l-2 border-purple-600 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-500 transition-all">
+                        <Link to="/admin" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
                           <Shield className="h-4 w-4 text-purple-600" />
-                          <span className="text-purple-600 font-bold">Admin Dashboard</span>
+                          <span className="font-bold text-foreground">Admin Dashboard</span>
                         </Link>
                       </DropdownMenuItem>
                     )}
                     {user.is_validator && (
                       <DropdownMenuItem asChild>
-                        <Link to="/validator" className="cursor-pointer flex items-center gap-2 font-medium bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-l-2 border-blue-600 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-500 transition-all">
+                        <Link to="/validator" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
                           <Shield className="h-4 w-4 text-blue-600" />
-                          <span className="text-blue-600 font-bold">Validator Dashboard</span>
+                          <span className="font-bold text-foreground">Validator Dashboard</span>
                         </Link>
                       </DropdownMenuItem>
                     )}
@@ -238,14 +247,14 @@ export const Navbar = memo(function Navbar() {
                         <span>Messages</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="my-2" />
                     {user.is_investor ? (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link to="/investor-dashboard" className="cursor-pointer flex items-center gap-2 font-medium bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-l-2 border-yellow-600 hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-500 transition-all">
+                          <Link to="/investor-dashboard" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
                             <Building2 className="h-4 w-4 text-white group-hover:text-white" />
-                            <span className="text-white font-bold group-hover:text-white">Investor Dashboard</span>
-                            <Sparkles className="h-3 w-3 text-white ml-auto group-hover:text-white" />
+                            <span className="font-bold text-foreground">Investor Dashboard</span>
+                            <Sparkles className="h-3 w-3 text-amber-600 ml-auto" />
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
@@ -257,7 +266,7 @@ export const Navbar = memo(function Navbar() {
                       </>
                     ) : (
                       <DropdownMenuItem asChild>
-                        <Link to="/investor-plans" className="cursor-pointer flex items-center gap-2 font-medium bg-gradient-to-r from-primary/10 to-accent/10 border-l-2 border-primary hover:from-primary/20 hover:to-accent/20 transition-all">
+                        <Link to="/investor-plans" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
                           <Building2 className="h-4 w-4 text-primary" />
                           <span className="text-primary font-bold">Become an Investor</span>
                           <Sparkles className="h-3 w-3 text-primary ml-auto animate-pulse" />
@@ -277,11 +286,12 @@ export const Navbar = memo(function Navbar() {
                         <span>Edit Profile & Verify Wallet</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="my-2" />
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive flex items-center gap-2 font-medium">
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>
                     </DropdownMenuItem>
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
@@ -315,3 +325,4 @@ export const Navbar = memo(function Navbar() {
     </header>
   );
 });
+

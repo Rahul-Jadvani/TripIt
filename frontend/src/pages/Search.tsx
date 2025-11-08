@@ -109,7 +109,7 @@ export default function Search() {
         <div className="mx-auto max-w-5xl w-full box-border">
           {/* Header section */}
           <div className="mb-10 card-elevated p-8">
-            <h1 className="text-3xl font-black text-foreground mb-2">Search Projects</h1>
+            <h1 className="text-3xl font-black text-foreground mb-2">Search</h1>
             <p className="text-sm text-muted-foreground">
               Find projects, builders, and hackathons on 0x.ship
             </p>
@@ -121,8 +121,8 @@ export default function Search() {
               <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search projects, builders, hackathons..."
-                className="pl-12 text-base"
+                placeholder="Search, builders, hackathons..."
+                className="pl-12 text-base rounded-[12px] border-4 border-black shadow-[6px_6px_0_0_#000] h-12"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -139,6 +139,22 @@ export default function Search() {
                 <span className="text-xs text-muted-foreground">{results.total ?? (results.projects?.length || 0) + (results.users?.length || 0)} results</span>
               )}
             </div>
+            {!query && (
+              <div className="mt-4">
+                <div className="text-xs font-black text-muted-foreground mb-2">Quick Filters</div>
+                <div className="flex flex-wrap gap-2">
+                  {['AI', 'Web3', 'Blockchain', 'DeFi', 'SaaS', 'Gaming'].map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => { setQuery(t); setTab('projects'); }}
+                      className="inline-flex items-center px-3 py-1.5 rounded-[12px] bg-secondary border-2 border-black text-xs font-bold shadow-[3px_3px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] hover:-translate-y-0.5 transition-transform"
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Loading State */}
@@ -150,7 +166,7 @@ export default function Search() {
           {!loading && !query && (
             <div className="card-elevated p-12 text-center">
               <div className="space-y-4">
-                <div className="text-6xl">🔍</div>
+                <div className="mx-auto h-14 w-14 rounded-[12px] border-4 border-black bg-secondary grid place-items-center shadow-[6px_6px_0_0_#000]"><SearchIcon className="h-7 w-7 text-foreground" /></div>
                 <p className="text-lg font-bold text-foreground">Start your search</p>
                 <p className="text-sm text-muted-foreground">
                   Enter keywords to find projects, discover builders, or explore hackathons
@@ -209,7 +225,7 @@ export default function Search() {
                 (!results.users || results.users.length === 0) && (
                   <div className="card-elevated p-12 text-center">
                     <div className="space-y-4">
-                      <p className="text-lg font-bold text-foreground">No results for “{query}”</p>
+                      <p className="text-lg font-bold text-foreground">No results for \"{query}\"</p>
                       <p className="text-sm text-muted-foreground">
                         Try different keywords or browse recent projects
                       </p>
@@ -223,3 +239,11 @@ export default function Search() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
