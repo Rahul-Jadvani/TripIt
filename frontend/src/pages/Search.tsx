@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSearch } from '@/hooks/useSearch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Helper function to get the backend URL
 const getBackendUrl = (): string => {
@@ -92,6 +93,7 @@ interface SearchResults {
 
 export default function Search() {
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState<'all' | 'projects' | 'users'>('all');
 
   // Instagram-style search: Debounce query + React Query caching
   const debouncedQuery = useDebounce(query, 300); // 300ms delay
@@ -113,17 +115,29 @@ export default function Search() {
             </p>
           </div>
 
-          {/* Search Input */}
+          {/* Search Input + Tabs */}
           <div className="mb-10 card-elevated p-6">
-            <div className="relative">
+            <div className="relative mb-4">
               <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search projects, users, hackathons..."
+                placeholder="Search projects, builders, hackathons..."
                 className="pl-12 text-base"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+                <TabsList className="inline-flex h-auto rounded-[15px] bg-secondary border-4 border-black p-1">
+                  <TabsTrigger value="all" className="px-3 py-2 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-black">All</TabsTrigger>
+                  <TabsTrigger value="projects" className="px-3 py-2 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-black">Projects ({results.projects?.length || 0})</TabsTrigger>
+                  <TabsTrigger value="users" className="px-3 py-2 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-black">Builders ({results.users?.length || 0})</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {query && (
+                <span className="text-xs text-muted-foreground">{results.total ?? (results.projects?.length || 0) + (results.users?.length || 0)} results</span>
+              )}
             </div>
           </div>
 
@@ -148,12 +162,12 @@ export default function Search() {
           {!loading && results && (
             <div className="space-y-8">
               {/* Projects Results */}
-              {results.projects && results.projects.length > 0 && (
+              {(tab === 'all' || tab === 'projects') && results.projects && results.projects.length > 0 && (
                 <div>
                   <h2 className="text-xl font-black mb-4">
                     Projects ({results.projects.length})
                   </h2>
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {results.projects.map((project) => (
                       <ProjectCard key={project.id} project={project} />
                     ))}
@@ -162,7 +176,7 @@ export default function Search() {
               )}
 
               {/* Users Results */}
-              {results.users && results.users.length > 0 && (
+              {(tab === 'all' || tab === 'users') && results.users && results.users.length > 0 && (
                 <div>
                   <h2 className="text-xl font-black mb-4">
                     Builders ({results.users.length})
@@ -172,7 +186,7 @@ export default function Search() {
                       <Link
                         key={user.id}
                         to={`/u/${user.username}`}
-                        className="card-elevated p-4 flex items-center gap-4 hover:shadow-lg transition-shadow"
+                        className="card-elevated p-4 flex items-center gap-4 hover:shadow-lg transition-shadow rounded-xl"
                       >
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={user.avatar_url} alt={user.username} />
@@ -191,13 +205,13 @@ export default function Search() {
               )}
 
               {/* No Results */}
-              {(!results.projects || results.projects.length === 0) &&
+              {query && (!results.projects || results.projects.length === 0) &&
                 (!results.users || results.users.length === 0) && (
                   <div className="card-elevated p-12 text-center">
                     <div className="space-y-4">
-                      <p className="text-lg font-bold text-foreground">No results found</p>
+                      <p className="text-lg font-bold text-foreground">No results for “{query}”</p>
                       <p className="text-sm text-muted-foreground">
-                        Try a different search term or browse recent projects
+                        Try different keywords or browse recent projects
                       </p>
                     </div>
                   </div>

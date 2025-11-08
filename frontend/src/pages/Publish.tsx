@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { WalletVerification } from '@/components/WalletVerification';
 import { UserSearchSelect } from '@/components/UserSearchSelect';
@@ -34,6 +34,8 @@ export default function Publish() {
   const [unregisteredName, setUnregisteredName] = useState('');
   const [unregisteredRole, setUnregisteredRole] = useState('');
   const [showProofScoreInfo, setShowProofScoreInfo] = useState(false);
+  const [showErrorSummary, setShowErrorSummary] = useState(false);
+  const [formErrorsList, setFormErrorsList] = useState<{ id: string; message: string }[]>([]);
 
   // Hackathons state
   const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
@@ -59,6 +61,7 @@ export default function Publish() {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    watch,
   } = useForm<PublishProjectInput>({
     resolver: zodResolver(publishProjectSchema),
     defaultValues: {
@@ -72,6 +75,7 @@ export default function Publish() {
       techStack: [],
     },
   });
+  const descLength = watch('description', '').length;
 
   const handleAddTech = () => {
     if (techInput.trim() && !techStack.includes(techInput.trim())) {
@@ -393,6 +397,27 @@ export default function Publish() {
     }
   };
 
+  // When validation fails, show a structured error summary and scroll to first error
+  const onInvalid = (formErrors: any) => {
+    const list: { id: string; message: string }[] = [];
+    if (formErrors?.title?.message) list.push({ id: 'title', message: `Title: ${formErrors.title.message}` });
+    if (formErrors?.description?.message) list.push({ id: 'description', message: `Description: ${formErrors.description.message}` });
+    if (formErrors?.demoUrl?.message) list.push({ id: 'demoUrl', message: `Demo URL: ${formErrors.demoUrl.message}` });
+    if (formErrors?.githubUrl?.message) list.push({ id: 'githubUrl', message: `GitHub URL: ${formErrors.githubUrl.message}` });
+    // Business rules
+    if (techStack.length === 0) list.push({ id: 'techStackSection', message: 'Tech Stack: Add at least one technology' });
+    if (categories.length === 0) list.push({ id: 'categoriesSection', message: 'Categories: Select at least one category' });
+
+    setFormErrorsList(list);
+    setShowErrorSummary(true);
+    // Scroll to the first error block/field
+    const first = list[0]?.id && document.getElementById(list[0].id);
+    if (first && 'scrollIntoView' in first) {
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    toast.error('Please fix the highlighted fields');
+  };
+
   return (
     <div className="bg-background min-h-screen">
       <div className="container mx-auto px-6 py-12">
@@ -414,6 +439,30 @@ export default function Publish() {
               >
                 <Info className="h-6 w-6 text-primary" />
               </button>
+            </div>
+
+            {/* Quick section navigation */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[
+                { id: 'basicsSection', label: 'Basics' },
+                { id: 'categoriesSection', label: 'Categories & Chains' },
+                { id: 'linksSection', label: 'Links' },
+                { id: 'techStackSection', label: 'Tech Stack' },
+                { id: 'teamSection', label: 'Team' },
+                { id: 'storySection', label: 'Story' },
+                { id: 'marketSection', label: 'Market' },
+                { id: 'pitchDeckSection', label: 'Pitch Deck' },
+                { id: 'screenshotsSection', label: 'Screenshots' },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="badge badge-dash badge-secondary hover:opacity-90"
+                >
+                  {s.label}
+                </button>
+              ))}
             </div>
 
             {/* Proof Score Info - Collapsible */}
@@ -456,7 +505,7 @@ export default function Publish() {
                   </div>
                 </div>
                 <p className="mt-4 text-xs text-foreground font-bold bg-primary/20 p-3 rounded-lg border-2 border-primary">
-                  💡 Fill in all optional fields to achieve a maximum Quality Score of 20/20!
+                  <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Tip: Fill in all optional fields to achieve a maximum Quality Score of 20/20!</span>
                 </p>
               </div>
             )}
@@ -467,9 +516,34 @@ export default function Publish() {
             <WalletVerification />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
             <div className="space-y-8">
-              <div className="card-elevated p-8">
+              {/* Error Summary */}
+              {showErrorSummary && formErrorsList.length > 0 && (
+                <div id="errorSummary" className="card-elevated p-5 border-4 border-destructive bg-destructive/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <h3 className="text-lg font-black text-foreground">Please resolve these issues</h3>
+                  </div>
+                  <ul className="list-disc ml-6 space-y-1">
+                    {formErrorsList.map((e, idx) => (
+                      <li key={idx}>
+                        <button
+                          type="button"
+                          className="underline text-destructive hover:opacity-80"
+                          onClick={() => {
+                            const el = document.getElementById(e.id);
+                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }}
+                        >
+                          {e.message}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="card-elevated p-8" id="basicsSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Basic Information
                 </h2>
@@ -479,7 +553,8 @@ export default function Publish() {
                     <Input
                       id="title"
                       placeholder="e.g., DeFi Lending Platform"
-                      className="text-base"
+                      aria-invalid={!!errors.title}
+                      className={`text-base ${errors.title ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('title')}
                     />
                     {errors.title && (
@@ -516,7 +591,8 @@ export default function Publish() {
                       id="description"
                       placeholder="Describe your project in detail (minimum 200 characters for quality score)"
                       rows={8}
-                      className="text-base"
+                      aria-invalid={!!errors.description}
+                      className={`text-base ${errors.description ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('description')}
                     />
                     {errors.description && (
@@ -525,10 +601,15 @@ export default function Publish() {
                         {errors.description.message}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground">Minimum 200 characters recommended for +5 quality score</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">Minimum 200 characters recommended for +5 quality score</p>
+                      <span className={`badge ${descLength >= 200 ? 'badge-success' : 'badge-warning'}`}>
+                        {descLength} / 200+
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3" id="categoriesSection">
                     <Label className="text-base font-bold">
                       Project Categories * (Select all that apply)
                       <span className="ml-2 text-xs badge-info">Helps validators find your project</span>
@@ -565,9 +646,16 @@ export default function Publish() {
                         </label>
                       ))}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Selected: {categories.length > 0 ? categories.join(', ') : 'None'}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        Selected: {categories.length > 0 ? categories.join(', ') : 'None'}
+                      </p>
+                      {showErrorSummary && categories.length === 0 && (
+                        <span className="text-xs text-destructive font-bold flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" /> Required
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Chains Selector */}
@@ -583,16 +671,16 @@ export default function Publish() {
               </div>
 
               {/* NEW: Project Story & Vision Section */}
-              <div className="card-elevated p-8 bg-gradient-to-br from-card to-primary/5">
+              <div className="card-elevated p-8 bg-gradient-to-br from-card to-primary/5" id="storySection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
-                  📖 Project Story & Vision
+                  <span className="inline-flex items-center gap-2"><BookOpen className="h-6 w-6" /> Project Story & Vision</span>
                 </h2>
                 <p className="text-sm text-muted-foreground mb-6">Share the journey behind your project - what inspired you and how it came to life</p>
 
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <Label htmlFor="projectStory" className="text-base font-bold flex items-center gap-2">
-                      <span>🚀 The Journey</span>
+                      <span className="inline-flex items-center gap-2"><Rocket className="h-4 w-4" /> The Journey</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
@@ -608,7 +696,7 @@ export default function Publish() {
 
                   <div className="space-y-3">
                     <Label htmlFor="inspiration" className="text-base font-bold flex items-center gap-2">
-                      <span>💡 The Spark</span>
+                      <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> The Spark</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
@@ -625,16 +713,16 @@ export default function Publish() {
               </div>
 
               {/* NEW: Market & Innovation Section */}
-              <div className="card-elevated p-8 bg-gradient-to-br from-card to-accent/5">
+              <div className="card-elevated p-8 bg-gradient-to-br from-card to-accent/5" id="marketSection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
-                  🎯 Market & Innovation
+                  <span className="inline-flex items-center gap-2"><Target className="h-6 w-6" /> Market & Innovation</span>
                 </h2>
                 <p className="text-sm text-muted-foreground mb-6">Show what makes your project stand out in the ecosystem</p>
 
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <Label htmlFor="marketComparison" className="text-base font-bold flex items-center gap-2">
-                      <span>🔍 Competitive Landscape</span>
+                      <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Competitive Landscape</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
@@ -650,7 +738,7 @@ export default function Publish() {
 
                   <div className="space-y-3">
                     <Label htmlFor="noveltyFactor" className="text-base font-bold flex items-center gap-2">
-                      <span>✨ What Makes This Special</span>
+                      <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4" /> What Makes This Special</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
@@ -667,9 +755,9 @@ export default function Publish() {
               </div>
 
               {/* NEW: Pitch Deck Section */}
-              <div className="card-elevated p-8 bg-gradient-to-br from-card to-secondary/10">
+              <div className="card-elevated p-8 bg-gradient-to-br from-card to-secondary/10" id="pitchDeckSection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
-                  📊 Pitch Deck
+                  <span className="inline-flex items-center gap-2"><FileText className="h-6 w-6" /> Pitch Deck</span>
                 </h2>
                 <p className="text-sm text-muted-foreground mb-6">Upload your pitch deck to give investors and collaborators a complete view</p>
 
@@ -731,8 +819,8 @@ export default function Publish() {
                       </div>
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    💡 A good pitch deck can significantly increase investor interest and collaboration opportunities
+                  <p className="text-xs text-muted-foreground inline-flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4" /> A good pitch deck can significantly increase investor interest and collaboration opportunities
                   </p>
                 </div>
               </div>
@@ -819,7 +907,7 @@ export default function Publish() {
                 </div>
               </div>
 
-              <div className="card-elevated p-8">
+              <div className="card-elevated p-8" id="linksSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Links & Resources
                 </h2>
@@ -833,6 +921,8 @@ export default function Publish() {
                       id="demoUrl"
                       type="url"
                       placeholder="https://demo.example.com"
+                      aria-invalid={!!errors.demoUrl}
+                      className={`${errors.demoUrl ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('demoUrl')}
                     />
                     {errors.demoUrl && (
@@ -850,6 +940,8 @@ export default function Publish() {
                       id="githubUrl"
                       type="url"
                       placeholder="https://github.com/username/repo"
+                      aria-invalid={!!errors.githubUrl}
+                      className={`${errors.githubUrl ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('githubUrl', {
                         onChange: (e) => validateGithubUrl(e.target.value),
                         onBlur: (e) => validateGithubUrl(e.target.value)
@@ -882,7 +974,7 @@ export default function Publish() {
                 </div>
               </div>
 
-              <div className="card-elevated p-8">
+              <div className="card-elevated p-8" id="techStackSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Tech Stack *
                 </h2>
@@ -917,7 +1009,7 @@ export default function Publish() {
                     </div>
                   )}
 
-                  {techStack.length === 0 && (
+                  {techStack.length === 0 && showErrorSummary && (
                     <p className="text-sm font-bold text-destructive flex items-center gap-1">
                       <AlertTriangle className="h-4 w-4" />
                       Add at least one technology
@@ -927,7 +1019,7 @@ export default function Publish() {
               </div>
 
               {/* Team Members Section */}
-              <div className="card-elevated p-8">
+              <div className="card-elevated p-8" id="teamSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3 flex items-center gap-2">
                   <Users className="h-6 w-6" />
                   Team Members / Crew
@@ -1118,7 +1210,7 @@ export default function Publish() {
                 </div>
               </div>
 
-              <div className="card-elevated p-8">
+              <div className="card-elevated p-8" id="screenshotsSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Screenshots (Optional)
                   <span className="ml-2 text-xs badge-primary">+5 Quality Score</span>

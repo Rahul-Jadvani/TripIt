@@ -26,15 +26,15 @@ export default function Leaderboard() {
       <div className="container mx-auto px-6 py-12 overflow-hidden">
         <div className="mx-auto max-w-5xl w-full box-border">
           {/* Header section */}
-          <div className="mb-10 card-elevated p-8">
+          <div className="mb-6 card-elevated p-8">
             <h1 className="text-4xl font-black text-foreground mb-2">Leaderboard</h1>
             <p className="text-base text-muted-foreground">
               Top projects and builders on 0x.ship
             </p>
           </div>
 
-          {/* Tabs */}
-          <div className="mb-8">
+          {/* Tabs and image in one row */}
+          <div className="mb-3 flex items-center justify-between gap-4 flex-wrap">
             <Tabs value={tab} onValueChange={(v) => setTab(v as LeaderboardTab)}>
               <TabsList className="inline-flex h-auto rounded-[15px] bg-secondary border-4 border-black p-1">
                 <TabsTrigger
@@ -57,6 +57,15 @@ export default function Leaderboard() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+
+            <div className="flex items-center">
+              <img
+                src="/assets/leaderboard.gif"
+                alt="Leaderboard graphic"
+                className="block w-40 sm:w-48 md:w-60 h-auto"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/assets/leaderboard.png'; }}
+              />
+            </div>
           </div>
 
           {/* Leaderboard Items */}

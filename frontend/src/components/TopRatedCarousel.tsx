@@ -175,11 +175,11 @@ export function TopRatedCarousel({
                   key={project.id}
                   className={`!w-full sm:!w-auto flex items-center justify-center`}
                 >
-                  <div className="w-full sm:w-[600px]">
+                  <div className="w-full sm:w-[760px] md:w-[820px]">
                     {/* Main Card - Fixed Height */}
                     <div
                       onClick={isActive ? handleCardClick : undefined}
-                      className={`relative flex flex-col overflow-hidden card-interactive transition-all duration-300 h-[320px] ${
+                      className={`relative flex flex-col overflow-hidden card-interactive transition-all duration-300 h-[380px] md:h-[420px] ${
                         !isActive ? 'opacity-60' : ''
                       } ${isActive ? 'cursor-pointer hover:shadow-lg' : ''}`}
                     >
@@ -328,7 +328,7 @@ export function TopRatedCarousel({
             </>
           </Swiper>
         ) : (
-          <div className="flex items-center justify-center h-[320px] rounded-lg border border-border/40 bg-secondary/20">
+          <div className="flex items-center justify-center h-[380px] md:h-[420px] rounded-lg border border-border/40 bg-secondary/20">
             <div className="text-center">
               <p className="text-muted-foreground font-medium">
                 No top rated projects found

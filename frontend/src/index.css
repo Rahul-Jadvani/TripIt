@@ -621,5 +621,15 @@ All colors MUST be HSL.
     font-style: normal;
     letter-spacing: -0.02em;
   }
+
+  /* (patterns removed per request) */
+
+  /* Feed page enhancements */
+  .feed-quick-nav {
+    @apply sticky top-24 z-30 border-2 border-black rounded-[15px] bg-card/70 backdrop-blur px-3 py-2 shadow-card;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 

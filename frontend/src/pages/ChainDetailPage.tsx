@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useChain, useChainProjects } from '@/hooks/useChains';
+import { useChain, useChainProjects, useFollowChain, useUnfollowChain } from '@/hooks/useChains';
 import { useBanChain, useSuspendChain, useUnbanChain, useDeleteChainAdmin, useToggleChainFeatured } from '@/hooks/useAdminChains';
 import { ChainHeader } from '@/components/ChainHeader';
 import { ChainHeaderSkeleton } from '@/components/ChainHeaderSkeleton';
@@ -55,6 +55,8 @@ export default function ChainDetailPage() {
   const chain = chainData?.chain;
   const projects = projectsData?.projects || [];
   const totalPages = projectsData?.total_pages || 1;
+  const followMutation = useFollowChain();
+  const unfollowMutation = useUnfollowChain();
 
   // Admin handler functions
   const handleAdminAction = async (action: string) => {
@@ -158,6 +160,33 @@ export default function ChainDetailPage() {
       {/* Chain Header */}
       <ChainHeader chain={chain} />
 
+      {/* Community actions like subreddit (Join + Create Post) */}
+      <div className="flex items-center justify-between gap-3 px-1 -mt-4">
+        <div className="flex items-center gap-2">
+          {user && (
+            <Button
+              size="sm"
+              variant={chain.is_following ? 'outline' : 'default'}
+              onClick={() => {
+                if (chain.is_following) {
+                  unfollowMutation.mutate(chain.slug);
+                } else {
+                  followMutation.mutate(chain.slug);
+                }
+              }}
+              disabled={followMutation.isPending || unfollowMutation.isPending}
+            >
+              {chain.is_following ? 'Joined' : 'Join'}
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {user && (
+            <CreatePostDialog chainSlug={slug || ''} chainName={chain.name} />
+          )}
+        </div>
+      </div>
+
       {/* Admin Actions - Only visible to admins */}
       {isAdmin && (
         <Alert className="border-yellow-500/50 bg-yellow-500/10">
@@ -255,6 +284,9 @@ export default function ChainDetailPage() {
       )}
 
       {/* Tabs */}
+      {/* Subreddit-style layout: main content + sticky sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
       <Tabs defaultValue="projects" className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <TabsList>
@@ -422,6 +454,96 @@ export default function ChainDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+        </div>
+
+        {/* Sticky sidebar with About/Rules/Links */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-24 space-y-4">
+            <Card className="p-5 space-y-3">
+              <div>
+                <h3 className="text-lg font-bold">About {chain.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {chain.description}
+                </p>
+              </div>
+
+              {chain.categories && chain.categories.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Categories</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {chain.categories.slice(0, 6).map((category) => (
+                      <span key={category} className="px-2 py-0.5 rounded-full text-xs bg-secondary">
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-3 pt-2 border-t">
+                <div className="text-center">
+                  <div className="text-xl font-black text-primary">{chain.project_count}</div>
+                  <div className="text-xs text-muted-foreground">projects</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-black text-primary">{chain.follower_count}</div>
+                  <div className="text-xs text-muted-foreground">followers</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-black text-primary">{chain.view_count}</div>
+                  <div className="text-xs text-muted-foreground">views</div>
+                </div>
+              </div>
+
+              {chain.social_links && Object.keys(chain.social_links).length > 0 && (
+                <div className="pt-2 border-t">
+                  <h4 className="text-sm font-semibold mb-2">Links</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {chain.social_links.website && (
+                      <a className="btn-secondary text-xs px-3 py-1 rounded-full" target="_blank" rel="noopener noreferrer" href={chain.social_links.website}>Website</a>
+                    )}
+                    {chain.social_links.twitter && (
+                      <a className="btn-secondary text-xs px-3 py-1 rounded-full" target="_blank" rel="noopener noreferrer" href={chain.social_links.twitter}>Twitter</a>
+                    )}
+                    {chain.social_links.discord && (
+                      <a className="btn-secondary text-xs px-3 py-1 rounded-full" target="_blank" rel="noopener noreferrer" href={chain.social_links.discord}>Discord</a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground">
+                Created by{' '}
+                {chain.creator ? (
+                  <span className="text-foreground font-medium">@{chain.creator.username}</span>
+                ) : (
+                  'community'
+                )}
+              </div>
+            </Card>
+
+            {/* Rules */}
+            {chain.rules && (
+              <Card className="p-5">
+                <h3 className="text-lg font-bold mb-2">Rules</h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{chain.rules}</p>
+              </Card>
+            )}
+
+            {/* Moderators - only if backend provides */}
+            {Array.isArray((chain as any).moderators) && (chain as any).moderators.length > 0 && (
+              <Card className="p-5">
+                <h3 className="text-lg font-bold mb-2">Moderators</h3>
+                <div className="flex flex-wrap gap-2 text-sm">
+                  {((chain as any).moderators as Array<{ username: string }>).map((mod, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full bg-secondary">@{mod.username}</span>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+        </aside>
+      </div>
 
       {/* Add Project Dialog */}
       {user && (

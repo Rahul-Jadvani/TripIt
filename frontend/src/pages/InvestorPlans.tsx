@@ -1470,65 +1470,92 @@ export default function InvestorPlans() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={`card-elevated p-8 relative hover:shadow-2xl transition-all group ${
-                plan.popular ? 'ring-4 ring-primary ring-offset-4 ring-offset-background scale-105' : ''
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 px-5 py-2 bg-gradient-to-r from-primary to-accent text-foreground text-sm font-black rounded-full border-4 border-background shadow-lg flex items-center gap-1.5">
-                  <Zap className="h-4 w-4" />
-                  RECOMMENDED
-                </div>
-              )}
-
-              <div className="mb-6">
-                <h3 className="text-xl font-black mb-2">{plan.name}</h3>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-3xl font-black bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    {plan.price}
-                  </span>
-                  {plan.period && <span className="text-muted-foreground text-sm font-medium">/ {plan.period}</span>}
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{plan.description}</p>
-              </div>
-
-              <div className="space-y-3 mb-8">
-                {plan.features.map((feature, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 group/item hover:bg-primary/10 rounded-md p-2 transition-all duration-200">
-                    <div className="mt-0.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary/90 transition-all duration-200">
-                      <Check className="h-3.5 w-3.5 text-black font-bold group-hover:scale-110 transition-transform duration-200" />
-                    </div>
-                    <span className="text-xs font-medium leading-relaxed flex-1">{feature}</span>
+          {PLANS.map((plan) => {
+            const suffix = plan.id === 'professional' ? 'mo' : (plan.period === 'forever' ? 'forever' : plan.period);
+            return (
+              <div
+                key={plan.id}
+                className={`relative transition-all group hover:-translate-y-0.5 ${
+                  plan.popular ? 'scale-105' : ''
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 px-5 py-2 bg-gradient-to-r from-primary to-accent text-foreground text-sm font-black rounded-full border-4 border-background shadow-lg flex items-center gap-1.5 z-10">
+                    <Zap className="h-4 w-4" />
+                    RECOMMENDED
                   </div>
-                ))}
-                {plan.limitations.map((limitation, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 opacity-40">
-                    <div className="mt-0.5 h-5 w-5 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-                      <X className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-                    </div>
-                    <span className="text-xs flex-1">{limitation}</span>
-                  </div>
-                ))}
-              </div>
+                )}
 
-              {plan.available ? (
-                <button
-                  onClick={() => handleApply(plan.id)}
-                  className="btn-primary w-full group/btn hover:scale-105 transition-transform gap-2 py-2.5 text-sm"
-                >
-                  <span className="font-bold">Get Started</span>
-                  <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              ) : (
-                <button disabled className="btn-secondary w-full opacity-50 cursor-not-allowed py-2.5 text-sm">
-                  Coming Soon
-                </button>
-              )}
-            </div>
-          ))}
+                <div className="rounded-2xl bg-card text-foreground p-6 border-[3px] border-black shadow-[8px_8px_0_0_#000]">
+                  <div className="pricing-block-content">
+                    <p className="pricing-plan text-xl font-black tracking-tight">{plan.name}</p>
+                    <div className="price-value flex items-center gap-2 mt-1">
+                      <p className="price-number text-3xl font-black">
+                        {plan.price}
+                        {suffix && suffix !== 'forever' && (
+                          <span className="text-sm font-bold align-top ml-1">/{suffix}</span>
+                        )}
+                      </p>
+                      {suffix === 'forever' && (
+                        <div className="text-xs font-bold ml-1 opacity-80">forever</div>
+                      )}
+                    </div>
+                    {plan.id === 'free' && (
+                      <div className="pricing-note text-xs text-muted-foreground">free forever</div>
+                    )}
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-1">{plan.description}</p>
+
+                    <ul className="check-list mt-4 space-y-2" role="list">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="check-list-item flex items-center gap-2">
+                          <svg
+                            version={1.0}
+                            preserveAspectRatio="xMidYMid meet"
+                            height={16}
+                            viewBox="0 0 30 30.000001"
+                            zoomAndPan="magnify"
+                            width={16}
+                            xmlnsXlink="http://www.w3.org/1999/xlink"
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{ color: 'hsl(var(--primary))' }}
+                          >
+                            <defs>
+                              <clipPath id={`id1-${plan.id}-${idx}`}>
+                                <path fill="currentColor" clipRule="nonzero" d="M 2.328125 4.222656 L 27.734375 4.222656 L 27.734375 24.542969 L 2.328125 24.542969 Z M 2.328125 4.222656" />
+                              </clipPath>
+                            </defs>
+                            <g clipPath={`url(#id1-${plan.id}-${idx})`}>
+                              <path fillRule="nonzero" fillOpacity={1} d="M 27.5 7.53125 L 24.464844 4.542969 C 24.15625 4.238281 23.65625 4.238281 23.347656 4.542969 L 11.035156 16.667969 L 6.824219 12.523438 C 6.527344 12.230469 6 12.230469 5.703125 12.523438 L 2.640625 15.539062 C 2.332031 15.84375 2.332031 16.335938 2.640625 16.640625 L 10.445312 24.324219 C 10.59375 24.472656 10.796875 24.554688 11.007812 24.554688 C 11.214844 24.554688 11.417969 24.472656 11.566406 24.324219 L 27.5 8.632812 C 27.648438 8.488281 27.734375 8.289062 27.734375 8.082031 C 27.734375 7.875 27.648438 7.679688 27.5 7.53125 Z M 27.5 7.53125" fill="currentColor" />
+                            </g>
+                          </svg>
+                          <span className="text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="mt-6">
+                      {plan.available ? (
+                        <button
+                          onClick={() => handleApply(plan.id)}
+                          className="w-full inline-flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl border-[3px] border-black bg-primary text-black shadow-[0_-6px_0_0_#000] hover:shadow-[0_-8px_0_0_#000] hover:-translate-y-0.5 transition"
+                        >
+                          Get Started
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="w-full inline-flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl border-[3px] border-black bg-muted text-muted-foreground shadow-[0_-6px_0_0_#000] opacity-60 cursor-not-allowed"
+                        >
+                          Coming Soon
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="card-elevated p-8 text-center bg-gradient-to-r from-secondary/50 to-secondary/30 border-2 border-primary/20">

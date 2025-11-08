@@ -62,7 +62,8 @@ export default function Intros() {
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case 'accepted':
-        return <CheckCircle className="h-4 w-4 text-primary" />;
+        // Use black to ensure visibility on primary/yellow backgrounds
+        return <CheckCircle className="h-4 w-4 text-black" />;
       case 'declined':
         return <XCircle className="h-4 w-4 text-red-600" />;
       default:
@@ -211,7 +212,7 @@ export default function Intros() {
                       <button
                         onClick={() => handleAccept(intro.id)}
                         disabled={acceptMutation.isPending || declineMutation.isPending}
-                        className="btn-primary flex-1 gap-2 group/btn hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                        className="btn-primary flex-1 inline-flex items-center justify-center gap-2 group hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                       >
                         {acceptMutation.isPending ? (
                           <>
@@ -220,7 +221,7 @@ export default function Intros() {
                           </>
                         ) : (
                           <>
-                            <Check className="h-4 w-4 group-hover/btn:scale-125 transition-transform" />
+                            <Check className="h-4 w-4 group-hover:scale-125 transition-transform" />
                             <span className="font-bold">Accept & Start Chat</span>
                           </>
                         )}
@@ -228,7 +229,7 @@ export default function Intros() {
                       <button
                         onClick={() => handleDecline(intro.id)}
                         disabled={acceptMutation.isPending || declineMutation.isPending}
-                        className="btn-secondary flex-1 gap-2 hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                        className="btn-secondary flex-1 inline-flex items-center justify-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                       >
                         {declineMutation.isPending ? (
                           <>
@@ -248,9 +249,9 @@ export default function Intros() {
                   {intro.status === 'accepted' && (
                     <button
                       onClick={() => navigate(`/messages?user=${intro.investor?.id}`)}
-                      className="btn-primary w-full gap-2 group/btn hover:scale-[1.02] transition-transform"
+                      className="btn-primary w-full inline-flex items-center justify-center gap-2 group hover:scale-[1.02] transition-transform"
                     >
-                      <Mail className="h-4 w-4 group-hover/btn:rotate-12 transition-transform" />
+                      <Mail className="h-4 w-4 group-hover:rotate-12 transition-transform" />
                       <span className="font-bold">Open Conversation</span>
                     </button>
                   )}
@@ -316,9 +317,9 @@ export default function Intros() {
                   {intro.status === 'accepted' && (
                     <button
                       onClick={() => navigate(`/messages?user=${intro.builder?.id}`)}
-                      className="btn-primary w-full gap-2 group/btn hover:scale-[1.02] transition-transform"
+                      className="btn-primary w-full inline-flex items-center justify-center gap-2 group hover:scale-[1.02] transition-transform"
                     >
-                      <Mail className="h-4 w-4 group-hover/btn:rotate-12 transition-transform" />
+                      <Mail className="h-4 w-4 group-hover:rotate-12 transition-transform" />
                       <span className="font-bold">Open Conversation</span>
                     </button>
                   )}
