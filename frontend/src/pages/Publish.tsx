@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { WalletVerification } from '@/components/WalletVerification';
 import { UserSearchSelect } from '@/components/UserSearchSelect';
@@ -21,6 +21,54 @@ import { ChainSelector } from '@/components/ChainSelector';
 export default function Publish() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Multistep state
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const stepDefs: { index: number; label: string; anchors: string[] }[] = [
+    { index: 1, label: 'Basics', anchors: ['basicsSection', 'linksSection'] },
+    { index: 2, label: 'Tech & Categories', anchors: ['categoriesSection', 'techStackSection'] },
+    { index: 3, label: 'Team & Story', anchors: ['teamSection', 'storySection', 'marketSection'] },
+    { index: 4, label: 'Assets & Submit', anchors: ['pitchDeckSection', 'screenshotsSection'] },
+  ];
+  const totalSteps = stepDefs.length;
+  const scrollToSection = (id?: string) => {
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el && 'scrollIntoView' in el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+  const scrollToStep = (step: number) => {
+    const def = stepDefs.find(s => s.index === step);
+    if (def) scrollToSection(def.anchors[0]);
+  };
+  const goToStep = (step: number) => {
+    const bounded = Math.max(1, Math.min(totalSteps, step));
+    setCurrentStep(bounded);
+    scrollToStep(bounded);
+  };
+  const nextStep = () => goToStep(currentStep + 1);
+  const prevStep = () => goToStep(currentStep - 1);
+  const getStepForId = (id: string): number => {
+    // Map direct input ids to their section containers first
+    const idToSection: Record<string, string> = {
+      title: 'basicsSection',
+      tagline: 'basicsSection',
+      description: 'basicsSection',
+      demoUrl: 'linksSection',
+      githubUrl: 'linksSection',
+      // Section ids themselves map 1:1
+      categoriesSection: 'categoriesSection',
+      techStackSection: 'techStackSection',
+      teamSection: 'teamSection',
+      storySection: 'storySection',
+      marketSection: 'marketSection',
+      pitchDeckSection: 'pitchDeckSection',
+      screenshotsSection: 'screenshotsSection',
+    };
+    const section = idToSection[id] || id;
+    const def = stepDefs.find(s => s.anchors.includes(section));
+    return def?.index || 1;
+  };
   const [techStack, setTechStack] = useState<string[]>([]);
   const [techInput, setTechInput] = useState('');
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
@@ -62,6 +110,7 @@ export default function Publish() {
     formState: { errors, isSubmitting },
     reset,
     watch,
+    trigger,
   } = useForm<PublishProjectInput>({
     resolver: zodResolver(publishProjectSchema),
     defaultValues: {
@@ -76,6 +125,36 @@ export default function Publish() {
     },
   });
   const descLength = watch('description', '').length;
+
+  // Guarded next for per-step validation
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      const ok = await trigger(['title', 'description']);
+      if (!ok) {
+        setShowErrorSummary(true);
+        const firstInvalid = ['title', 'description'].find((f) => (errors as any)?.[f]);
+        if (firstInvalid) {
+          document.getElementById(firstInvalid)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+    }
+    if (currentStep === 2) {
+      if (categories.length === 0) {
+        setShowErrorSummary(true);
+        toast.error('Please select at least one project category');
+        scrollToSection('categoriesSection');
+        return;
+      }
+      if (techStack.length === 0) {
+        setShowErrorSummary(true);
+        toast.error('Please add at least one technology');
+        scrollToSection('techStackSection');
+        return;
+      }
+    }
+    goToStep(currentStep + 1);
+  };
 
   const handleAddTech = () => {
     if (techInput.trim() && !techStack.includes(techInput.trim())) {
@@ -303,11 +382,15 @@ export default function Publish() {
 
   const onSubmit = async (data: PublishProjectInput) => {
     if (techStack.length === 0) {
+      goToStep(getStepForId('techStackSection'));
+      scrollToSection('techStackSection');
       toast.error('Please add at least one technology');
       return;
     }
 
     if (categories.length === 0) {
+      goToStep(getStepForId('categoriesSection'));
+      scrollToSection('categoriesSection');
       toast.error('Please select at least one project category');
       return;
     }
@@ -411,9 +494,11 @@ export default function Publish() {
     setFormErrorsList(list);
     setShowErrorSummary(true);
     // Scroll to the first error block/field
-    const first = list[0]?.id && document.getElementById(list[0].id);
-    if (first && 'scrollIntoView' in first) {
-      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const firstId = list[0]?.id;
+    if (firstId) {
+      goToStep(getStepForId(firstId));
+      const el = document.getElementById(firstId);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     toast.error('Please fix the highlighted fields');
   };
@@ -441,6 +526,66 @@ export default function Publish() {
               </button>
             </div>
 
+            {/* Multistep Progress */}
+            <div className="relative mb-4">
+              <div className="relative h-2 bg-secondary/30 rounded-full overflow-hidden border-2 border-black">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
+                />
+              </div>
+              <div className="mt-4 grid grid-cols-4 gap-2">
+                {stepDefs.map((s) => {
+                  const isActive = currentStep === s.index;
+                  const isCompleted = currentStep > s.index;
+                  return (
+                    <button
+                      key={s.index}
+                      type="button"
+                      className={`flex items-center gap-3 p-3 rounded-[12px] border-2 ${
+                        isActive ? 'bg-primary text-black border-black' : isCompleted ? 'bg-success text-black border-black' : 'bg-secondary/20 text-foreground border-black'
+                      }`}
+                      onClick={() => goToStep(s.index)}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black border-2 border-black ${
+                        isCompleted ? 'bg-success' : isActive ? 'bg-primary' : 'bg-background'
+                      }`}>
+                        {isCompleted ? '✓' : s.index}
+                      </div>
+                      <span className="font-bold text-sm truncate">{s.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  type="button"
+                  className="btn-secondary px-4 py-2 flex items-center gap-2"
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" /> Previous
+                </button>
+                {currentStep < totalSteps ? (
+                  <button
+                    type="button"
+                    className="btn-primary px-4 py-2 flex items-center gap-2"
+                    onClick={handleNext}
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-primary px-4 py-2 font-black"
+                    onClick={() => handleSubmit(onSubmit, onInvalid)()}
+                  >
+                    Publish
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Quick section navigation */}
             <div className="mt-4 flex flex-wrap gap-2">
               {[
@@ -457,7 +602,10 @@ export default function Publish() {
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={() => {
+                    goToStep(getStepForId(s.id));
+                    document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   className="badge badge-dash badge-secondary hover:opacity-90"
                 >
                   {s.label}
@@ -544,10 +692,12 @@ export default function Publish() {
                 </div>
               )}
               <div className="card-elevated p-8" id="basicsSection">
-                <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Basic Information
-                </h2>
-                <div className="space-y-6">
+                {currentStep === 1 && (
+                  <>
+                    <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
+                      Basic Information
+                    </h2>
+                    <div className="space-y-6">
                   <div className="space-y-3">
                     <Label htmlFor="title" className="text-base font-bold">Project Title *</Label>
                     <Input
@@ -608,7 +758,15 @@ export default function Publish() {
                       </span>
                     </div>
                   </div>
+                    </div>
+                  </>
+                )}
 
+                {currentStep === 2 && (
+                  <>
+                    <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
+                      Categories & Chains
+                    </h2>
                   <div className="space-y-3" id="categoriesSection">
                     <Label className="text-base font-bold">
                       Project Categories * (Select all that apply)
@@ -667,10 +825,13 @@ export default function Publish() {
                       projectCategories={categories}
                     />
                   </div>
-                </div>
+                  </>
+                )}
+                
               </div>
 
               {/* NEW: Project Story & Vision Section */}
+              {currentStep === 3 && (
               <div className="card-elevated p-8 bg-gradient-to-br from-card to-primary/5" id="storySection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
                   <span className="inline-flex items-center gap-2"><BookOpen className="h-6 w-6" /> Project Story & Vision</span>
@@ -711,8 +872,10 @@ export default function Publish() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* NEW: Market & Innovation Section */}
+              {currentStep === 3 && (
               <div className="card-elevated p-8 bg-gradient-to-br from-card to-accent/5" id="marketSection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
                   <span className="inline-flex items-center gap-2"><Target className="h-6 w-6" /> Market & Innovation</span>
@@ -753,8 +916,10 @@ export default function Publish() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* NEW: Pitch Deck Section */}
+              {currentStep === 4 && (
               <div className="card-elevated p-8 bg-gradient-to-br from-card to-secondary/10" id="pitchDeckSection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
                   <span className="inline-flex items-center gap-2"><FileText className="h-6 w-6" /> Pitch Deck</span>
@@ -824,7 +989,9 @@ export default function Publish() {
                   </p>
                 </div>
               </div>
+              )}
 
+              {currentStep === 3 && (
               <div className="card-elevated p-8">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Hackathons (Optional)
@@ -906,7 +1073,9 @@ export default function Publish() {
                   </div>
                 </div>
               </div>
+              )}
 
+              {currentStep === 1 && (
               <div className="card-elevated p-8" id="linksSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Links & Resources
@@ -973,7 +1142,9 @@ export default function Publish() {
                   </div>
                 </div>
               </div>
+              )}
 
+              {currentStep === 2 && (
               <div className="card-elevated p-8" id="techStackSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Tech Stack *
@@ -1017,8 +1188,10 @@ export default function Publish() {
                   )}
                 </div>
               </div>
+              )}
 
               {/* Team Members Section */}
+              {currentStep === 3 && (
               <div className="card-elevated p-8" id="teamSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3 flex items-center gap-2">
                   <Users className="h-6 w-6" />
@@ -1209,7 +1382,9 @@ export default function Publish() {
                   )}
                 </div>
               </div>
+              )}
 
+              {currentStep === 4 && (
               <div className="card-elevated p-8" id="screenshotsSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Screenshots (Optional)
@@ -1300,7 +1475,9 @@ export default function Publish() {
                   )}
                 </div>
               </div>
+              )}
 
+              {currentStep === 4 && (
               <div className="card-elevated p-8 mt-8">
                 <div className="flex gap-4">
                   <button
@@ -1327,6 +1504,7 @@ export default function Publish() {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           </form>
         </div>

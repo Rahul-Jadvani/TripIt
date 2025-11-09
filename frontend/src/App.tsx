@@ -13,6 +13,8 @@ import { wagmiConfig } from "./config/wagmi";
 import { usePrefetch } from "./hooks/usePrefetch";
 import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
 import { Suspense, lazy } from "react";
+import { CoffeeLoader } from "./components/CoffeeLoader";
+import { FirstOpenLoader } from "./components/FirstOpenLoader";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Pages (lazy-loaded)
@@ -75,7 +77,7 @@ function InvestorsGateway() {
   if (isLoading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <CoffeeLoader size="sm" message="Checking your session…" />
       </div>
     );
   }
@@ -91,18 +93,13 @@ const App = () => (
       <AuthProvider>
         <PrefetchWrapper>
           <PageScrollBackground />
+          <FirstOpenLoader />
           <TooltipProvider>
             <Toaster />
             <Sonner />
             <NotificationCenterHost />
             <BrowserRouter>
-              <Suspense
-                fallback={
-                  <div className="flex min-h-[40vh] items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                  </div>
-                }
-              >
+              <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center"><CoffeeLoader message="Warming up modules…" /></div>}>
               <ErrorBoundary>
               <Routes>
                 <Route element={<MainLayout />}>
