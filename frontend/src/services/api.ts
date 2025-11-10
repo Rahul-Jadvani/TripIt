@@ -135,7 +135,7 @@ export const votesService = {
 export const commentsService = {
   getByProject: (projectId: string) =>
     api.get(
-      `/comments?project_id=${encodeURIComponent(projectId)}&projectId=${encodeURIComponent(projectId)}&per_page=100&limit=100`
+      `/comments?project_id=${encodeURIComponent(projectId)}&per_page=100&limit=100`
     ),
   // Fallback patterns some backends use
   getByProjectPath: (projectId: string) => api.get(`/comments/${encodeURIComponent(projectId)}`),
