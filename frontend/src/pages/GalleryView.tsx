@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useProjects } from '@/hooks/useProjects';
+import { CoffeeLoader } from '@/components/CoffeeLoader';
 import { Project } from '@/types';
 import { ProjectCard } from '@/components/ProjectCard';
 import { GallerySkeletonGrid } from '@/components/ProjectCardSkeleton';
@@ -21,12 +22,36 @@ const GalleryView = () => {
   const scrollObserverTarget = useRef<HTMLDivElement>(null);
 
   // Fetch all projects based on category
-  const { data: hotData } = useProjects('trending', 1);
-  const { data: topData } = useProjects('top-rated', 1);
-  const { data: newData } = useProjects('newest', 1);
+  const { data: hotData, isLoading: hotLoading } = useProjects('trending', 1);
+  const { data: topData, isLoading: topLoading } = useProjects('top-rated', 1);
+  const { data: newData, isLoading: newLoading } = useProjects('newest', 1);
+  const isAnyLoading = hotLoading || topLoading || newLoading;
+
+  // Redirect legacy/alias categories to canonical ones
+  useEffect(() => {
+    if (!category) return;
+    const aliasMap: Record<string, string> = {
+      top: 'top-scored',
+      newest: 'new-launches',
+      new: 'new-launches',
+      projects: 'all',
+      allprojects: 'all',
+      trending: 'hot',
+    };
+    const normalized = aliasMap[category];
+    if (normalized) {
+      navigate(`/gallery/${normalized}`, { replace: true });
+    }
+  }, [category, navigate]);
 
   // Filter projects based on category
   useEffect(() => {
+    // Wait until at least one dataset has been fetched; avoid flashing empty state
+    if (isAnyLoading && !hotData && !topData && !newData) {
+      setLoading(true);
+      return;
+    }
+
     setLoading(true);
     const allProjectsList = [...(hotData?.data || []), ...(topData?.data || []), ...(newData?.data || [])];
 
@@ -67,7 +92,7 @@ const GalleryView = () => {
     setDisplayedProjects(filtered.slice(0, CARDS_PER_PAGE));
     setHasMore(filtered.length > CARDS_PER_PAGE);
     setLoading(false);
-  }, [category, hotData, topData, newData]);
+  }, [category, hotData, topData, newData, isAnyLoading]);
 
   // Load more projects when user scrolls to bottom
   const loadMoreProjects = useCallback(() => {
@@ -112,13 +137,14 @@ const GalleryView = () => {
 
   const getCategoryTitle = () => {
     const titleMap: Record<string, string> = {
+      all: 'All Projects',
       hot: 'Hot Projects',
       'top-scored': 'Top Scored Projects',
       'new-launches': 'New Launches',
       'ai-smart-contracts': 'AI & Smart Contracts',
       'most-requested': 'Most Requested Intros',
     };
-    return titleMap[category || ''] || 'Projects Gallery';
+    return titleMap[category || ''] || 'All Projects';
   };
 
   return (
@@ -143,8 +169,9 @@ const GalleryView = () => {
       {/* Gallery Grid or Loading State */}
       <div className="container mx-auto px-4 sm:px-6 py-12 max-w-7xl">
         {loading ? (
-          <GallerySkeletonGrid count={12} />
-        ) : displayedProjects.length === 0 ? (
+          // Show brand loader while initial data is coming in
+          <div className="flex items-center justify-center min-h-[300px]"><CoffeeLoader message="Brewing projects…" /></div>
+        ) : displayedProjects.length === 0 && !isAnyLoading ? (
           <div className="flex flex-col items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="text-3xl mb-4">📭</div>

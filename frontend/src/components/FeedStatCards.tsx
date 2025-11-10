@@ -11,7 +11,7 @@ export default function FeedStatCards({ projectsCount, buildersCount }: FeedStat
     <div className="grid grid-cols-2 w-full max-w-3xl gap-3 max-[500px]:grid-cols-1 px-3 mx-auto">
       {/* Projects card */}
       <a
-        href="/gallery/top-rated"
+        href="/gallery/all"
         className="group relative block w-full rounded-[15px] p-5 border-4 border-black bg-primary text-black shadow-card transition duration-300 hover:translate-y-[3px] hover:shadow-[0_-8px_0px_0px_hsl(var(--primary))]"
       >
         <p className="text-2xl font-black leading-none">{projectsCount}</p>
@@ -21,7 +21,7 @@ export default function FeedStatCards({ projectsCount, buildersCount }: FeedStat
 
       {/* Builders card */}
       <a
-        href="/leaderboard"
+        href="/leaderboard?tab=builders"
         className="group relative block w-full rounded-[15px] p-5 border-4 border-black bg-secondary text-secondary-foreground shadow-card transition duration-300 hover:translate-y-[3px] hover:shadow-[0_-8px_0px_0px_hsl(var(--primary))]"
       >
         <p className="text-2xl font-black leading-none">{buildersCount}</p>

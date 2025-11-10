@@ -8,17 +8,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ThumbsUp, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface CommentSectionProps {
   projectId: string;
+  altProjectId?: string; // fallback id (e.g., numeric vs uuid)
 }
 
-export function CommentSection({ projectId }: CommentSectionProps) {
+export function CommentSection({ projectId, altProjectId }: CommentSectionProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [commentText, setCommentText] = useState('');
 
-  const { data: commentsData, isLoading } = useComments(projectId);
+  const { data: commentsData, isLoading } = useComments(projectId, altProjectId);
   const createCommentMutation = useCreateComment(projectId);
   const deleteCommentMutation = useDeleteComment('', projectId);
   const voteCommentMutation = useVoteComment(projectId);
@@ -32,14 +34,16 @@ export function CommentSection({ projectId }: CommentSectionProps) {
     }
 
     if (commentText.trim().length === 0) return;
+    if (createCommentMutation.isPending) return; // guard against double clicks
 
     await createCommentMutation.mutateAsync({ content: commentText });
     setCommentText('');
+    toast.success('Comment posted');
   };
 
   const handleDelete = (commentId: string) => {
     if (window.confirm('Delete this comment?')) {
-      deleteCommentMutation.mutate();
+      deleteCommentMutation.mutate(commentId);
     }
   };
 

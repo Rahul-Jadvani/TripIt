@@ -694,7 +694,7 @@ export default function ProjectDetail() {
               </h2>
               <div className="flex flex-wrap gap-2">
                 {project.techStack.map((tech: string) => (
-                  <span key={tech} className="badge-primary text-xs">
+                  <span key={tech} className="label-chip">
                     {tech}
                   </span>
                 ))}
@@ -784,7 +784,7 @@ export default function ProjectDetail() {
           {/* Comments Section */}
           <div id="comments" className="card-elevated p-6 scroll-mt-20">
             <h2 className="text-2xl font-black mb-6 text-foreground">Comments & Discussion</h2>
-            <CommentSection projectId={project.id} />
+            <CommentSection projectId={id || String(project.id)} altProjectId={String(project.id)} />
           </div>
         </div>
       </div>

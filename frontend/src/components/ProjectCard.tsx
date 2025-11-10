@@ -24,6 +24,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const saveMutation = useSaveProject();
   const unsaveMutation = useUnsaveProject();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [savedLocal, setSavedLocal] = useState<boolean | null>(null);
 
   const upvoteRatio = project.voteCount > 0
     ? Math.round((project.voteCount / (project.voteCount + Math.abs(project.commentCount - project.voteCount))) * 100)
@@ -44,10 +45,17 @@ export function ProjectCard({ project }: ProjectCardProps) {
       return;
     }
 
-    if (isSaved) {
-      unsaveMutation.mutate(project.id);
+    const current = savedLocal ?? !!isSaved;
+    // Optimistic toggle
+    setSavedLocal(!current);
+    if (current) {
+      unsaveMutation.mutate(project.id, {
+        onError: () => setSavedLocal(current),
+      });
     } else {
-      saveMutation.mutate(project.id);
+      saveMutation.mutate(project.id, {
+        onError: () => setSavedLocal(current),
+      });
     }
   };
 
@@ -98,13 +106,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
                     onClick={handleSave}
                     disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
                     className={`p-1.5 rounded-lg transition-smooth border border-border/40 disabled:opacity-50 ${
-                      isSaved
+                      (savedLocal ?? isSaved)
                         ? 'bg-primary text-black'
                         : 'bg-secondary/50 hover:bg-primary hover:text-black text-muted-foreground'
                     }`}
-                    title={isSaved ? 'Unsave project' : 'Save project'}
+                    title={(savedLocal ?? isSaved) ? 'Unsave project' : 'Save project'}
                   >
-                    <Bookmark className={`h-3.5 w-3.5 ${isSaved ? 'fill-current' : ''}`} />
+                    <Bookmark className={`h-3.5 w-3.5 ${(savedLocal ?? isSaved) ? 'fill-current' : ''}`} />
                   </button>
                 </div>
 
@@ -134,14 +142,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
             {project.techStack && project.techStack.length > 0 && (
               <div className="flex gap-1.5 flex-wrap">
                 {project.techStack.slice(0, 4).map((tech) => (
-                  <Badge key={tech} variant="secondary" className="text-[10px] bg-secondary/50 hover:bg-secondary py-0.5 px-2">
+                  <span key={tech} className="badge bg-secondary/30 text-foreground text-[10px] py-0.5 px-2 flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary border border-black" />
                     {tech}
-                  </Badge>
+                  </span>
                 ))}
                 {project.techStack.length > 4 && (
-                  <Badge variant="secondary" className="text-[10px] bg-secondary/50 py-0.5 px-2">
-                    +{project.techStack.length - 4}
-                  </Badge>
+                  <span className="badge bg-secondary/30 text-foreground text-[10px] py-0.5 px-2">+{project.techStack.length - 4}</span>
                 )}
               </div>
             )}

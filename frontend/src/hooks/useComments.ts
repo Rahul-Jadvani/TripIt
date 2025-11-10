@@ -37,17 +37,135 @@ function transformComment(backendComment: any) {
   };
 }
 
-export function useComments(projectId: string) {
+export function useComments(projectId: string, altProjectId?: string) {
   return useQuery({
     queryKey: ['comments', projectId],
     queryFn: async () => {
-      const response = await commentsService.getByProject(projectId);
-
-      // Transform the comments data
-      return {
-        ...response.data,
-        data: response.data.data?.map(transformComment) || [],
+      const safe = async (fn: () => Promise<any[]>): Promise<any[]> => {
+        try {
+          const out = await fn();
+          return Array.isArray(out) ? out : [];
+        } catch {
+          return [];
+        }
       };
+      // Primary endpoint
+      const tryPrimary = async () => {
+        const res = await commentsService.getByProject(projectId);
+        const raw = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data || {}).data)
+            ? (res.data as any).data
+            : Array.isArray((res.data || {}).comments)
+              ? (res.data as any).comments
+              : [];
+        return raw;
+      };
+
+      const tryFallback = async () => {
+        const res = await commentsService.getByProjectPath(projectId);
+        const raw = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data || {}).data)
+            ? (res.data as any).data
+            : Array.isArray((res.data || {}).comments)
+              ? (res.data as any).comments
+              : [];
+        return raw;
+      };
+
+      const tryNested = async () => {
+        const res = await commentsService.getByProjectNested(projectId);
+        const raw = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data || {}).data)
+            ? (res.data as any).data
+            : Array.isArray((res.data || {}).comments)
+              ? (res.data as any).comments
+              : [];
+        return raw;
+      };
+
+      const tryNestedAlt = async () => {
+        const res = await commentsService.getByProjectNestedAlt(projectId);
+        const raw = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data || {}).data)
+            ? (res.data as any).data
+            : Array.isArray((res.data || {}).comments)
+              ? (res.data as any).comments
+              : [];
+        return raw;
+      };
+
+      let raw = await safe(tryPrimary);
+      if (!Array.isArray(raw) || raw.length === 0) {
+        const fb = await safe(tryFallback);
+        if (Array.isArray(fb) && fb.length) raw = fb;
+      }
+      if (!Array.isArray(raw) || raw.length === 0) {
+        const nb = await safe(tryNested);
+        if (Array.isArray(nb) && nb.length) raw = nb;
+      }
+      if (!Array.isArray(raw) || raw.length === 0) {
+        const nb2 = await safe(tryNestedAlt);
+        if (Array.isArray(nb2) && nb2.length) raw = nb2;
+      }
+
+      // Try again with alternative id if provided
+      if ((!Array.isArray(raw) || raw.length === 0) && altProjectId) {
+        const using = altProjectId;
+        const altPrimary = async () => {
+          const res = await commentsService.getByProject(using);
+          const arr = Array.isArray(res.data)
+            ? res.data
+            : Array.isArray((res.data || {}).data)
+              ? (res.data as any).data
+              : Array.isArray((res.data || {}).comments)
+                ? (res.data as any).comments
+                : [];
+          return arr;
+        };
+        const altPath = async () => {
+          const res = await commentsService.getByProjectPath(using);
+          const arr = Array.isArray(res.data)
+            ? res.data
+            : Array.isArray((res.data || {}).data)
+              ? (res.data as any).data
+              : Array.isArray((res.data || {}).comments)
+                ? (res.data as any).comments
+                : [];
+          return arr;
+        };
+        const altNested = async () => {
+          const res = await commentsService.getByProjectNested(using);
+          const arr = Array.isArray(res.data)
+            ? res.data
+            : Array.isArray((res.data || {}).data)
+              ? (res.data as any).data
+              : Array.isArray((res.data || {}).comments)
+                ? (res.data as any).comments
+                : [];
+          return arr;
+        };
+        const altNested2 = async () => {
+          const res = await commentsService.getByProjectNestedAlt(using);
+          const arr = Array.isArray(res.data)
+            ? res.data
+            : Array.isArray((res.data || {}).data)
+              ? (res.data as any).data
+              : Array.isArray((res.data || {}).comments)
+                ? (res.data as any).comments
+                : [];
+          return arr;
+        };
+        let a = await safe(altPrimary); if (a?.length) raw = a;
+        if (!raw?.length) { a = await safe(altPath); if (a?.length) raw = a; }
+        if (!raw?.length) { a = await safe(altNested); if (a?.length) raw = a; }
+        if (!raw?.length) { a = await safe(altNested2); if (a?.length) raw = a; }
+      }
+
+      return { data: (raw || []).map(transformComment) } as any;
     },
     enabled: !!projectId,
     staleTime: 1000 * 60 * 5, // Comments stay fresh for 5 minutes
@@ -64,7 +182,13 @@ export function useCreateComment(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: any) => commentsService.create({ ...data, project_id: projectId }),
+    mutationFn: (data: any) => commentsService.create({
+      ...data,
+      // Be liberal with field names for compatibility
+      project_id: projectId,
+      projectId: projectId,
+      comment: data.content,
+    }),
 
     // OPTIMISTIC UPDATE: Show comment immediately
     onMutate: async (newComment) => {
@@ -113,13 +237,12 @@ export function useCreateComment(projectId: string) {
         _isOptimistic: true, // Flag to identify optimistic comments
       };
 
-      // Optimistically add comment to cache
+      // Optimistically add comment to cache (create structure if missing)
       queryClient.setQueryData(['comments', projectId], (old: any) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: [optimisticComment, ...old.data], // Add to beginning
-        };
+        if (!old || !Array.isArray(old.data)) {
+          return { data: [optimisticComment] };
+        }
+        return { ...old, data: [optimisticComment, ...old.data] };
       });
 
       // Optimistically increment comment count
@@ -139,8 +262,18 @@ export function useCreateComment(projectId: string) {
 
     // SUCCESS: Replace optimistic comment with real one
     onSuccess: (response) => {
-      // The backend will broadcast via Socket.IO, but we can update immediately
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+      const real = response?.data?.data ? transformComment(response.data.data) : null;
+      if (real) {
+        queryClient.setQueryData(['comments', projectId], (old: any) => {
+          if (!old || !Array.isArray(old.data)) return { data: [real] };
+          // Remove any temp optimistic entries matching content and author 'You'
+          const filtered = old.data.filter((c: any) => !c._isOptimistic);
+          return { ...old, data: [real, ...filtered] };
+        });
+      } else {
+        // Fallback to refetch
+        queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+      }
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       toast.success('Comment posted!');
     },
@@ -225,7 +358,7 @@ export function useDeleteComment(commentId: string, projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => commentsService.delete(commentId),
+    mutationFn: (id?: string) => commentsService.delete(id || commentId),
 
     // OPTIMISTIC UPDATE: Remove comment immediately
     onMutate: async () => {

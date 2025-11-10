@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +16,7 @@ export default function Register() {
   const [showConfirm, setShowConfirm] = useState(false);
   const pwdTimerRef = useRef<number | null>(null);
   const confirmTimerRef = useRef<number | null>(null);
-  const { register } = useAuth();
+  const { register, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,8 +38,8 @@ export default function Register() {
       console.log('🚀 Attempting registration with:', { email, username });
       await register(email, password, username);
       console.log('✅ Registration successful');
-      toast.success('Account created successfully!');
-      navigate('/');
+      toast.success('Account created successfully! Please log in.');
+      navigate('/login');
     } catch (error: any) {
       console.error('❌ Registration error:', {
         status: error.response?.status,
@@ -83,6 +83,10 @@ export default function Register() {
       }, 3000);
     }
   };
+
+  if (!authLoading && user) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="bg-background min-h-screen">

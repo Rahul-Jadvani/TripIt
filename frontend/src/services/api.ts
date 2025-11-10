@@ -133,7 +133,14 @@ export const votesService = {
 
 // Comments
 export const commentsService = {
-  getByProject: (projectId: string) => api.get(`/comments?project_id=${projectId}`),
+  getByProject: (projectId: string) =>
+    api.get(
+      `/comments?project_id=${encodeURIComponent(projectId)}&projectId=${encodeURIComponent(projectId)}&per_page=100&limit=100`
+    ),
+  // Fallback patterns some backends use
+  getByProjectPath: (projectId: string) => api.get(`/comments/${encodeURIComponent(projectId)}`),
+  getByProjectNested: (projectId: string) => api.get(`/projects/${encodeURIComponent(projectId)}/comments`),
+  getByProjectNestedAlt: (projectId: string) => api.get(`/project/${encodeURIComponent(projectId)}/comments`),
   create: (data: any) => api.post('/comments', data),
   update: (commentId: string, data: any) => api.put(`/comments/${commentId}`, data),
   delete: (commentId: string) => api.delete(`/comments/${commentId}`),

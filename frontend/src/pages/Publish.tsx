@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PublishLoader, PublishSuccess } from '@/components/PublishLoader';
 import { toast } from 'sonner';
 import { WalletVerification } from '@/components/WalletVerification';
 import { UserSearchSelect } from '@/components/UserSearchSelect';
@@ -84,6 +86,9 @@ export default function Publish() {
   const [showProofScoreInfo, setShowProofScoreInfo] = useState(false);
   const [showErrorSummary, setShowErrorSummary] = useState(false);
   const [formErrorsList, setFormErrorsList] = useState<{ id: string; message: string }[]>([]);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishState, setPublishState] = useState<'loading' | 'success'>('loading');
+  const [publishedId, setPublishedId] = useState<string | undefined>();
 
   // Hackathons state
   const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
@@ -427,7 +432,15 @@ export default function Publish() {
         payload.screenshot_urls = screenshotUrls;
       }
       if (teamMembers.length > 0) {
-        payload.team_members = teamMembers;
+        payload.team_members = teamMembers.map((m) => {
+          const t: any = {};
+          if (m.user_id) t.user_id = m.user_id;
+          if (m.name) t.name = m.name;
+          if (m.role) t.role = m.role;
+          if (m.username) t.username = m.username;
+          if (m.avatar_url) t.avatar_url = m.avatar_url; // omit null/undefined to avoid backend null errors
+          return t;
+        });
       }
       // NEW: Add extended project information
       if (projectStory && projectStory.trim()) {
@@ -457,8 +470,13 @@ export default function Publish() {
       console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
       console.log('========================');
 
-      await createProjectMutation.mutateAsync(payload);
+      setShowPublishModal(true);
+      setPublishState('loading');
+      const res: any = await createProjectMutation.mutateAsync(payload);
+      const newId = res?.data?.data?.id || res?.data?.data?.project_id || res?.data?.id;
       toast.success('Project published successfully!');
+      setPublishedId(newId);
+      setPublishState('success');
       reset();
       setTechStack([]);
       setScreenshotUrls([]);
@@ -472,11 +490,32 @@ export default function Publish() {
       setNoveltyFactor('');
       setCategories([]);
       setSelectedChainIds([]);
-      navigate('/my-projects');
+      // Navigation handled by success modal action
     } catch (error: any) {
       console.error('Error publishing project:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to publish project';
-      toast.error(errorMessage);
+      // Friendly fallback
+      toast.error('Please fix the highlighted fields and try again.');
+
+      // Try to surface actionable errors without dumping backend JSON
+      const apiErr = error?.response?.data;
+      const list: { id: string; message: string }[] = [];
+      if (apiErr && typeof apiErr === 'object') {
+        // Common shape: { team_members: { 0: { avatar_url: ['Field may not be null.'] } } }
+        if (apiErr.team_members) {
+          list.push({ id: 'teamSection', message: 'Team: Remove empty avatar values or add member details' });
+        }
+        if (apiErr.title) list.push({ id: 'title', message: 'Title: ' + (apiErr.title?.[0] || 'Invalid') });
+        if (apiErr.description) list.push({ id: 'description', message: 'Description: ' + (apiErr.description?.[0] || 'Invalid') });
+      }
+      if (list.length) {
+        setFormErrorsList(list);
+        setShowErrorSummary(true);
+        const firstId = list[0]?.id;
+        if (firstId) {
+          goToStep(getStepForId(firstId));
+          document.getElementById(firstId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
     }
   };
 
@@ -504,9 +543,27 @@ export default function Publish() {
   };
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen publish-compact">
       <div className="container mx-auto px-6 py-12">
         <div className="mx-auto max-w-5xl">
+          <Dialog open={showPublishModal} onOpenChange={setShowPublishModal}>
+            <DialogContent className="sm:max-w-md bg-card border-4 border-black rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-black">{publishState === 'loading' ? 'Publishing…' : 'All set!'}</DialogTitle>
+              </DialogHeader>
+              {publishState === 'loading' ? (
+                <PublishLoader message="Sending your project to camp…" />
+              ) : (
+                <PublishSuccess
+                  projectId={publishedId}
+                  onGo={() => {
+                    setShowPublishModal(false);
+                    if (publishedId) navigate(`/project/${publishedId}`); else navigate('/my-projects');
+                  }}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
           {/* Header section */}
           <div className="mb-10 card-elevated p-8">
             <div className="flex items-start justify-between mb-4">
@@ -557,33 +614,7 @@ export default function Publish() {
                   );
                 })}
               </div>
-              <div className="mt-4 flex items-center justify-between">
-                <button
-                  type="button"
-                  className="btn-secondary px-4 py-2 flex items-center gap-2"
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" /> Previous
-                </button>
-                {currentStep < totalSteps ? (
-                  <button
-                    type="button"
-                    className="btn-primary px-4 py-2 flex items-center gap-2"
-                    onClick={handleNext}
-                  >
-                    Next <ChevronRight className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-primary px-4 py-2 font-black"
-                    onClick={() => handleSubmit(onSubmit, onInvalid)()}
-                  >
-                    Publish
-                  </button>
-                )}
-              </div>
+              {/* Navigation buttons moved to bottom */}
             </div>
 
             {/* Quick section navigation */}
@@ -735,7 +766,7 @@ export default function Publish() {
                   <div className="space-y-3">
                     <Label htmlFor="description" className="text-base font-bold">
                       Description *
-                      <span className="ml-2 text-xs badge-primary">+5 Quality Score for 200+ chars</span>
+                      <span className="ml-2 text-xs badge-info">+5 Quality Score for 200+ chars</span>
                     </Label>
                     <Textarea
                       id="description"
@@ -1084,7 +1115,7 @@ export default function Publish() {
                   <div className="space-y-2">
                     <Label htmlFor="demoUrl">
                       Demo URL
-                      <span className="ml-2 text-xs badge-primary">+5 Quality Score</span>
+                      <span className="ml-2 text-xs badge-info">+5 Quality Score</span>
                     </Label>
                     <Input
                       id="demoUrl"
@@ -1103,7 +1134,7 @@ export default function Publish() {
                   <div className="space-y-2">
                     <Label htmlFor="githubUrl">
                       GitHub URL
-                      <span className="ml-2 text-xs badge-primary">+5 Quality Score</span>
+                      <span className="ml-2 text-xs badge-info">+5 Quality Score</span>
                     </Label>
                     <Input
                       id="githubUrl"
@@ -1387,8 +1418,8 @@ export default function Publish() {
               {currentStep === 4 && (
               <div className="card-elevated p-8" id="screenshotsSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Screenshots (Optional)
-                  <span className="ml-2 text-xs badge-primary">+5 Quality Score</span>
+                  Screenshots <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                  <span className="ml-2 text-xs badge-info">+5 Quality Score</span>
                 </h2>
                 <div className="space-y-5">
                   <p className="text-sm text-muted-foreground">
@@ -1507,6 +1538,30 @@ export default function Publish() {
               )}
             </div>
           </form>
+          {/* Bottom navigation for steps 1-3 */}
+          {currentStep < totalSteps && (
+            <div className="card-elevated p-8 mt-8">
+              <div className="flex gap-4 items-center">
+                <button
+                  type="button"
+                  className="btn-secondary flex-1 inline-flex items-center justify-center gap-2 py-4 text-lg font-bold rounded-[15px]"
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  <span>Previous</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary flex-1 inline-flex items-center justify-center gap-2 py-4 text-lg font-black rounded-[15px]"
+                  onClick={handleNext}
+                >
+                  <span>Next</span>
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

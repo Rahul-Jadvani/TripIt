@@ -132,7 +132,7 @@ export function ShareDialog({ open, onOpenChange, url, title, description }: Sha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="w-[92vw] max-w-[42rem] bg-card border-4 border-black rounded-2xl shadow-card overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Share2 className="h-5 w-5 text-primary" />
@@ -145,8 +145,8 @@ export function ShareDialog({ open, onOpenChange, url, title, description }: Sha
 
         <div className="space-y-4">
           {/* Copy Link Button - Primary Action */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 px-4 py-3 rounded-lg bg-muted/50 border border-border/50 text-sm font-mono overflow-hidden">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="min-w-0 grow px-4 py-3 rounded-lg bg-card border-2 border-border text-sm font-mono overflow-hidden">
               <div className="truncate text-muted-foreground">{url}</div>
             </div>
             <Button
@@ -166,7 +166,7 @@ export function ShareDialog({ open, onOpenChange, url, title, description }: Sha
               onClick={handleNativeShare}
               variant="outline"
               size="lg"
-              className="w-full border-2 hover:bg-muted/50"
+              className="w-full border-2 hover:bg-accent/10"
             >
               <Share2 className="h-4 w-4 mr-2" />
               Share via...
@@ -185,8 +185,8 @@ export function ShareDialog({ open, onOpenChange, url, title, description }: Sha
             </div>
           </div>
 
-          {/* Social Media Grid */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Social Media Grid - auto-fit to avoid overflow */}
+          <div className="grid [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] gap-3 w-full">
             {shareOptions.map((option) => {
               const Icon = option.icon;
               return (
@@ -196,7 +196,7 @@ export function ShareDialog({ open, onOpenChange, url, title, description }: Sha
                     option.action();
                     onOpenChange(false);
                   }}
-                  className={`group flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-border/50 bg-muted/20 hover:bg-muted/40 transition-all duration-200 hover:scale-105 hover:border-border ${option.color}`}
+                  className={`group flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-border bg-card hover:bg-accent/10 transition-all duration-200 hover:scale-105 w-full ${option.color}`}
                 >
                   <Icon className={`h-7 w-7 ${option.iconColor} transition-transform group-hover:scale-110`} />
                   <span className="text-xs font-semibold text-foreground/80 group-hover:text-foreground">{option.name}</span>

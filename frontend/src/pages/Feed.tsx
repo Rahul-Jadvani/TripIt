@@ -65,6 +65,7 @@ export default function Feed() {
   const { data: topData, isLoading: topLoading } = useProjects('top-rated', 1);
   const { data: newData, isLoading: newLoading } = useProjects('newest', 1);
   const { data: topBuilders = [] } = useBuildersLeaderboard(8);
+  const { data: buildersForCount = [] } = useBuildersLeaderboard(50);
   const { data: investors = [] } = usePublicInvestors();
   const { data: dashboard } = useDashboardStats();
   const investorsHref = user ? '/investor-directory' : '/investors';
@@ -250,7 +251,7 @@ export default function Feed() {
             <section className="mt-2">
               <FeedStatCards
                 projectsCount={(hotData?.data?.length || 0) + (topData?.data?.length || 0) + (newData?.data?.length || 0)}
-                buildersCount={topBuilders?.length || 0}
+                buildersCount={(buildersForCount?.length || topBuilders?.length || 0)}
               />
               <div className="relative mt-6">
                 <img
@@ -308,7 +309,7 @@ export default function Feed() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {topBuilders[0] && (
                 <FeedMiniThread
-                  title={`Follow @${topBuilders[0].username}`}
+                  title={`@${topBuilders[0].username}`}
                   subtitle={`${topBuilders[0].projects} projects • ${topBuilders[0].score} karma`}
                   href={`/u/${topBuilders[0].username}`}
                   badge="Top Builder"
@@ -487,5 +488,3 @@ export default function Feed() {
     </div>
   );
 }
-
-

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Medal, Loader2, AlertCircle } from 'lucide-react';
@@ -9,7 +10,13 @@ import { useProjectsLeaderboard, useBuildersLeaderboard } from '@/hooks/useLeade
 type LeaderboardTab = 'projects' | 'builders' | 'featured';
 
 export default function Leaderboard() {
-  const [tab, setTab] = useState<LeaderboardTab>('projects');
+  const [searchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as LeaderboardTab) || 'projects';
+  const [tab, setTab] = useState<LeaderboardTab>(initialTab);
+  useEffect(() => {
+    const t = (searchParams.get('tab') as LeaderboardTab) || 'projects';
+    setTab(t);
+  }, [searchParams]);
 
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjectsLeaderboard();
   const { data: buildersData, isLoading: buildersLoading, error: buildersError } = useBuildersLeaderboard();
