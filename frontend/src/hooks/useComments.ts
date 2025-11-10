@@ -169,12 +169,14 @@ export function useComments(projectId: string, altProjectId?: string) {
     },
     enabled: !!projectId,
     staleTime: 1000 * 60 * 5, // Comments stay fresh for 5 minutes
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes (reduced from 30 to ensure fresh data on return)
+    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
     refetchInterval: false, // NO polling - Socket.IO handles invalidation
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchOnMount: false, // Don't force refetch on mount - use staleTime instead
     placeholderData: (previousData) => previousData, // Keep old data visible during refetch
+    retry: 2, // Retry failed requests twice before giving up
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 }
 
