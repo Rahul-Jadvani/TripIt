@@ -169,12 +169,12 @@ export function useComments(projectId: string, altProjectId?: string) {
     },
     enabled: !!projectId,
     staleTime: 1000 * 60 * 5, // Comments stay fresh for 5 minutes
-    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes (reduced from 30 to ensure fresh data on return)
     refetchInterval: false, // NO polling - Socket.IO handles invalidation
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    refetchOnMount: 'always', // Always check for fresh data
-    placeholderData: (previousData) => previousData, // Keep old data visible
+    refetchOnMount: false, // Don't force refetch on mount - use staleTime instead
+    placeholderData: (previousData) => previousData, // Keep old data visible during refetch
   });
 }
 
@@ -183,11 +183,8 @@ export function useCreateComment(projectId: string) {
 
   return useMutation({
     mutationFn: (data: any) => commentsService.create({
-      ...data,
-      // Be liberal with field names for compatibility
       project_id: projectId,
-      projectId: projectId,
-      comment: data.content,
+      content: data.content,
     }),
 
     // OPTIMISTIC UPDATE: Show comment immediately
@@ -262,20 +259,34 @@ export function useCreateComment(projectId: string) {
 
     // SUCCESS: Replace optimistic comment with real one
     onSuccess: (response) => {
-      const real = response?.data?.data ? transformComment(response.data.data) : null;
+      // Handle both nested and flat response structures
+      const commentData = response?.data?.data || response?.data || null;
+      const real = commentData ? transformComment(commentData) : null;
+
       if (real) {
+        // Update cache with real comment, removing optimistic placeholder
         queryClient.setQueryData(['comments', projectId], (old: any) => {
           if (!old || !Array.isArray(old.data)) return { data: [real] };
-          // Remove any temp optimistic entries matching content and author 'You'
-          const filtered = old.data.filter((c: any) => !c._isOptimistic);
+
+          // Remove optimistic comment with same content (more reliable than ID matching)
+          const filtered = old.data.filter((c: any) => {
+            // Keep real comments (those without _isOptimistic flag)
+            // Remove optimistic ones to prevent duplicates
+            return !c._isOptimistic;
+          });
+
+          // Add the real comment at the beginning
           return { ...old, data: [real, ...filtered] };
         });
+        toast.success('Comment posted!');
       } else {
-        // Fallback to refetch
+        // Fallback: if we can't parse the response, refetch to be safe
         queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+        toast.success('Comment posted!');
       }
+
+      // Invalidate project cache to update comment count
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Comment posted!');
     },
 
     // ROLLBACK: On error, restore previous state
@@ -289,10 +300,11 @@ export function useCreateComment(projectId: string) {
       toast.error(error.response?.data?.message || 'Failed to post comment');
     },
 
-    // Always refetch to ensure consistency
+    // Do NOT invalidate comments cache here - we already updated it in onSuccess
+    // Only project cache needs invalidation for comment count
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      // No invalidation here - prevents unnecessary refetches
+      // The real data was already merged in onSuccess
     },
   });
 }
@@ -335,7 +347,7 @@ export function useUpdateComment(commentId: string, projectId: string) {
 
     // SUCCESS
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+      // Cache already updated in onMutate, no need to refetch
       toast.success('Comment updated!');
     },
 
@@ -347,9 +359,9 @@ export function useUpdateComment(commentId: string, projectId: string) {
       toast.error(error.response?.data?.message || 'Failed to update comment');
     },
 
-    // Always refetch to ensure consistency
+    // Don't invalidate - we already updated the cache in onMutate
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+      // No action needed - optimistic update already applied
     },
   });
 }
@@ -396,7 +408,7 @@ export function useDeleteComment(commentId: string, projectId: string) {
 
     // SUCCESS
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+      // Cache already updated in onMutate, no need to refetch
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       toast.success('Comment deleted!');
     },
@@ -412,10 +424,9 @@ export function useDeleteComment(commentId: string, projectId: string) {
       toast.error(error.response?.data?.message || 'Failed to delete comment');
     },
 
-    // Always refetch to ensure consistency
+    // Don't invalidate - we already updated the cache in onMutate
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      // No action needed - optimistic update already applied
     },
   });
 }
@@ -457,10 +468,10 @@ export function useVoteComment(projectId: string) {
       return { previousComments };
     },
 
-    // SUCCESS: Refetch to ensure consistency
+    // SUCCESS: Cache already updated in onMutate
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
       // Silent success - no toast to avoid spam
+      // Cache already updated optimistically
     },
 
     // ROLLBACK: On error, restore previous state
@@ -471,9 +482,9 @@ export function useVoteComment(projectId: string) {
       toast.error(error.response?.data?.message || 'Failed to vote on comment');
     },
 
-    // Always refetch to ensure consistency
+    // Don't invalidate - we already updated the cache in onMutate
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+      // No action needed - optimistic update already applied
     },
   });
 }
