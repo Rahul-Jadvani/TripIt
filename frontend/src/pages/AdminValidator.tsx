@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AlertCircle, Award, Loader2, Shield, ExternalLink, Github, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import CoffeeLoader from '@/components/CoffeeLoader';
 
 const ADMIN_PASSWORD = 'Admin';
 
@@ -358,6 +359,11 @@ export default function AdminValidator() {
         </Card>
       </div>
     );
+  }
+
+  // Show loading animation on first load
+  if (isLoading && projects.length === 0 && investorRequests.length === 0) {
+    return <CoffeeLoader overlay captionCategory="admin" />;
   }
 
   return (
