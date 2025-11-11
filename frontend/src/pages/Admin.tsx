@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import {
   useAdminUsers,
   useAdminValidators,
   useAdminProjects,
+  useAdminProjectsInfinite,
+  useAdminBadgesInfinite,
   useAdminInvestorRequests,
   useToggleUserAdmin,
   useToggleUserActive,
@@ -157,31 +159,29 @@ interface BadgeItem {
   };
 }
 
-function BadgeManagementList() {
-  const [allBadges, setAllBadges] = useState<BadgeItem[]>([]);
-  const [loading, setLoading] = useState(true);
+interface BadgeManagementListProps {
+  observerTarget: React.RefObject<HTMLDivElement>;
+}
+
+function BadgeManagementList({ observerTarget }: BadgeManagementListProps) {
   const [filterBadgeType, setFilterBadgeType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingBadge, setEditingBadge] = useState<BadgeItem | null>(null);
   const [editBadgeType, setEditBadgeType] = useState('');
   const [editRationale, setEditRationale] = useState('');
 
-  const fetchBadges = async () => {
-    setLoading(true);
-    try {
-      const response = await adminService.getAllBadges({ perPage: 1000 });
-      setAllBadges(response.data.data.badges || []);
-    } catch (error) {
-      console.error('Failed to fetch badges:', error);
-      toast.error('Failed to load badges');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use infinite scroll for badges
+  const {
+    items: allBadges,
+    isLoading: loading,
+    hasNextPage,
+    fetchNextPage,
+  } = useAdminBadgesInfinite({ filterBadgeType: filterBadgeType !== 'all' ? filterBadgeType : undefined });
 
-  useEffect(() => {
-    fetchBadges();
-  }, []);
+  // Refetch when needed (after editing/deleting)
+  const refetchBadges = () => {
+    fetchNextPage();
+  };
 
   // Client-side filtering
   const filteredBadges = useMemo(() => {
@@ -222,7 +222,7 @@ function BadgeManagementList() {
       });
       toast.success('Badge updated successfully');
       setEditingBadge(null);
-      fetchBadges();
+      refetchBadges();
     } catch (error) {
       console.error('Failed to update badge:', error);
       toast.error('Failed to update badge');
@@ -235,7 +235,7 @@ function BadgeManagementList() {
     try {
       const response = await adminService.deleteBadge(badgeId);
       toast.success(response.data.message || 'Badge deleted successfully');
-      fetchBadges();
+      refetchBadges();
     } catch (error: any) {
       console.error('Failed to delete badge:', error);
       const errorMessage = error.response?.data?.message || 'Failed to delete badge';
@@ -398,6 +398,15 @@ function BadgeManagementList() {
               </CardContent>
             </Card>
           ))}
+
+          {/* Infinite scroll observer target */}
+          <div ref={observerTarget} className="py-4 text-center">
+            {hasNextPage ? (
+              <p className="text-sm text-muted-foreground">Scroll to load more badges...</p>
+            ) : allBadges.length > 0 ? (
+              <p className="text-sm text-muted-foreground">No more badges</p>
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -1018,16 +1027,28 @@ export default function Admin() {
   const [removingInvestor, setRemovingInvestor] = useState<string | null>(null);
   const [updatingPermissions, setUpdatingPermissions] = useState<string | null>(null);
 
+  // Refs for infinite scroll observer targets
+  const projectsObserverTarget = useRef<HTMLDivElement>(null);
+  const badgesObserverTarget = useRef<HTMLDivElement>(null);
+
   // OPTIMIZED: Load all data on mount with React Query (cached automatically)
   const { data: stats } = useAdminStats();
   const { data: usersData, isLoading: usersLoading } = useAdminUsers({ search: userSearch, role: userFilter, perPage: 100 });
   const { data: validatorsData, isLoading: validatorsLoading } = useAdminValidators();
-  const { data: projectsData, isLoading: projectsLoading } = useAdminProjects({ search: projectSearch, perPage: 100 });
+
+  // Use infinite scroll for projects instead of paginated load
+  const {
+    items: allProjects,
+    isLoading: projectsLoading,
+    hasNextPage: projectsHasNextPage,
+    fetchNextPage: fetchNextProjectsPage,
+  } = useAdminProjectsInfinite({ search: projectSearch });
+
   const { data: investorRequestsData, isLoading: investorsLoading, refetch: refetchInvestorRequests } = useAdminInvestorRequests();
 
   const users = usersData?.users || [];
   const validators = validatorsData || [];
-  const projects = projectsData?.projects || [];
+  const projects = allProjects; // From infinite scroll hook
   const investorRequests = investorRequestsData || [];
 
   // Mutations
@@ -1756,6 +1777,15 @@ export default function Admin() {
                   </CardContent>
                 </Card>
               ))}
+
+              {/* Infinite scroll observer target */}
+              <div ref={projectsObserverTarget} className="py-4 text-center">
+                {projectsHasNextPage ? (
+                  <p className="text-sm text-muted-foreground">Scroll to load more projects...</p>
+                ) : projects.length > 0 ? (
+                  <p className="text-sm text-muted-foreground">No more projects</p>
+                ) : null}
+              </div>
             </div>
           )}
         </TabsContent>
@@ -1775,7 +1805,7 @@ export default function Admin() {
 
             {/* All Badges List */}
             <TabsContent value="current" className="mt-4 space-y-4">
-              <BadgeManagementList />
+              <BadgeManagementList observerTarget={badgesObserverTarget} />
             </TabsContent>
 
             {/* Award New Badge */}

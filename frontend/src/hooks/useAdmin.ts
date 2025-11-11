@@ -56,6 +56,34 @@ export function useAdminProjects(params: { search?: string; perPage?: number } =
   });
 }
 
+// Infinite scroll version for projects
+export function useAdminProjectsInfinite(params: { search?: string } = {}) {
+  const { useInfiniteQuery: useInfQuery } = require('@tanstack/react-query');
+
+  return useInfQuery({
+    queryKey: ['admin', 'projects', 'infinite', params],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await adminService.getProjects({
+        ...params,
+        page: pageParam,
+        perPage: 30,
+      });
+      return response.data.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      // If we got fewer items than perPage, we've reached the end
+      const itemsCount = lastPage.projects?.length || 0;
+      if (itemsCount < 30) {
+        return undefined;
+      }
+      return lastPage.pagination?.page ? lastPage.pagination.page + 1 : undefined;
+    },
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 30,
+  });
+}
+
 export function useAdminInvestorRequests() {
   return useQuery({
     queryKey: ['admin', 'investor-requests'],
@@ -241,5 +269,30 @@ export function useRejectInvestorRequest() {
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to reject request');
     },
+  });
+}
+
+// Infinite scroll version for badges
+export function useAdminBadgesInfinite(params: { search?: string; filterBadgeType?: string } = {}) {
+  const { useInfiniteQuery: useInfQuery } = require('@tanstack/react-query');
+
+  return useInfQuery({
+    queryKey: ['admin', 'badges', 'infinite', params],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await adminService.getAllBadges({
+        page: pageParam,
+        perPage: 30,
+        badgeType: params.filterBadgeType && params.filterBadgeType !== 'all' ? params.filterBadgeType : undefined,
+      });
+      return response.data.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const itemsCount = lastPage.badges?.length || 0;
+      if (itemsCount < 30) return undefined;
+      return lastPage.pagination?.page ? lastPage.pagination.page + 1 : undefined;
+    },
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 30,
   });
 }
