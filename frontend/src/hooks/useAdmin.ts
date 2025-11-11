@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { adminService } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -58,9 +58,7 @@ export function useAdminProjects(params: { search?: string; perPage?: number } =
 
 // Infinite scroll version for projects
 export function useAdminProjectsInfinite(params: { search?: string } = {}) {
-  const { useInfiniteQuery: useInfQuery } = require('@tanstack/react-query');
-
-  return useInfQuery({
+  return useInfiniteQuery({
     queryKey: ['admin', 'projects', 'infinite', params],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await adminService.getProjects({
@@ -274,9 +272,7 @@ export function useRejectInvestorRequest() {
 
 // Infinite scroll version for badges
 export function useAdminBadgesInfinite(params: { search?: string; filterBadgeType?: string } = {}) {
-  const { useInfiniteQuery: useInfQuery } = require('@tanstack/react-query');
-
-  return useInfQuery({
+  return useInfiniteQuery({
     queryKey: ['admin', 'badges', 'infinite', params],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await adminService.getAllBadges({
