@@ -98,9 +98,19 @@ def create_app(config_name=None):
         # Skip if disabled (e.g., during migrations to avoid deadlocks)
         if not app.config.get('TESTING') and not os.environ.get('DISABLE_CACHE_WARMER'):
             from utils.cache_warmer import CacheWarmer
+
+            # CRITICAL FIX: Warm cache immediately on startup (not after 5 minutes!)
+            # This eliminates the 10-60 second first-load delay
+            print("[PERFORMANCE] Pre-warming critical caches on startup...")
+            try:
+                CacheWarmer.warm_all()
+                print("[PERFORMANCE] Startup cache warming completed!")
+            except Exception as e:
+                print(f"[PERFORMANCE] Warning: Startup cache warming failed: {e}")
+
             # Start background warmer (runs every 5 minutes, sequential to avoid crashes)
             CacheWarmer.start_background_warmer(app, interval=300)
-            print("[PERFORMANCE] Cache warmer started - warming every 5 minutes")
+            print("[PERFORMANCE] Background cache warmer started - updating every 5 minutes")
 
         # PERFORMANCE: Start background MV refresh worker
         # Skip if disabled (e.g., during testing or when running standalone worker)
