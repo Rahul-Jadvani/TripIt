@@ -1,0 +1,202 @@
+================================================================================
+                    VOTING SYSTEM - CRITICAL BUG FIX
+================================================================================
+
+THE PROBLEM:
+============
+Votes were NOT being saved to the database because the frontend wasn't sending
+API requests when removing votes.
+
+VISUAL COMPARISON:
+
+BEFORE (BROKEN):
+────────────────
+User clicks upvote button ✓
+User clicks upvote button again to remove
+  │
+  ├─ Frontend updates UI locally (count decreases)
+  │
+  └─ NO API REQUEST IS SENT ✗
+       │
+       └─ Backend never knows about the vote removal
+            │
+            └─ Vote removal NOT saved in database ✗
+                 │
+                 └─ Refresh page → Vote is back ✗
+
+
+AFTER (FIXED):
+──────────────
+User clicks upvote button ✓
+User clicks upvote button again to remove
+  │
+  ├─ Frontend updates UI locally (count decreases) ✓
+  │
+  ├─ API REQUEST IS SENT ✓ (THIS WAS MISSING!)
+  │   POST /api/votes { project_id, vote_type: 'up' }
+  │
+  ├─ Backend processes vote removal ✓
+  │   Deletes Vote record from database
+  │   Updates project.upvotes count
+  │
+  ├─ Backend responds with updated data ✓
+  │
+  ├─ Frontend receives response ✓
+  │   Updates UI with backend-confirmed counts
+  │
+  └─ Vote removal SAVED in database ✓
+       │
+       └─ Refresh page → Vote removal persists ✓
+
+
+THE ROOT CAUSE:
+===============
+
+FILE: frontend/src/components/VoteButtons.tsx
+LINE: 60
+
+When removing a vote:
+───────────────────
+setCurrentVote(null);
+pendingVoteRef.current = null;  ← WRONG! Set to null
+
+
+Then in the debounce handler at line 101:
+──────────────────────────────────────────
+if (shouldSendRequest && requestVoteType !== null) {
+  // API call NOT executed because:
+  // requestVoteType = null (from pendingVoteRef.current)
+  // So condition is FALSE
+  // So API request NEVER SENT
+}
+
+
+THE FIX:
+========
+
+FILE: frontend/src/components/VoteButtons.tsx
+LINE: 61
+
+When removing a vote, KEEP the vote type:
+─────────────────────────────────────────
+setCurrentVote(null);
+pendingVoteRef.current = voteType;  ← CORRECT! Still send the request
+
+
+Now in the debounce handler:
+────────────────────────────
+if (shouldSendRequest && requestVoteType !== null) {
+  // API call EXECUTES because:
+  // requestVoteType = 'up' (from pendingVoteRef.current)
+  // So condition is TRUE
+  // So API request IS SENT ✓
+}
+
+
+HOW THE FIX ENABLES PERSISTENCE:
+=================================
+
+1. Vote is added/removed in frontend UI (optimistic)
+2. API request is sent to backend (NOW WORKS ✓)
+3. Backend processes and saves to database
+4. Backend returns updated project data
+5. Frontend updates with backend-confirmed counts
+6. Vote is now PERMANENTLY in database
+7. On refresh, frontend fetches fresh data from DB
+8. Vote state persists across page refreshes ✓
+
+
+TIMELINE OF THE BUG:
+====================
+
+WHAT HAPPENED:
+- Frontend code would update the UI optimistically
+- But then wouldn't send the API request
+- So backend never saved the vote removal
+- When you refresh, the old vote was still in database
+- So it appeared as if your vote removal didn't work
+
+WHY IT FAILED:
+- pendingVoteRef.current was set to null when removing
+- Debounce condition checked "requestVoteType !== null"
+- null !== null is FALSE, so API call was skipped
+- Simple logic error: forgot to keep the vote type
+
+WHY IT WORKS NOW:
+- pendingVoteRef.current keeps the vote type even when removing
+- Debounce condition now evaluates to TRUE
+- API call is made
+- Backend saves the removal
+- Database is updated
+- Next refresh fetches updated data
+
+
+VERIFICATION:
+==============
+
+To verify the fix works:
+
+1. Open browser DevTools (F12)
+2. Go to Console tab
+3. Click upvote button
+   → Look for: "📤 SENDING VOTE REQUEST"
+   → Look for: "🌐 API CALL: POST /votes"
+   → Look for: "📊 UPDATED COUNTS"
+
+4. Click upvote button again (to remove)
+   → Same logs should appear (THIS WAS MISSING BEFORE)
+   → Vote count should decrease
+   → Check Network tab: POST /api/votes should be there
+
+5. Refresh the page (F5)
+   → Vote count should STAY decreased
+   → Vote removal PERSISTED in database ✓
+
+
+FILES CHANGED:
+==============
+
+1. frontend/src/components/VoteButtons.tsx
+   - Line 61: Critical fix (pendingVoteRef = voteType, not null)
+   - Lines 52-58, 109-119, 121-156: Added comprehensive logging
+
+2. frontend/src/services/api.ts
+   - Lines 129-140: Added API call logging
+
+3. backend/routes/votes.py
+   - Line 74: Return project data on vote removal
+
+
+IMPACT SUMMARY:
+===============
+
+Before:
+✗ Voting works (adds votes)
+✗ Vote removal doesn't work (no API call)
+✗ Votes don't persist on refresh
+✗ Database updates not reflected in UI
+✗ No visibility into what's happening
+
+After:
+✓ Voting works (adds votes)
+✓ Vote removal works (API call is sent)
+✓ Votes persist on refresh (fetched from DB)
+✓ Database updates reflected in UI immediately
+✓ Complete console logging for debugging
+
+
+KEY TAKEAWAY:
+=============
+
+The bug was a MISSING API CALL when removing votes.
+
+The fix was ONE LINE OF CODE:
+  Change: pendingVoteRef.current = null;
+  To:     pendingVoteRef.current = voteType;
+
+This one-line change enables the entire vote removal workflow to function
+correctly, from frontend request to backend persistence to database storage.
+
+Simple fix. Huge impact.
+
+================================================================================

@@ -136,19 +136,22 @@ export function useRealTimeUpdates() {
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       });
       socket.on('comment:added', (data) => {
+        // Only invalidate project cache for comment count update
+        // Comments cache is already updated via optimistic update + onSuccess
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['comments', data.project_id] });
       });
       socket.on('comment:updated', (data) => {
+        // Only invalidate project cache, comments cache updated via optimistic + onSuccess
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['comments', data.project_id] });
       });
       socket.on('comment:deleted', (data) => {
+        // Only invalidate project cache for comment count
+        // Comments cache already updated via optimistic + onSuccess
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['comments', data.project_id] });
       });
       socket.on('comment:voted', (data) => {
-        queryClient.invalidateQueries({ queryKey: ['comments', data.project_id] });
+        // Just invalidate the project cache to update comment vote counts if displayed
+        queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
       });
 
       // Leaderboard and user profile

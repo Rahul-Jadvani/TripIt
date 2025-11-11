@@ -3,7 +3,7 @@ import { projectsService } from '@/services/api';
 import { toast } from 'sonner';
 
 // Transform backend project data to frontend format
-function transformProject(backendProject: any) {
+export function transformProject(backendProject: any) {
   return {
     id: backendProject.id,
     title: backendProject.title,
@@ -98,7 +98,7 @@ export function useProjects(sort: string = 'hot', page: number = 1) {
       };
     },
     // Instagram-style caching: Short stale time, long cache retention
-    staleTime: 1000 * 60 * 5, // 5 min - marks data as "stale" but still usable
+    staleTime: 1000 * 60 * 1, // 1 min - marks data as "stale" but still usable (votes change frequently)
     gcTime: 1000 * 60 * 30,   // 30 min - keeps in memory for instant navigation
 
     // Real-time refetch strategy
@@ -125,9 +125,11 @@ export function useProjectById(id: string) {
       };
     },
     enabled: !!id,
-    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes (project details change less often)
+    staleTime: 1000 * 60 * 1, // Consider data fresh for 1 minute (votes/comments change frequently)
     gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
 
+    // Always fetch fresh data when component mounts to ensure latest votes/comments
+    refetchOnMount: 'always',
     // Background refetch for project details
     refetchInterval: 1000 * 60 * 2, // Refresh every 2 minutes (votes/comments change)
     refetchOnWindowFocus: true,

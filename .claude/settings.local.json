@@ -23,7 +23,8 @@
       "Bash(timeout /t 5)",
       "Bash(timeout /t 8)",
       "Bash(nul)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

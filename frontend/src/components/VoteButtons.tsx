@@ -16,14 +16,21 @@ export function VoteButtons({ projectId, voteCount, userVote = null, onVoteChang
   const { user } = useAuth();
   const navigate = useNavigate();
   const voteMutation = useVote(projectId);
+
+  // Ensure voteCount is always a valid number
+  const normalizedVoteCount = typeof voteCount === 'number' ? voteCount : 0;
+
   const [currentVote, setCurrentVote] = useState<'up' | 'down' | null>(userVote);
-  const [currentCount, setCurrentCount] = useState(voteCount);
+  const [currentCount, setCurrentCount] = useState(normalizedVoteCount);
   const pendingVoteRef = useRef<'up' | 'down' | null>(null);
   const voteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // DEBUG: Log initial state
+  console.log(`[INIT] VoteButtons for project ${projectId}: userVote=${userVote}, voteCount=${voteCount}, currentVote=${currentVote}, currentCount=${currentCount}`);
+
   useEffect(() => {
     setCurrentVote(userVote);
-    setCurrentCount(voteCount);
+    setCurrentCount(typeof voteCount === 'number' ? voteCount : 0);
   }, [userVote, voteCount]);
 
   // Cleanup timer on unmount
@@ -45,25 +52,41 @@ export function VoteButtons({ projectId, voteCount, userVote = null, onVoteChang
     const previousVote = currentVote;
     const previousCount = currentCount;
 
+    // Debug logging
+    console.log('🗳️ VOTE CLICK:', {
+      voteType,
+      wasVoted,
+      currentVote,
+      projectId
+    });
+
     // Instant UI update (optimistic)
     if (wasVoted) {
-      // Remove vote (toggle off)
+      // Remove vote (toggle off) - still need to send the request!
       setCurrentVote(null);
-      setCurrentCount(prev => voteType === 'up' ? prev - 1 : prev + 1);
-      pendingVoteRef.current = null; // Final state: no vote
+      setCurrentCount(prev => {
+        const result = voteType === 'up' ? prev - 1 : prev + 1;
+        return isNaN(result) ? normalizedVoteCount : result;
+      });
+      // Still set the voteType so the API call is made to remove it from backend
+      pendingVoteRef.current = voteType;
     } else if (currentVote) {
       // Change vote from opposite type
       setCurrentVote(voteType);
       setCurrentCount(prev => {
-        if (currentVote === 'up' && voteType === 'down') return prev - 2;
-        if (currentVote === 'down' && voteType === 'up') return prev + 2;
-        return prev;
+        let result = prev;
+        if (currentVote === 'up' && voteType === 'down') result = prev - 2;
+        else if (currentVote === 'down' && voteType === 'up') result = prev + 2;
+        return isNaN(result) ? normalizedVoteCount : result;
       });
       pendingVoteRef.current = voteType; // Final state: new vote type
     } else {
       // New vote
       setCurrentVote(voteType);
-      setCurrentCount(prev => voteType === 'up' ? prev + 1 : prev - 1);
+      setCurrentCount(prev => {
+        const result = voteType === 'up' ? prev + 1 : prev - 1;
+        return isNaN(result) ? normalizedVoteCount : result;
+      });
       pendingVoteRef.current = voteType; // Final state: new vote
     }
 
@@ -81,40 +104,62 @@ export function VoteButtons({ projectId, voteCount, userVote = null, onVoteChang
       let shouldSendRequest = true;
       let requestVoteType: 'up' | 'down' | null = finalVote;
 
-      // If final state matches original state, no need to send request
-      if (finalVote === userVote) {
+      // If final state matches current UI state, no need to send request
+      // Use currentVote STATE (not userVote PROP) because prop updates are delayed
+      if (finalVote === currentVote) {
         shouldSendRequest = false;
+        console.log('📤 SKIP REQUEST (finalVote === currentVote):', {
+          finalVote,
+          currentVote,
+          projectId
+        });
+      } else {
+        console.log('📤 SENDING VOTE REQUEST:', {
+          finalVote,
+          currentVote,
+          requestVoteType,
+          shouldSendRequest,
+          projectId
+        });
       }
 
       if (shouldSendRequest && requestVoteType !== null) {
         // Send the final vote state
+        console.log('✅ EXECUTING VOTE MUTATION:', requestVoteType);
         voteMutation.mutate(requestVoteType, {
           onError: (error) => {
+            console.error('❌ VOTE ERROR:', {
+              message: error?.message,
+              status: error?.response?.status,
+              data: error?.response?.data
+            });
             // Only show error if it's not a duplicate key error
             const errorMsg = error?.response?.data?.message || error?.message || '';
             if (!errorMsg.includes('duplicate') && !errorMsg.includes('UniqueViolation')) {
               // Revert on actual errors
+              console.log('⚠️ REVERTING VOTE:', previousVote, previousCount);
               setCurrentVote(previousVote);
               setCurrentCount(previousCount);
             }
             // For duplicate errors, ignore - UI is already in correct state
           },
           onSuccess: (response) => {
-            // Sync with backend response
+            console.log('✅ VOTE SUCCESS RESPONSE:', response?.data);
+            // Sync with backend response - backend now always returns updated project data
             const data = response?.data?.data;
-            if (data) {
-              const newCount = (data.upvotes || 0) - (data.downvotes || 0);
-              setCurrentCount(newCount);
+            if (data && typeof data === 'object') {
+              const upvotes = typeof data.upvotes === 'number' ? data.upvotes : 0;
+              const downvotes = typeof data.downvotes === 'number' ? data.downvotes : 0;
+              const newCount = upvotes - downvotes;
+              console.log('📊 UPDATED COUNTS:', { upvotes, downvotes, newCount });
+              // Only update if we got valid numbers from backend
+              if (!isNaN(newCount)) {
+                setCurrentCount(newCount);
+              }
+              // Update user vote state from backend
               setCurrentVote(data.user_vote || null);
             } else {
-              // Vote was removed (backend returns null)
-              setCurrentVote(null);
-              // Recalculate count based on current state
-              if (previousVote === 'up') {
-                setCurrentCount(prev => Math.max(0, prev - 1));
-              } else if (previousVote === 'down') {
-                setCurrentCount(prev => prev + 1);
-              }
+              console.warn('⚠️ No valid data in response:', data);
             }
             onVoteChange?.();
           },
@@ -127,37 +172,43 @@ export function VoteButtons({ projectId, voteCount, userVote = null, onVoteChang
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3" onClick={(e) => e.stopPropagation()}>
-      <Button
-        variant={currentVote === 'up' ? 'default' : 'ghost'}
-        size="sm"
+      <button
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           handleVote('up');
         }}
         type="button"
-        className="h-8 w-8 p-0 transition-all active:scale-95"
+        className={`h-8 w-8 rounded-md flex items-center justify-center transition-all active:scale-95 border ${
+          currentVote === 'up'
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-secondary hover:bg-secondary/80 border-border text-muted-foreground hover:text-foreground'
+        }`}
+        title="Like project"
       >
         <ThumbsUp className="h-4 w-4" />
-      </Button>
+      </button>
 
       <span className="min-w-[3rem] text-center font-semibold tabular-nums">
-        {currentCount}
+        {isNaN(currentCount) || currentCount === undefined ? 0 : currentCount}
       </span>
 
-      <Button
-        variant={currentVote === 'down' ? 'default' : 'ghost'}
-        size="sm"
+      <button
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           handleVote('down');
         }}
         type="button"
-        className="h-8 w-8 p-0 transition-all active:scale-95"
+        className={`h-8 w-8 rounded-md flex items-center justify-center transition-all active:scale-95 border ${
+          currentVote === 'down'
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-secondary hover:bg-secondary/80 border-border text-muted-foreground hover:text-foreground'
+        }`}
+        title="Dislike project"
       >
         <ThumbsDown className="h-4 w-4" />
-      </Button>
+      </button>
     </div>
   );
 }

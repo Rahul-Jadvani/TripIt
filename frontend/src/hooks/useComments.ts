@@ -9,18 +9,18 @@ function transformComment(backendComment: any) {
     content: backendComment.content,
     projectId: backendComment.project_id,
     authorId: backendComment.user_id,
-    author: backendComment.commenter ? {
-      id: backendComment.commenter.id,
-      username: backendComment.commenter.username,
-      email: backendComment.commenter.email || '',
-      displayName: backendComment.commenter.display_name,
-      avatar: backendComment.commenter.avatar_url,
-      bio: backendComment.commenter.bio,
-      isVerified: backendComment.commenter.email_verified || false,
-      isAdmin: backendComment.commenter.is_admin || false,
-      walletAddress: backendComment.commenter.wallet_address,
-      createdAt: backendComment.commenter.created_at,
-      updatedAt: backendComment.commenter.updated_at || backendComment.commenter.created_at,
+    author: backendComment.author ? {
+      id: backendComment.author.id,
+      username: backendComment.author.username,
+      email: backendComment.author.email || '',
+      displayName: backendComment.author.display_name,
+      avatar: backendComment.author.avatar_url,
+      bio: backendComment.author.bio,
+      isVerified: backendComment.author.email_verified || false,
+      isAdmin: backendComment.author.is_admin || false,
+      walletAddress: backendComment.author.wallet_address,
+      createdAt: backendComment.author.created_at,
+      updatedAt: backendComment.author.updated_at || backendComment.author.created_at,
     } : {
       id: backendComment.user_id,
       username: 'Unknown',
@@ -37,145 +37,29 @@ function transformComment(backendComment: any) {
   };
 }
 
-export function useComments(projectId: string, altProjectId?: string) {
+export function useComments(projectId: string) {
   return useQuery({
     queryKey: ['comments', projectId],
     queryFn: async () => {
-      const safe = async (fn: () => Promise<any[]>): Promise<any[]> => {
-        try {
-          const out = await fn();
-          return Array.isArray(out) ? out : [];
-        } catch {
-          return [];
-        }
-      };
-      // Primary endpoint
-      const tryPrimary = async () => {
-        const res = await commentsService.getByProject(projectId);
-        const raw = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray((res.data || {}).data)
-            ? (res.data as any).data
-            : Array.isArray((res.data || {}).comments)
-              ? (res.data as any).comments
-              : [];
-        return raw;
-      };
+      // Single, clean endpoint with standardized response format
+      const res = await commentsService.getByProject(projectId);
 
-      const tryFallback = async () => {
-        const res = await commentsService.getByProjectPath(projectId);
-        const raw = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray((res.data || {}).data)
-            ? (res.data as any).data
-            : Array.isArray((res.data || {}).comments)
-              ? (res.data as any).comments
-              : [];
-        return raw;
-      };
+      // Backend returns paginated_response: { status, message, data: [...], pagination: {...} }
+      // So res.data.data contains the comments array
+      const raw = res.data?.data || [];
 
-      const tryNested = async () => {
-        const res = await commentsService.getByProjectNested(projectId);
-        const raw = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray((res.data || {}).data)
-            ? (res.data as any).data
-            : Array.isArray((res.data || {}).comments)
-              ? (res.data as any).comments
-              : [];
-        return raw;
-      };
-
-      const tryNestedAlt = async () => {
-        const res = await commentsService.getByProjectNestedAlt(projectId);
-        const raw = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray((res.data || {}).data)
-            ? (res.data as any).data
-            : Array.isArray((res.data || {}).comments)
-              ? (res.data as any).comments
-              : [];
-        return raw;
-      };
-
-      let raw = await safe(tryPrimary);
-      if (!Array.isArray(raw) || raw.length === 0) {
-        const fb = await safe(tryFallback);
-        if (Array.isArray(fb) && fb.length) raw = fb;
-      }
-      if (!Array.isArray(raw) || raw.length === 0) {
-        const nb = await safe(tryNested);
-        if (Array.isArray(nb) && nb.length) raw = nb;
-      }
-      if (!Array.isArray(raw) || raw.length === 0) {
-        const nb2 = await safe(tryNestedAlt);
-        if (Array.isArray(nb2) && nb2.length) raw = nb2;
-      }
-
-      // Try again with alternative id if provided
-      if ((!Array.isArray(raw) || raw.length === 0) && altProjectId) {
-        const using = altProjectId;
-        const altPrimary = async () => {
-          const res = await commentsService.getByProject(using);
-          const arr = Array.isArray(res.data)
-            ? res.data
-            : Array.isArray((res.data || {}).data)
-              ? (res.data as any).data
-              : Array.isArray((res.data || {}).comments)
-                ? (res.data as any).comments
-                : [];
-          return arr;
-        };
-        const altPath = async () => {
-          const res = await commentsService.getByProjectPath(using);
-          const arr = Array.isArray(res.data)
-            ? res.data
-            : Array.isArray((res.data || {}).data)
-              ? (res.data as any).data
-              : Array.isArray((res.data || {}).comments)
-                ? (res.data as any).comments
-                : [];
-          return arr;
-        };
-        const altNested = async () => {
-          const res = await commentsService.getByProjectNested(using);
-          const arr = Array.isArray(res.data)
-            ? res.data
-            : Array.isArray((res.data || {}).data)
-              ? (res.data as any).data
-              : Array.isArray((res.data || {}).comments)
-                ? (res.data as any).comments
-                : [];
-          return arr;
-        };
-        const altNested2 = async () => {
-          const res = await commentsService.getByProjectNestedAlt(using);
-          const arr = Array.isArray(res.data)
-            ? res.data
-            : Array.isArray((res.data || {}).data)
-              ? (res.data as any).data
-              : Array.isArray((res.data || {}).comments)
-                ? (res.data as any).comments
-                : [];
-          return arr;
-        };
-        let a = await safe(altPrimary); if (a?.length) raw = a;
-        if (!raw?.length) { a = await safe(altPath); if (a?.length) raw = a; }
-        if (!raw?.length) { a = await safe(altNested); if (a?.length) raw = a; }
-        if (!raw?.length) { a = await safe(altNested2); if (a?.length) raw = a; }
-      }
-
-      return { data: (raw || []).map(transformComment) } as any;
+      // Transform each comment to frontend format
+      return { data: (Array.isArray(raw) ? raw : []).map(transformComment) } as any;
     },
     enabled: !!projectId,
-    staleTime: 1000 * 60 * 5, // Comments stay fresh for 5 minutes
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
+    staleTime: 1000 * 60 * 10, // Comments stay fresh for 10 minutes (match backend cache TTL of 600s)
+    gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
     refetchInterval: false, // NO polling - Socket.IO handles invalidation
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchOnMount: false, // Don't force refetch on mount - use staleTime instead
     placeholderData: (previousData) => previousData, // Keep old data visible during refetch
-    retry: 2, // Retry failed requests twice before giving up
+    retry: 3, // Retry failed requests up to 3 times
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 }

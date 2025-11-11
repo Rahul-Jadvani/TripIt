@@ -126,8 +126,18 @@ export const projectsService = {
 
 // Voting
 export const votesService = {
-  vote: (projectId: string, voteType: 'up' | 'down') =>
-    api.post('/votes', { project_id: projectId, vote_type: voteType }),
+  vote: (projectId: string, voteType: 'up' | 'down') => {
+    console.log('🌐 API CALL: POST /votes', { projectId, voteType });
+    return api.post('/votes', { project_id: projectId, vote_type: voteType })
+      .then(response => {
+        console.log('📡 API RESPONSE /votes:', response.data);
+        return response;
+      })
+      .catch(error => {
+        console.error('🔴 API ERROR /votes:', error.response?.data || error.message);
+        throw error;
+      });
+  },
   getUserVotes: () => api.get('/votes/user'),
 };
 
@@ -135,12 +145,8 @@ export const votesService = {
 export const commentsService = {
   getByProject: (projectId: string) =>
     api.get(
-      `/comments?project_id=${encodeURIComponent(projectId)}&per_page=100&limit=100`
+      `/comments?project_id=${encodeURIComponent(projectId)}&per_page=100`
     ),
-  // Fallback patterns some backends use
-  getByProjectPath: (projectId: string) => api.get(`/comments/${encodeURIComponent(projectId)}`),
-  getByProjectNested: (projectId: string) => api.get(`/projects/${encodeURIComponent(projectId)}/comments`),
-  getByProjectNestedAlt: (projectId: string) => api.get(`/project/${encodeURIComponent(projectId)}/comments`),
   create: (data: any) => api.post('/comments', data),
   update: (commentId: string, data: any) => api.put(`/comments/${commentId}`, data),
   delete: (commentId: string) => api.delete(`/comments/${commentId}`),

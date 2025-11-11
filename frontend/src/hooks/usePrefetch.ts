@@ -8,6 +8,7 @@ import api, { projectsService, leaderboardService, publicInvestorsService, messa
 import { chainApi } from '@/services/chainApi';
 import { useAuth } from '@/context/AuthContext';
 import { logger } from '@/utils/logger';
+import { transformProject } from '@/hooks/useProjects';
 
 // Get backend URL
 const getBackendUrl = (): string => {
@@ -34,7 +35,10 @@ export function usePrefetch() {
             queryKey: ['projects', 'trending', 1],
             queryFn: async () => {
               const response = await projectsService.getAll('trending', 1);
-              return response.data;
+              return {
+                ...response.data,
+                data: response.data.data?.map(transformProject) || [],
+              };
             },
             staleTime: 1000 * 60 * 5, // 5 min for real-time feel
           }),
@@ -45,7 +49,10 @@ export function usePrefetch() {
             queryKey: ['projects', 'top-rated', 1],
             queryFn: async () => {
               const response = await projectsService.getAll('top-rated', 1);
-              return response.data;
+              return {
+                ...response.data,
+                data: response.data.data?.map(transformProject) || [],
+              };
             },
             staleTime: 1000 * 60 * 5,
           }),
@@ -56,7 +63,10 @@ export function usePrefetch() {
             queryKey: ['projects', 'newest', 1],
             queryFn: async () => {
               const response = await projectsService.getAll('newest', 1);
-              return response.data;
+              return {
+                ...response.data,
+                data: response.data.data?.map(transformProject) || [],
+              };
             },
             staleTime: 1000 * 60 * 5,
           }),
@@ -195,7 +205,10 @@ export function usePrefetch() {
             queryKey: ['projects', 'trending', 2],
             queryFn: async () => {
               const response = await projectsService.getAll('trending', 2);
-              return response.data;
+              return {
+                ...response.data,
+                data: response.data.data?.map(transformProject) || [],
+              };
             },
             staleTime: 1000 * 60 * 5,
           }),
@@ -203,7 +216,10 @@ export function usePrefetch() {
             queryKey: ['projects', 'top-rated', 2],
             queryFn: async () => {
               const response = await projectsService.getAll('top-rated', 2);
-              return response.data;
+              return {
+                ...response.data,
+                data: response.data.data?.map(transformProject) || [],
+              };
             },
             staleTime: 1000 * 60 * 5,
           }),

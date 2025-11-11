@@ -32,9 +32,11 @@ export function useVote(projectId: string) {
       const previousProjectsQueries = queryClient.getQueriesData({ queryKey: ['projects'] });
       const previousUserVotes = queryClient.getQueryData(['userVotes']);
 
-      // Get current user vote state
-      const userVotes = queryClient.getQueryData(['userVotes']) as any[] || [];
-      const existingVote = userVotes.find((v: any) => v.project_id === projectId);
+      // Get current user vote state from the actual project data, not from userVotes cache
+      // which might be stale or empty
+      const projectData = queryClient.getQueryData(['project', projectId]) as any;
+      const currentUserVote = projectData?.data?.user_vote;
+      const existingVote = currentUserVote ? { project_id: projectId, vote_type: currentUserVote } : null;
 
       // Optimistically update project vote counts
       queryClient.setQueryData(['project', projectId], (old: any) => {
@@ -166,22 +168,34 @@ export function useVote(projectId: string) {
       toast.error(errorMessage);
     },
 
-    // SETTLED: Always refetch to ensure data consistency (but don't force refetch)
-    onSettled: () => {
-      // Mark queries as stale but don't force immediate refetch
-      // This allows background refetch without blocking UI
-      queryClient.invalidateQueries({ 
-        queryKey: ['project', projectId],
-        refetchType: 'none' // Don't refetch immediately
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ['projects'],
-        refetchType: 'none' // Don't refetch immediately
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ['userVotes'],
-        refetchType: 'none' // Don't refetch immediately
-      });
+    // SETTLED: Ensure fresh data after vote
+    onSettled: async (data) => {
+      if (data?.data?.data) {
+        // Update the project query cache with the response data immediately
+        queryClient.setQueryData(['project', projectId], (old: any) => {
+          if (!old) return { data: data.data.data };
+          return { ...old, data: data.data.data };
+        });
+
+        // Update the projects feed cache with the response data
+        // Find and update this project in all projects queries
+        queryClient.setQueriesData({ queryKey: ['projects'] }, (old: any) => {
+          if (!old?.data?.data) return old;
+          const projects = old.data.data.map((p: any) =>
+            p.id === projectId ? data.data.data : p
+          );
+          return { ...old, data: { ...old.data, data: projects } };
+        });
+      }
+
+      // Wait a brief moment to ensure backend cache is invalidated, then refetch
+      // This prevents the frontend from receiving stale data from backend cache
+      setTimeout(() => {
+        // Invalidate then refetch to ensure fresh data
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['userVotes'] });
+      }, 100);  // 100ms delay allows backend to complete cache invalidation
     },
   });
 }

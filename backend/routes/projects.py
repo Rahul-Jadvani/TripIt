@@ -50,10 +50,52 @@ def list_projects(user_id):
         use_materialized_view = enable_feed_mv and (not has_filters) and (sort in sorts_using_mv)
 
         if not has_filters:
+            print(f"\n[API] GET /projects: No filters, checking cache... user_id={user_id}, sort={sort}, page={page}")
             cached = CacheService.get_cached_feed(page, sort)
+            print(f"[CACHE] Cache hit: {cached is not None}")
             if cached:
+                # Make a shallow copy to avoid modifying cached data
+                response_data = dict(cached)
+
+                # Even though data is cached, we need to add user-specific data (votes)
+                if user_id and 'data' in response_data and response_data['data']:
+                    from models.vote import Vote
+                    # Create a copy of the data list to avoid modifying cached projects
+                    response_data['data'] = [dict(p) for p in response_data['data']]
+
+                    project_ids = [p.get('id') for p in response_data['data'] if p.get('id')]
+
+                    print(f"[VOTE INJECTION] User: {user_id}, Projects in cache: {len(project_ids)}")
+                    print(f"[VOTE INJECTION] First few project IDs: {project_ids[:3]}")
+
+                    # Fetch user's votes for these projects
+                    if project_ids:
+                        votes = Vote.query.filter(
+                            Vote.user_id == user_id,
+                            Vote.project_id.in_(project_ids)
+                        ).all()
+                        votes_dict = {vote.project_id: vote.vote_type for vote in votes}
+                        print(f"[VOTE INJECTION] Found {len(votes_dict)} votes for user {user_id}")
+                        if votes_dict:
+                            print(f"[VOTE INJECTION] Votes dictionary: {votes_dict}")
+
+                        # Add user votes to each project in response data (copy, not cached)
+                        for i, project in enumerate(response_data['data'][:3]):  # Log first 3
+                            old_vote = project.get('user_vote')
+                            project['user_vote'] = votes_dict.get(project.get('id'))
+                            new_vote = project['user_vote']
+                            if old_vote != new_vote:
+                                print(f"[VOTE INJECTION] Project {i} ({project.get('id')}): {old_vote} → {new_vote}")
+
+                        # Do it for all without extra logging
+                        for project in response_data['data']:
+                            project['user_vote'] = votes_dict.get(project.get('id'))
+                else:
+                    print(f"[VOTE INJECTION] SKIPPED: user_id={user_id}, has_data={'data' in response_data}, data_len={len(response_data.get('data', []))}")
+
+                print(f"[API RESPONSE] Returning {len(response_data.get('data', []))} projects from cache")
                 from flask import jsonify
-                return jsonify(cached), 200
+                return jsonify(response_data), 200
 
         # ULTRA-FAST: Use materialized view for base feed (no filters)
         if use_materialized_view:
@@ -407,6 +449,13 @@ def get_project(user_id, project_id):
                     db.session.commit()
             except:
                 pass  # Don't fail if view increment fails
+
+            # Add user's vote to cached data if authenticated
+            if user_id and cached.get('data'):
+                from models.vote import Vote
+                vote = Vote.query.filter_by(user_id=user_id, project_id=project_id).first()
+                cached['data']['user_vote'] = vote.vote_type if vote else None
+
             from flask import jsonify
             return jsonify(cached), 200
 

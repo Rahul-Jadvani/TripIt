@@ -9,7 +9,7 @@ const TopRatedCarousel = lazy(() =>
 );
 import { ProjectCardSkeletonGrid, TopRatedCarouselSkeleton } from '@/components/ProjectCardSkeleton';
 import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle } from 'lucide-react';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjects, transformProject } from '@/hooks/useProjects';
 import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
 import { usePublicInvestors } from '@/hooks/useInvestors';
 import { useDashboardStats } from '@/hooks/useStats';
@@ -92,7 +92,7 @@ export default function Feed() {
               const response = await projectsService.getAll(sort, 3);
               return {
                 ...response.data,
-                data: response.data.data || [],
+                data: response.data.data?.map(transformProject) || [],
               };
             },
             staleTime: 1000 * 60 * 5,

@@ -82,6 +82,11 @@ def create_comment(user_id):
         db.session.add(comment)
         db.session.commit()
 
+        # CRITICAL: Ensure author is loaded after commit
+        # This loads the relationship so to_dict() includes author info
+        from sqlalchemy.orm import joinedload
+        comment = Comment.query.options(joinedload(Comment.author)).get(comment.id)
+
         # Invalidate project cache and comments cache
         from utils.cache import CacheService
         CacheService.invalidate_project(validated_data['project_id'])
