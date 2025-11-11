@@ -40,6 +40,7 @@ import {
   useDeleteChainAdmin,
   useToggleChainFeatured,
 } from '@/hooks/useAdminChains';
+import CoffeeLoader from '@/components/CoffeeLoader';
 
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -1198,6 +1199,11 @@ export default function Admin() {
   };
 
   // ==================== Render ====================
+
+  // Show loading animation on first load
+  if ((usersLoading || validatorsLoading || projectsLoading) && users.length === 0 && validators.length === 0 && projects.length === 0) {
+    return <CoffeeLoader overlay captionCategory="admin" />;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">

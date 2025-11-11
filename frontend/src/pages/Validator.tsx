@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import CoffeeLoader from '@/components/CoffeeLoader';
 
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -258,6 +259,11 @@ export default function Validator() {
       });
     }
   });
+
+  // Show loading animation while fetching data
+  if (isLoading && assignments.length === 0) {
+    return <CoffeeLoader overlay captionCategory="validator" />;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
