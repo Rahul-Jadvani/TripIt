@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ThumbsUp, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { toast } from 'sonner';
+import { resolveProjectId } from '@/utils/projectId';
 
 interface CommentSectionProps {
   projectId: string;
@@ -19,26 +19,32 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
   const { user } = useAuth();
   const navigate = useNavigate();
   const [commentText, setCommentText] = useState('');
+  const resolvedProjectId = resolveProjectId(projectId, altProjectId);
 
-  const { data: commentsData, isLoading } = useComments(projectId, altProjectId);
-  const createCommentMutation = useCreateComment(projectId);
-  const deleteCommentMutation = useDeleteComment('', projectId);
-  const voteCommentMutation = useVoteComment(projectId);
+  const { data: commentsData, isLoading, error } = useComments(projectId, altProjectId);
+  const createCommentMutation = useCreateComment(projectId, altProjectId);
+  const deleteCommentMutation = useDeleteComment('', projectId, altProjectId);
+  const voteCommentMutation = useVoteComment(projectId, altProjectId);
 
   const comments = commentsData?.data || [];
 
-  const handlePostComment = async () => {
+  const handlePostComment = () => {
     if (!user) {
       navigate('/login');
       return;
     }
 
-    if (commentText.trim().length === 0) return;
-    if (createCommentMutation.isPending) return; // guard against double clicks
+    const trimmed = commentText.trim();
+    if (!trimmed || createCommentMutation.isPending || !resolvedProjectId) return;
 
-    await createCommentMutation.mutateAsync({ content: commentText });
+    // Clear immediately so the UI feels instant; restore on failure
     setCommentText('');
-    toast.success('Comment posted');
+    createCommentMutation.mutate(
+      { content: trimmed },
+      {
+        onError: () => setCommentText(trimmed),
+      }
+    );
   };
 
   const handleDelete = (commentId: string) => {
@@ -47,8 +53,17 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
     }
   };
 
-  if (isLoading) {
+  if (!resolvedProjectId) {
+    return <div className="text-center text-muted-foreground">Preparing comments...</div>;
+  }
+
+  if (isLoading && !commentsData) {
     return <div className="text-center text-muted-foreground">Loading comments...</div>;
+  }
+
+  // Show error only if we have no data to display
+  if (error && !commentsData?.data?.length) {
+    return <div className="text-center text-muted-foreground">Unable to load comments. Please refresh the page.</div>;
   }
 
   return (
@@ -67,7 +82,9 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
               />
               <Button
                 onClick={handlePostComment}
-                disabled={createCommentMutation.isPending || commentText.trim().length === 0}
+                disabled={
+                  createCommentMutation.isPending || commentText.trim().length === 0 || !resolvedProjectId
+                }
                 className="w-full"
               >
                 {createCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
@@ -114,7 +131,7 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(comment.id)}
-                        disabled={deleteCommentMutation.isPending}
+                        disabled={deleteCommentMutation.isPending || !resolvedProjectId}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -128,7 +145,7 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
                       variant="ghost"
                       size="sm"
                       onClick={() => voteCommentMutation.mutate({ commentId: comment.id, voteType: 'up' })}
-                      disabled={voteCommentMutation.isPending}
+                      disabled={voteCommentMutation.isPending || !resolvedProjectId}
                       className="text-muted-foreground"
                     >
                       <ThumbsUp className="h-4 w-4" />

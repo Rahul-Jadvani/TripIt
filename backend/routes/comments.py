@@ -4,6 +4,8 @@ Comment routes
 from flask import Blueprint, request
 from datetime import datetime
 from marshmallow import ValidationError
+import traceback
+import logging
 
 from extensions import db
 from models.comment import Comment
@@ -11,6 +13,9 @@ from models.project import Project
 from schemas.comment import CommentCreateSchema, CommentUpdateSchema
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 comments_bp = Blueprint('comments', __name__)
 
@@ -49,11 +54,15 @@ def get_comments(user_id):
 
         response = paginated_response(data, total, page, per_page)
 
-        # Cache for 10 minutes
-        CacheService.cache_comments(project_id, page, response.get_json(), ttl=600)
+        # Cache for 10 minutes - paginated_response returns a tuple (data, status_code)
+        # Extract just the data dict for caching
+        cache_data = response[0] if isinstance(response, tuple) else response.get_json()
+        CacheService.cache_comments(project_id, page, cache_data, ttl=600)
 
         return response
     except Exception as e:
+        logger.error(f"❌ GET /comments ERROR: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return error_response('Error', str(e), 500)
 
 

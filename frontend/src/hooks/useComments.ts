@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { commentsService } from '@/services/api';
 import { toast } from 'sonner';
+import { resolveProjectId } from '@/utils/projectId';
 
 // Transform backend comment data to frontend format
 function transformComment(backendComment: any) {
@@ -37,12 +38,18 @@ function transformComment(backendComment: any) {
   };
 }
 
-export function useComments(projectId: string) {
+export function useComments(projectId?: string, fallbackProjectId?: string) {
+  const resolvedProjectId = resolveProjectId(projectId, fallbackProjectId);
+
   return useQuery({
-    queryKey: ['comments', projectId],
+    queryKey: ['comments', resolvedProjectId || 'pending'],
     queryFn: async () => {
+      if (!resolvedProjectId) {
+        return { data: [] };
+      }
+
       // Single, clean endpoint with standardized response format
-      const res = await commentsService.getByProject(projectId);
+      const res = await commentsService.getByProject(resolvedProjectId);
 
       // Backend returns paginated_response: { status, message, data: [...], pagination: {...} }
       // So res.data.data contains the comments array
@@ -51,37 +58,50 @@ export function useComments(projectId: string) {
       // Transform each comment to frontend format
       return { data: (Array.isArray(raw) ? raw : []).map(transformComment) } as any;
     },
-    enabled: !!projectId,
+    enabled: !!resolvedProjectId,
     staleTime: 1000 * 60 * 10, // Comments stay fresh for 10 minutes (match backend cache TTL of 600s)
     gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
     refetchInterval: false, // NO polling - Socket.IO handles invalidation
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchOnWindowFocus: false, // DISABLED: Socket.IO handles cache invalidation on reconnect
+    refetchOnReconnect: false, // DISABLED: Prevents failed refetch attempts that clear cache
     refetchOnMount: false, // Don't force refetch on mount - use staleTime instead
+    refetchOnError: false, // CRITICAL: Do NOT refetch when error occurs - prevents cache clearing
     placeholderData: (previousData) => previousData, // Keep old data visible during refetch
-    retry: 3, // Retry failed requests up to 3 times
+    retry: 1, // Retry once (not 3 times) - if backend has issues, retrying repeatedly won't help
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 }
 
-export function useCreateComment(projectId: string) {
+export function useCreateComment(projectId?: string, fallbackProjectId?: string) {
   const queryClient = useQueryClient();
+  const resolvedProjectId = resolveProjectId(projectId, fallbackProjectId);
 
   return useMutation({
-    mutationFn: (data: any) => commentsService.create({
-      project_id: projectId,
-      content: data.content,
-    }),
+    mutationFn: (data: any) => {
+      if (!resolvedProjectId) {
+        return Promise.reject(new Error('Missing project id'));
+      }
+
+      return commentsService.create({
+        project_id: resolvedProjectId,
+        content: data.content,
+      });
+    },
 
     // OPTIMISTIC UPDATE: Show comment immediately
     onMutate: async (newComment) => {
+      if (!resolvedProjectId) {
+        toast.error('Unable to post comment right now. Missing project id.');
+        return { previousComments: undefined, previousProject: undefined };
+      }
+
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['comments', projectId] });
-      await queryClient.cancelQueries({ queryKey: ['project', projectId] });
+      await queryClient.cancelQueries({ queryKey: ['comments', resolvedProjectId] });
+      await queryClient.cancelQueries({ queryKey: ['project', resolvedProjectId] });
 
       // Snapshot previous values for rollback
-      const previousComments = queryClient.getQueryData(['comments', projectId]);
-      const previousProject = queryClient.getQueryData(['project', projectId]);
+      const previousComments = queryClient.getQueryData(['comments', resolvedProjectId]);
+      const previousProject = queryClient.getQueryData(['project', resolvedProjectId]);
 
       // Get current user info from cache (should be available from auth)
       const currentUser = queryClient.getQueryData(['currentUser']) as any;
@@ -90,29 +110,31 @@ export function useCreateComment(projectId: string) {
       const optimisticComment = {
         id: `temp-${Date.now()}`, // Temporary ID
         content: newComment.content,
-        projectId: projectId,
+        projectId: resolvedProjectId,
         authorId: currentUser?.id || 'unknown',
-        author: currentUser ? {
-          id: currentUser.id,
-          username: currentUser.username,
-          email: currentUser.email || '',
-          displayName: currentUser.displayName || currentUser.username,
-          avatar: currentUser.avatar,
-          bio: currentUser.bio,
-          isVerified: currentUser.isVerified || false,
-          isAdmin: currentUser.isAdmin || false,
-          walletAddress: currentUser.walletAddress,
-          createdAt: currentUser.createdAt,
-          updatedAt: currentUser.updatedAt,
-        } : {
-          id: 'unknown',
-          username: 'You',
-          email: '',
-          isVerified: false,
-          isAdmin: false,
-          createdAt: '',
-          updatedAt: '',
-        },
+        author: currentUser
+          ? {
+              id: currentUser.id,
+              username: currentUser.username,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || currentUser.username,
+              avatar: currentUser.avatar,
+              bio: currentUser.bio,
+              isVerified: currentUser.isVerified || false,
+              isAdmin: currentUser.isAdmin || false,
+              walletAddress: currentUser.walletAddress,
+              createdAt: currentUser.createdAt,
+              updatedAt: currentUser.updatedAt,
+            }
+          : {
+              id: 'unknown',
+              username: 'You',
+              email: '',
+              isVerified: false,
+              isAdmin: false,
+              createdAt: '',
+              updatedAt: '',
+            },
         upvotes: 0,
         downvotes: 0,
         createdAt: new Date().toISOString(),
@@ -121,7 +143,7 @@ export function useCreateComment(projectId: string) {
       };
 
       // Optimistically add comment to cache (create structure if missing)
-      queryClient.setQueryData(['comments', projectId], (old: any) => {
+      queryClient.setQueryData(['comments', resolvedProjectId], (old: any) => {
         if (!old || !Array.isArray(old.data)) {
           return { data: [optimisticComment] };
         }
@@ -129,7 +151,7 @@ export function useCreateComment(projectId: string) {
       });
 
       // Optimistically increment comment count
-      queryClient.setQueryData(['project', projectId], (old: any) => {
+      queryClient.setQueryData(['project', resolvedProjectId], (old: any) => {
         if (!old?.data) return old;
         return {
           ...old,
@@ -145,13 +167,15 @@ export function useCreateComment(projectId: string) {
 
     // SUCCESS: Replace optimistic comment with real one
     onSuccess: (response) => {
+      if (!resolvedProjectId) return;
+
       // Handle both nested and flat response structures
       const commentData = response?.data?.data || response?.data || null;
       const real = commentData ? transformComment(commentData) : null;
 
       if (real) {
         // Update cache with real comment, removing optimistic placeholder
-        queryClient.setQueryData(['comments', projectId], (old: any) => {
+        queryClient.setQueryData(['comments', resolvedProjectId], (old: any) => {
           if (!old || !Array.isArray(old.data)) return { data: [real] };
 
           // Remove optimistic comment with same content (more reliable than ID matching)
@@ -167,21 +191,23 @@ export function useCreateComment(projectId: string) {
         toast.success('Comment posted!');
       } else {
         // Fallback: if we can't parse the response, refetch to be safe
-        queryClient.invalidateQueries({ queryKey: ['comments', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['comments', resolvedProjectId] });
         toast.success('Comment posted!');
       }
 
       // Invalidate project cache to update comment count
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', resolvedProjectId] });
     },
 
     // ROLLBACK: On error, restore previous state
     onError: (error: any, newComment, context) => {
-      if (context?.previousComments) {
-        queryClient.setQueryData(['comments', projectId], context.previousComments);
-      }
-      if (context?.previousProject) {
-        queryClient.setQueryData(['project', projectId], context.previousProject);
+      if (resolvedProjectId) {
+        if (context?.previousComments) {
+          queryClient.setQueryData(['comments', resolvedProjectId], context.previousComments);
+        }
+        if (context?.previousProject) {
+          queryClient.setQueryData(['project', resolvedProjectId], context.previousProject);
+        }
       }
       toast.error(error.response?.data?.message || 'Failed to post comment');
     },
@@ -195,22 +221,27 @@ export function useCreateComment(projectId: string) {
   });
 }
 
-export function useUpdateComment(commentId: string, projectId: string) {
+export function useUpdateComment(commentId: string, projectId?: string, fallbackProjectId?: string) {
   const queryClient = useQueryClient();
+  const resolvedProjectId = resolveProjectId(projectId, fallbackProjectId);
 
   return useMutation({
     mutationFn: (data: any) => commentsService.update(commentId, data),
 
     // OPTIMISTIC UPDATE: Show edited comment immediately
     onMutate: async (updatedData) => {
+      if (!resolvedProjectId) {
+        return { previousComments: undefined };
+      }
+
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['comments', projectId] });
+      await queryClient.cancelQueries({ queryKey: ['comments', resolvedProjectId] });
 
       // Snapshot previous value for rollback
-      const previousComments = queryClient.getQueryData(['comments', projectId]);
+      const previousComments = queryClient.getQueryData(['comments', resolvedProjectId]);
 
       // Optimistically update the comment
-      queryClient.setQueryData(['comments', projectId], (old: any) => {
+      queryClient.setQueryData(['comments', resolvedProjectId], (old: any) => {
         if (!old?.data) return old;
 
         return {
@@ -233,14 +264,15 @@ export function useUpdateComment(commentId: string, projectId: string) {
 
     // SUCCESS
     onSuccess: () => {
-      // Cache already updated in onMutate, no need to refetch
-      toast.success('Comment updated!');
+      if (resolvedProjectId) {
+        toast.success('Comment updated!');
+      }
     },
 
     // ROLLBACK: On error, restore previous state
     onError: (error: any, updatedData, context) => {
-      if (context?.previousComments) {
-        queryClient.setQueryData(['comments', projectId], context.previousComments);
+      if (resolvedProjectId && context?.previousComments) {
+        queryClient.setQueryData(['comments', resolvedProjectId], context.previousComments);
       }
       toast.error(error.response?.data?.message || 'Failed to update comment');
     },
@@ -252,24 +284,33 @@ export function useUpdateComment(commentId: string, projectId: string) {
   });
 }
 
-export function useDeleteComment(commentId: string, projectId: string) {
+export function useDeleteComment(
+  commentId: string,
+  projectId?: string,
+  fallbackProjectId?: string
+) {
   const queryClient = useQueryClient();
+  const resolvedProjectId = resolveProjectId(projectId, fallbackProjectId);
 
   return useMutation({
     mutationFn: (id?: string) => commentsService.delete(id || commentId),
 
     // OPTIMISTIC UPDATE: Remove comment immediately
     onMutate: async () => {
+      if (!resolvedProjectId) {
+        return { previousComments: undefined, previousProject: undefined };
+      }
+
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['comments', projectId] });
-      await queryClient.cancelQueries({ queryKey: ['project', projectId] });
+      await queryClient.cancelQueries({ queryKey: ['comments', resolvedProjectId] });
+      await queryClient.cancelQueries({ queryKey: ['project', resolvedProjectId] });
 
       // Snapshot previous values for rollback
-      const previousComments = queryClient.getQueryData(['comments', projectId]);
-      const previousProject = queryClient.getQueryData(['project', projectId]);
+      const previousComments = queryClient.getQueryData(['comments', resolvedProjectId]);
+      const previousProject = queryClient.getQueryData(['project', resolvedProjectId]);
 
       // Optimistically remove the comment
-      queryClient.setQueryData(['comments', projectId], (old: any) => {
+      queryClient.setQueryData(['comments', resolvedProjectId], (old: any) => {
         if (!old?.data) return old;
         return {
           ...old,
@@ -278,7 +319,7 @@ export function useDeleteComment(commentId: string, projectId: string) {
       });
 
       // Optimistically decrement comment count
-      queryClient.setQueryData(['project', projectId], (old: any) => {
+      queryClient.setQueryData(['project', resolvedProjectId], (old: any) => {
         if (!old?.data) return old;
         return {
           ...old,
@@ -294,18 +335,21 @@ export function useDeleteComment(commentId: string, projectId: string) {
 
     // SUCCESS
     onSuccess: () => {
-      // Cache already updated in onMutate, no need to refetch
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Comment deleted!');
+      if (resolvedProjectId) {
+        queryClient.invalidateQueries({ queryKey: ['project', resolvedProjectId] });
+        toast.success('Comment deleted!');
+      }
     },
 
     // ROLLBACK: On error, restore previous state
     onError: (error: any, variables, context) => {
-      if (context?.previousComments) {
-        queryClient.setQueryData(['comments', projectId], context.previousComments);
-      }
-      if (context?.previousProject) {
-        queryClient.setQueryData(['project', projectId], context.previousProject);
+      if (resolvedProjectId) {
+        if (context?.previousComments) {
+          queryClient.setQueryData(['comments', resolvedProjectId], context.previousComments);
+        }
+        if (context?.previousProject) {
+          queryClient.setQueryData(['project', resolvedProjectId], context.previousProject);
+        }
       }
       toast.error(error.response?.data?.message || 'Failed to delete comment');
     },
@@ -317,8 +361,9 @@ export function useDeleteComment(commentId: string, projectId: string) {
   });
 }
 
-export function useVoteComment(projectId: string) {
+export function useVoteComment(projectId?: string, fallbackProjectId?: string) {
   const queryClient = useQueryClient();
+  const resolvedProjectId = resolveProjectId(projectId, fallbackProjectId);
 
   return useMutation({
     mutationFn: ({ commentId, voteType }: { commentId: string; voteType: 'up' | 'down' }) =>
@@ -326,14 +371,18 @@ export function useVoteComment(projectId: string) {
 
     // OPTIMISTIC UPDATE: Update vote counts immediately
     onMutate: async ({ commentId, voteType }) => {
+      if (!resolvedProjectId) {
+        return { previousComments: undefined };
+      }
+
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['comments', projectId] });
+      await queryClient.cancelQueries({ queryKey: ['comments', resolvedProjectId] });
 
       // Snapshot previous value for rollback
-      const previousComments = queryClient.getQueryData(['comments', projectId]);
+      const previousComments = queryClient.getQueryData(['comments', resolvedProjectId]);
 
       // Optimistically update the comment's vote count
-      queryClient.setQueryData(['comments', projectId], (old: any) => {
+      queryClient.setQueryData(['comments', resolvedProjectId], (old: any) => {
         if (!old?.data) return old;
 
         return {
@@ -357,13 +406,12 @@ export function useVoteComment(projectId: string) {
     // SUCCESS: Cache already updated in onMutate
     onSuccess: () => {
       // Silent success - no toast to avoid spam
-      // Cache already updated optimistically
     },
 
     // ROLLBACK: On error, restore previous state
     onError: (error: any, variables, context) => {
-      if (context?.previousComments) {
-        queryClient.setQueryData(['comments', projectId], context.previousComments);
+      if (resolvedProjectId && context?.previousComments) {
+        queryClient.setQueryData(['comments', resolvedProjectId], context.previousComments);
       }
       toast.error(error.response?.data?.message || 'Failed to vote on comment');
     },
@@ -374,4 +422,3 @@ export function useVoteComment(projectId: string) {
     },
   });
 }
-
