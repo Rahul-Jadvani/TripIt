@@ -6,6 +6,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 from marshmallow import ValidationError
 from datetime import datetime, timedelta
 import requests
+from urllib.parse import urlencode
 import secrets
 import random
 import os
@@ -22,6 +23,9 @@ auth_bp = Blueprint('auth', __name__)
 
 # In-memory OTP storage (use Redis in production)
 otp_storage = {}
+
+# In-memory OAuth state storage for CSRF protection (use Redis in production)
+oauth_state = {}
 
 
 @auth_bp.route('/register', methods=['POST'])
@@ -201,6 +205,131 @@ def github_connect():
 
     except Exception as e:
         return error_response('Error', str(e), 500)
+
+
+# Google OAuth Routes (Login)
+@auth_bp.route('/google/login', methods=['GET'])
+def google_login():
+    """Initiate Google OAuth flow for user login"""
+    try:
+        state = secrets.token_urlsafe(32)
+        oauth_state[state] = {
+            'expires_at': datetime.utcnow() + timedelta(minutes=5)
+        }
+
+        params = {
+            'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
+            'redirect_uri': current_app.config.get('GOOGLE_REDIRECT_URI'),
+            'response_type': 'code',
+            'scope': 'openid email profile',
+            'state': state,
+            'access_type': 'offline',
+            'prompt': 'consent',
+        }
+
+        google_auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urlencode(params)
+        return redirect(google_auth_url)
+
+    except Exception as e:
+        frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+        return redirect(f"{frontend_url}/login?google_error=init_failed")
+
+
+@auth_bp.route('/google/callback', methods=['GET'])
+def google_callback():
+    """Handle Google OAuth callback"""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+
+        frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+
+        if error:
+            return redirect(f"{frontend_url}/login?google_error={error}")
+
+        if not code or not state:
+            return redirect(f"{frontend_url}/login?google_error=missing_code_or_state")
+
+        # Validate state
+        stored = oauth_state.get(state)
+        if not stored or datetime.utcnow() > stored['expires_at']:
+            return redirect(f"{frontend_url}/login?google_error=invalid_state")
+        # One-time use
+        del oauth_state[state]
+
+        # Exchange code for tokens
+        token_response = requests.post(
+            'https://oauth2.googleapis.com/token',
+            data={
+                'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
+                'client_secret': current_app.config.get('GOOGLE_CLIENT_SECRET'),
+                'code': code,
+                'grant_type': 'authorization_code',
+                'redirect_uri': current_app.config.get('GOOGLE_REDIRECT_URI'),
+            },
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+        )
+
+        token_data = token_response.json()
+        access_token = token_data.get('access_token')
+
+        if not access_token:
+            err = token_data.get('error', 'token_failed')
+            return redirect(f"{frontend_url}/login?google_error={err}")
+
+        # Get user info
+        userinfo_resp = requests.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+        profile = userinfo_resp.json()
+
+        email = (profile.get('email') or '').lower()
+        email_verified = profile.get('email_verified', True)
+        name = profile.get('name') or ''
+        picture = profile.get('picture')
+
+        if not email:
+            return redirect(f"{frontend_url}/login?google_error=no_email")
+
+        # Find or create user
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # Generate a username from email
+            base_username = email.split('@')[0][:20] or 'user'
+            candidate = base_username
+            suffix = 1
+            while User.query.filter_by(username=candidate).first() is not None:
+                suffix += 1
+                candidate = f"{base_username}{suffix}"
+
+            user = User(
+                email=email,
+                username=candidate,
+                display_name=name or candidate,
+                avatar_url=picture,
+                email_verified=bool(email_verified)
+            )
+            # Set random password to satisfy non-null constraint
+            user.set_password(secrets.token_urlsafe(32))
+            db.session.add(user)
+            db.session.commit()
+
+        if not user.is_active:
+            return redirect(f"{frontend_url}/login?google_error=account_disabled")
+
+        # Issue JWT tokens
+        access = create_access_token(identity=user.id)
+        refresh = create_refresh_token(identity=user.id)
+
+        # Redirect to frontend callback to store tokens
+        return redirect(f"{frontend_url}/auth/callback?provider=google&access={access}&refresh={refresh}")
+
+    except Exception as e:
+        db.session.rollback()
+        frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+        return redirect(f"{frontend_url}/login?google_error=callback_failed")
 
 
 @auth_bp.route('/github/callback', methods=['GET'])

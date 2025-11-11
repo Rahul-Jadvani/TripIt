@@ -81,9 +81,9 @@ def get_project_updates(project_id):
         if not project:
             return jsonify({'status': 'error', 'message': 'Project not found'}), 404
 
-        # OPTIMIZED: Get updates with pagination, eager load user
+        # OPTIMIZED: Get updates with pagination, eager load creator
         query = ProjectUpdate.query.filter_by(project_id=project_id)\
-            .options(joinedload(ProjectUpdate.user))
+            .options(joinedload(ProjectUpdate.creator))
 
         total = query.count()
         updates = query.order_by(ProjectUpdate.created_at.desc())\

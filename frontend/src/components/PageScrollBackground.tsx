@@ -1,12 +1,18 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
+/**
+ * Page Scroll Background Component - CSS-only version
+ *
+ * Renders animated gradient blobs using CSS instead of framer-motion
+ * - No JavaScript animation runtime
+ * - Respects prefers-reduced-motion
+ * - Saves ~40KB framer-motion bundle size
+ * - Fixed positioning to stay behind content
+ * - z-index: 0 to stay behind all content
+ */
 const PageScrollBackground = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll();
-
   // Respect user's reduced-motion preference
   const [reducedMotion, setReducedMotion] = useState(false);
   useEffect(() => {
@@ -16,67 +22,71 @@ const PageScrollBackground = () => {
     } catch {}
   }, []);
 
-  // Subtle parallax transforms (GPU-friendly: translate only)
-  const ySlow = useTransform(scrollYProgress, [0, 1], [0, 60]);
-  const xSlow = useTransform(scrollYProgress, [0, 1], [0, 30]);
-  const yFast = useTransform(scrollYProgress, [0, 1], [0, -40]);
-  const xFast = useTransform(scrollYProgress, [0, 1], [0, -20]);
+  // Skip animation entirely if reduced motion is preferred
+  if (reducedMotion) {
+    return (
+      <div
+        aria-hidden
+        className="fixed inset-0 pointer-events-none overflow-hidden"
+        style={{ zIndex: 0 }}
+      >
+        {/* Vignette overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background" />
 
-  // Static fallback values when reduced motion is enabled
-  const staticTransform = useMemo(() => ({ x: 0, y: 0 }), []);
+        {/* Static blobs */}
+        <div className="absolute -top-[10%] -left-[10%] h-[45vw] w-[45vw] rounded-full bg-primary/15 blur-3xl" />
+        <div className="absolute -bottom-[15%] -right-[5%] h-[40vw] w-[40vw] rounded-full bg-accent/20 blur-3xl" />
+        <div className="absolute top-[20%] right-[20%] h-[28vw] w-[28vw] rounded-full bg-primary/10 blur-3xl" />
+      </div>
+    );
+  }
 
   return (
     <div
-      ref={containerRef}
       aria-hidden
       className="fixed inset-0 pointer-events-none overflow-hidden"
       style={{ zIndex: 0 }}
     >
-      {/* Subtle vignette to improve contrast */}
+      {/* Vignette to improve contrast */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background" />
 
-      {/* Blurred color blobs moving slightly with scroll */}
-      {/* Top-left blob */}
-      {reducedMotion ? (
-        <div className="absolute -top-[10%] -left-[10%] h-[45vw] w-[45vw] rounded-full bg-primary/15 blur-3xl" />
-      ) : (
-        <motion.div
-          className="absolute -top-[10%] -left-[10%] h-[45vw] w-[45vw] rounded-full bg-primary/15 blur-3xl will-change-transform"
-          style={{ x: xSlow, y: ySlow }}
-        />
-      )}
+      {/* Animated blobs using CSS keyframes */}
+      <style>{`
+        @keyframes float-slow {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(10px, 20px); }
+          50% { transform: translate(5px, 40px); }
+          75% { transform: translate(-10px, 20px); }
+        }
 
-      {/* Bottom-right blob */}
-      {reducedMotion ? (
-        <div className="absolute -bottom-[15%] -right-[5%] h-[40vw] w-[40vw] rounded-full bg-accent/20 blur-3xl" />
-      ) : (
-        <motion.div
-          className="absolute -bottom-[15%] -right-[5%] h-[40vw] w-[40vw] rounded-full bg-accent/20 blur-3xl will-change-transform"
-          style={{ x: xFast, y: yFast }}
-        />
-      )}
+        @keyframes float-fast {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-15px, -30px); }
+          50% { transform: translate(-20px, -50px); }
+          75% { transform: translate(-10px, -30px); }
+        }
 
-      {/* Mid-right subtle glow */}
-      {reducedMotion ? (
-        <div className="absolute top-[20%] right-[20%] h-[28vw] w-[28vw] rounded-full bg-primary/10 blur-3xl" />
-      ) : (
-        <motion.div
-          className="absolute top-[20%] right-[20%] h-[28vw] w-[28vw] rounded-full bg-primary/10 blur-3xl will-change-transform"
-          style={{ x: xSlow, y: yFast }}
-        />
-      )}
+        .blob-slow {
+          animation: float-slow 20s ease-in-out infinite;
+          will-change: transform;
+        }
+
+        .blob-fast {
+          animation: float-fast 15s ease-in-out infinite;
+          will-change: transform;
+        }
+      `}</style>
+
+      {/* Top-left blob - slow animation */}
+      <div className="blob-slow absolute -top-[10%] -left-[10%] h-[45vw] w-[45vw] rounded-full bg-primary/15 blur-3xl" />
+
+      {/* Bottom-right blob - fast animation */}
+      <div className="blob-fast absolute -bottom-[15%] -right-[5%] h-[40vw] w-[40vw] rounded-full bg-accent/20 blur-3xl" />
+
+      {/* Mid-right blob - slow animation */}
+      <div className="blob-slow absolute top-[20%] right-[20%] h-[28vw] w-[28vw] rounded-full bg-primary/10 blur-3xl" />
     </div>
   );
 };
 
 export { PageScrollBackground };
-
-/**
- * Page Scroll Background Component
- *
- * Renders an animated SVG stroke that follows page scroll progress.
- * - Fixed positioning to stay in viewport
- * - Tracks page scroll with useScroll
- * - z-index: 0 to stay behind all content
- * - Based on InteractiveScrollBackground design
- */

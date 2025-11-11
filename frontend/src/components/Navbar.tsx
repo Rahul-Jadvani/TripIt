@@ -176,6 +176,16 @@ export const Navbar = memo(function Navbar() {
                 {/* Notifications */}
                 <NotificationBell />
 
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-label="Toggle mobile menu"
+                  aria-expanded={mobileMenuOpen}
+                  className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
+
                 {/* User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -287,6 +297,12 @@ export const Navbar = memo(function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="my-2" />
+                    {/* Wallet Connection in Mobile/Tablet */}
+                    <DropdownMenuItem asChild>
+                      <div className="lg:hidden cursor-pointer px-2 py-2">
+                        <ConnectWallet />
+                      </div>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive flex items-center gap-2 font-medium">
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>
@@ -294,6 +310,82 @@ export const Navbar = memo(function Navbar() {
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* Mobile Navigation Drawer */}
+                {mobileMenuOpen && (
+                  <div className="absolute top-16 left-0 right-0 md:hidden bg-background border-b-4 border-black shadow-lg z-40">
+                    <nav className="flex flex-col p-4 gap-2">
+                      <Link
+                        to="/"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          prefetchRoute('/');
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Feed</span>
+                      </Link>
+                      <Link
+                        to="/leaderboard"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          prefetchRoute('/leaderboard');
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
+                      >
+                        <Trophy className="h-4 w-4" />
+                        <span>Leaderboard</span>
+                      </Link>
+                      <Link
+                        to="/chains"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          prefetchRoute('/chains');
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
+                      >
+                        <Link2 className="h-4 w-4" />
+                        <span>Chains</span>
+                      </Link>
+                      {user && (
+                        <Link
+                          to="/investor-directory"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            prefetchRoute('/investor-directory');
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
+                        >
+                          <Building2 className="h-4 w-4" />
+                          <span>Investors</span>
+                        </Link>
+                      )}
+                      <Link
+                        to="/search"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          prefetchRoute('/search');
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
+                      >
+                        <Search className="h-4 w-4" />
+                        <span>Search</span>
+                      </Link>
+                      <Link
+                        to="/publish"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          prefetchRoute('/publish');
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold btn-primary transition-quick"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Publish</span>
+                      </Link>
+                    </nav>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex items-center gap-2">

@@ -77,7 +77,10 @@ export default function NotificationsPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'unread')}>
+      <Tabs value={filter} onValueChange={(v) => {
+        setFilter(v as 'all' | 'unread');
+        setPage(1); // Reset pagination on filter change
+      }}>
         <TabsList>
           <TabsTrigger value="all">
             All Notifications
@@ -108,6 +111,11 @@ export default function NotificationsPage() {
                     ? "You're all caught up!"
                     : "You'll be notified about activity on your chains and projects"}
                 </p>
+                {filter === 'unread' && data && (
+                  <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                    Total notifications: {data.total || 0}
+                  </p>
+                )}
               </div>
             </Card>
           ) : (

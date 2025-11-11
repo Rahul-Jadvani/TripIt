@@ -72,14 +72,57 @@ export default function DirectMessages() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const otherUserTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageCountRef = useRef(0);
   const shouldScrollRef = useRef(true);
 
   // Initialize Socket.IO listeners for real-time message updates
-  useRealTimeUpdates();
+  const socket = useRealTimeUpdates();
+
+  // Listen for typing indicators from other user
+  useEffect(() => {
+    if (!socket || !selectedUser) return;
+
+    const handleUserTyping = (data: any) => {
+      if (data.sender_id === selectedUser.id) {
+        setOtherUserTyping(true);
+
+        // Clear existing timeout
+        if (otherUserTypingTimeoutRef.current) {
+          clearTimeout(otherUserTypingTimeoutRef.current);
+        }
+
+        // Stop showing typing indicator after 3 seconds of inactivity
+        otherUserTypingTimeoutRef.current = window.setTimeout(() => {
+          setOtherUserTyping(false);
+        }, 3000);
+      }
+    };
+
+    const handleUserStoppedTyping = (data: any) => {
+      if (data.sender_id === selectedUser.id) {
+        setOtherUserTyping(false);
+        if (otherUserTypingTimeoutRef.current) {
+          clearTimeout(otherUserTypingTimeoutRef.current);
+        }
+      }
+    };
+
+    socket.on('user:typing', handleUserTyping);
+    socket.on('user:stopped_typing', handleUserStoppedTyping);
+
+    return () => {
+      socket.off('user:typing', handleUserTyping);
+      socket.off('user:stopped_typing', handleUserStoppedTyping);
+      if (otherUserTypingTimeoutRef.current) {
+        clearTimeout(otherUserTypingTimeoutRef.current);
+      }
+    };
+  }, [socket, selectedUser]);
 
   // React Query hooks
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
@@ -126,11 +169,17 @@ export default function DirectMessages() {
     }
   }, [messages, user?.id]);
 
-  // Handle typing indicator
+  // Handle typing indicator - emit to socket and track locally
   const handleTyping = () => {
+    if (!socket || !selectedUser) return;
+
     if (!isTyping) {
       setIsTyping(true);
-      // TODO: Emit socket event 'user:typing'
+      // Emit typing event to recipient
+      socket.emit('user:typing', {
+        recipient_id: selectedUser.id,
+        sender_id: user?.id,
+      });
     }
 
     // Clear existing timeout
@@ -138,10 +187,14 @@ export default function DirectMessages() {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set new timeout to stop typing after 2 seconds
-    typingTimeoutRef.current = setTimeout(() => {
+    // Set new timeout to stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = window.setTimeout(() => {
       setIsTyping(false);
-      // TODO: Emit socket event 'user:stopped_typing'
+      // Emit stopped typing event to recipient
+      socket.emit('user:stopped_typing', {
+        recipient_id: selectedUser.id,
+        sender_id: user?.id,
+      });
     }, 2000);
   };
 
@@ -404,8 +457,8 @@ export default function DirectMessages() {
                           </div>
                         );
                       })}
-                      {/* Typing indicator placeholder */}
-                      {/* {isTyping && <TypingIndicator />} */}
+                      {/* Typing indicator - show when other user is typing */}
+                      {otherUserTyping && <TypingIndicator />}
                       <div ref={messagesEndRef} />
                     </>
                   )}

@@ -84,28 +84,28 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <button className="btn-primary gap-2 inline-flex items-center w-full group hover:scale-[1.02] transition-transform">
-          <Send className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-          <span className="font-bold">Request Intro</span>
+        <button className="btn-primary gap-2 inline-flex items-center w-full group hover:scale-[1.02] transition-transform text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5">
+          <Send className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 group-hover:rotate-12 transition-transform" />
+          <span className="font-bold truncate">Request Intro</span>
         </button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] sm:w-full max-w-[95vw] sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-black flex items-center gap-2">
-            <div className="h-10 w-10 rounded-[12px] bg-primary/20 flex items-center justify-center border-2 border-primary">
-              <Send className="h-5 w-5 text-primary" />
+          <DialogTitle className="text-xl sm:text-2xl font-black flex items-center gap-2">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-[12px] bg-primary/20 flex items-center justify-center border-2 border-primary flex-shrink-0">
+              <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            Request Introduction
+            <span className="truncate">Request Intro</span>
           </DialogTitle>
-          <DialogDescription className="text-base">
+          <DialogDescription className="text-xs sm:text-base">
             Introduce yourself and let the builder know why you'd like to connect
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 pt-4">
-          <div className="space-y-3">
-            <Label htmlFor="message" className="text-sm font-bold flex items-center justify-between">
+        <div className="space-y-4 sm:space-y-6 pt-2 sm:pt-4 max-h-[70vh] overflow-y-auto">
+          <div className="space-y-2 sm:space-y-3">
+            <Label htmlFor="message" className="text-xs sm:text-sm font-bold flex items-center justify-between">
               <span>Your Message</span>
               <span className={`text-xs font-semibold transition-colors ${message.length >= 10 && message.length <= 1000 ? 'text-primary' : 'text-muted-foreground'}`}>
                 {message.length}/1000
@@ -116,8 +116,8 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
               placeholder="Hi! I'm interested in learning more about your project. I think there might be some interesting opportunities to collaborate..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              rows={5}
-              className="resize-none border-2 focus:border-primary"
+              rows={4}
+              className="resize-none border-2 focus:border-primary text-sm"
             />
             {message.trim().length > 0 && message.trim().length < 10 && (
               <p className="text-xs text-red-600 font-medium">
@@ -126,19 +126,19 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
             )}
           </div>
 
-          <div className="bg-secondary/50 rounded-[12px] p-4 border-2 border-border">
+          <div className="bg-secondary/50 rounded-[12px] p-3 sm:p-4 border-2 border-border">
             <p className="text-xs text-muted-foreground leading-relaxed">
               <strong className="text-foreground">Tip:</strong> Great intro requests are specific about your interest,
               mention what caught your attention, and suggest how you might add value.
             </p>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-2 sm:gap-3 pt-2">
             <Button
               variant="outline"
               onClick={() => setIsOpen(false)}
               disabled={loading}
-              className="flex-1 font-bold"
+              className="flex-1 font-bold text-xs sm:text-sm h-9 sm:h-10"
             >
               Cancel
             </Button>
@@ -149,17 +149,17 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
                 message.trim().length < 10 ||
                 message.length > 1000
               }
-              className="flex-1 btn-primary font-bold gap-2"
+              className="flex-1 btn-primary font-bold gap-2 text-xs sm:text-sm h-9 sm:h-10"
             >
               {loading ? (
                 <>
                   <span className="animate-pulse">Sending</span>
-                  <span className="animate-pulse">...</span>
+                  <span className="animate-pulse text-xs">.</span>
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4" />
-                  Send Request
+                  <Send className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="truncate">Send</span>
                 </>
               )}
             </Button>

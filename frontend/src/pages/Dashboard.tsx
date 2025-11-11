@@ -14,15 +14,15 @@ export default function Dashboard() {
 
   return (
     <div className="bg-background min-h-screen overflow-hidden">
-      <div className="container mx-auto px-6 py-12 overflow-hidden">
+      <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-12 overflow-hidden">
         <div className="mx-auto max-w-6xl w-full box-border">
           {/* Header */}
           {isLoading ? (
             <DashboardHeaderSkeleton />
           ) : (
-            <div className="mb-10 card-elevated p-8">
-              <h1 className="text-4xl font-black text-foreground mb-2">Welcome back, {user?.username}!</h1>
-              <p className="text-base text-muted-foreground">
+            <div className="mb-8 sm:mb-10 card-elevated p-4 sm:p-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground mb-2">Welcome back, {user?.username}!</h1>
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
                 Here's what's happening with your projects
               </p>
             </div>
@@ -42,60 +42,60 @@ export default function Dashboard() {
 
           {/* Stats Grid */}
           {!isLoading && !error && stats && (
-            <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5 w-full box-border overflow-hidden">
+            <div className="mb-8 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 w-full box-border overflow-hidden">
               {/* Total Projects */}
-              <div className="card-elevated p-6">
+              <div className="card-elevated p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-sm font-bold text-muted-foreground mb-1">Total Projects</p>
-                    <p className="text-3xl font-black text-foreground">{stats.totalProjects}</p>
+                    <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Total Projects</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalProjects}</p>
                   </div>
-                  <div className="badge-primary flex items-center justify-center h-10 w-10 rounded-[10px]">
-                    <Rocket className="h-5 w-5 text-foreground" />
+                  <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
+                    <Rocket className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
                   </div>
                 </div>
                 <Link to="/my-projects" className="text-xs text-primary hover:underline font-bold">
-                  View all projects →
+                  View all →
                 </Link>
               </div>
 
               {/* Total Votes */}
-              <div className="card-elevated p-6">
+              <div className="card-elevated p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-sm font-bold text-muted-foreground mb-1">Total Upvotes</p>
-                    <p className="text-3xl font-black text-foreground">{stats.totalVotes}</p>
+                    <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Total Upvotes</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalVotes}</p>
                   </div>
-                  <div className="badge-primary flex items-center justify-center h-10 w-10 rounded-[10px]">
-                    <ThumbsUp className="h-5 w-5 text-foreground" />
+                  <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
+                    <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Across all projects</p>
+                <p className="text-xs text-muted-foreground">All projects</p>
               </div>
 
               {/* Comments */}
-              <div className="card-elevated p-6">
+              <div className="card-elevated p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-sm font-bold text-muted-foreground mb-1">Total Comments</p>
-                    <p className="text-3xl font-black text-foreground">{stats.totalComments}</p>
+                    <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Total Comments</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalComments}</p>
                   </div>
-                  <div className="badge-primary flex items-center justify-center h-10 w-10 rounded-[10px]">
-                    <MessageSquare className="h-5 w-5 text-foreground" />
+                  <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
+                    <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Community engagement</p>
+                <p className="text-xs text-muted-foreground">Community</p>
               </div>
 
               {/* Intro Requests */}
-              <div className="card-elevated p-6">
+              <div className="card-elevated p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-sm font-bold text-muted-foreground mb-1">Intro Requests</p>
-                    <p className="text-3xl font-black text-foreground">{stats.introRequests}</p>
+                    <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Intros</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.introRequests}</p>
                   </div>
-                  <div className="badge-primary flex items-center justify-center h-10 w-10 rounded-[10px]">
-                    <Users className="h-5 w-5 text-foreground" />
+                  <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
                   </div>
                 </div>
                 <Link to="/intros" className="text-xs text-primary hover:underline font-bold">
@@ -104,20 +104,20 @@ export default function Dashboard() {
               </div>
 
               {/* Saved Projects */}
-              <div className="card-elevated p-6">
+              <div className="card-elevated p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-sm font-bold text-muted-foreground mb-1">Saved Projects</p>
-                    <p className="text-3xl font-black text-foreground">
+                    <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Saved</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">
                       {savedProjectsData?.pagination?.total || 0}
                     </p>
                   </div>
-                  <div className="badge-primary flex items-center justify-center h-10 w-10 rounded-[10px]">
-                    <Bookmark className="h-5 w-5 text-foreground" />
+                  <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
+                    <Bookmark className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
                   </div>
                 </div>
                 <Link to="/dashboard#saved" className="text-xs text-primary hover:underline font-bold">
-                  View saved projects →
+                  View saved →
                 </Link>
               </div>
             </div>
@@ -125,13 +125,13 @@ export default function Dashboard() {
 
           {/* Main Content Grid */}
           {!isLoading && !error && stats && (
-            <div className="grid gap-6 lg:grid-cols-2 w-full box-border overflow-hidden">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 w-full box-border overflow-hidden">
               {/* Quick Actions */}
-              <div className="card-elevated p-6">
-                <h2 className="text-2xl font-black mb-4 text-foreground border-b-4 border-primary pb-3">
+              <div className="card-elevated p-4 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-black mb-4 text-foreground border-b-4 border-primary pb-3">
                   Quick Actions
                 </h2>
-                <p className="text-sm text-muted-foreground mb-6">What would you like to do today?</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">What would you like to do today?</p>
 
                 <div className="space-y-3">
                   <Link to="/publish" className="btn-primary w-full inline-flex items-center justify-start gap-3 px-4 py-3">
@@ -154,11 +154,11 @@ export default function Dashboard() {
               </div>
 
               {/* Recent Activity */}
-              <div className="card-elevated p-6">
-                <h2 className="text-2xl font-black mb-4 text-foreground border-b-4 border-primary pb-3">
+              <div className="card-elevated p-4 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-black mb-4 text-foreground border-b-4 border-primary pb-3">
                   Recent Projects
                 </h2>
-                <p className="text-sm text-muted-foreground mb-6">Your latest published projects</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">Your latest published projects</p>
 
                 {stats.projects && stats.projects.length > 0 ? (
                   <div className="space-y-6">

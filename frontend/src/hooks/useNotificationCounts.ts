@@ -9,7 +9,11 @@ import { useRealTimeUpdates } from './useRealTimeUpdates';
 export function useNotificationCounts() {
   const queryClient = useQueryClient();
 
-  // Get unread messages count
+  // Initialize socket listeners for real-time updates
+  // Socket events (message:received, intro:received) automatically invalidate these queries
+  useRealTimeUpdates();
+
+  // Get unread messages count - cached from socket events, only fallback to fetch if stale
   const { data: messagesData = { unread_count: 0 } } = useQuery({
     queryKey: ['messages', 'count'],
     queryFn: async () => {
@@ -28,14 +32,14 @@ export function useNotificationCounts() {
       }
       return { unread_count: 0 };
     },
-    staleTime: 0, // Always refetch - counts change frequently
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes - socket events keep it fresh
     gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    refetchInterval: 1000 * 30, // Refetch every 30 seconds as fallback
+    // NO refetchInterval - socket events trigger invalidation instead
   });
 
-  // Get pending intro requests count
+  // Get pending intro requests count - cached from socket events, only fallback to fetch if stale
   const { data: introsData = { pending_count: 0 } } = useQuery({
     queryKey: ['intro-requests', 'count'],
     queryFn: async () => {
@@ -54,26 +58,12 @@ export function useNotificationCounts() {
       }
       return { pending_count: 0 };
     },
-    staleTime: 0, // Always refetch - counts change frequently
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes - socket events keep it fresh
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    refetchInterval: 1000 * 30, // Refetch every 30 seconds as fallback
+    // NO refetchInterval - socket events trigger invalidation instead
   });
-
-  // Initialize socket listeners for real-time updates
-  useRealTimeUpdates();
-
-  // Refetch counts when socket events fire
-  useEffect(() => {
-    // Refetch both counts to ensure they're always up to date
-    const interval = setInterval(() => {
-      queryClient.refetchQueries({ queryKey: ['messages', 'count'] });
-      queryClient.refetchQueries({ queryKey: ['intro-requests', 'count'] });
-    }, 5000); // Refetch every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [queryClient]);
 
   return {
     unreadMessagesCount: messagesData?.unread_count || 0,

@@ -1,6 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { NotificationCenterHost } from "@/components/NotificationCenter";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -15,12 +13,14 @@ import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
 import { Suspense, lazy } from "react";
 import { CoffeeLoader } from "./components/CoffeeLoader";
 import { FirstOpenLoader } from "./components/FirstOpenLoader";
+import { NetworkGuard } from "./components/NetworkGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Pages (lazy-loaded)
 const Feed = lazy(() => import("./pages/Feed"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
 const Search = lazy(() => import("./pages/Search"));
@@ -43,6 +43,7 @@ const Investors = lazy(() => import("./pages/Investors"));
 const DirectMessages = lazy(() => import("./pages/DirectMessages"));
 const GalleryView = lazy(() => import("./pages/GalleryView"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const NetworkIssue = lazy(() => import("./pages/NetworkIssue"));
 const ChainsListPage = lazy(() => import("./pages/ChainsListPage"));
 const ChainDetailPage = lazy(() => import("./pages/ChainDetailPage"));
 const ChainAnalytics = lazy(() => import("./pages/ChainAnalytics"));
@@ -95,10 +96,9 @@ const App = () => (
           <PageScrollBackground />
           <FirstOpenLoader />
           <TooltipProvider>
-            <Toaster />
             <Sonner />
-            <NotificationCenterHost />
             <BrowserRouter>
+              <NetworkGuard />
               <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center"><CoffeeLoader message="Warming up modules…" /></div>}>
               <ErrorBoundary>
               <Routes>
@@ -110,7 +110,9 @@ const App = () => (
               {/* Helpful redirects */}
               <Route path="/investor" element={<Navigate to="/investor-directory" replace />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/offline" element={<NetworkIssue />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/u/:username" element={<UserProfile />} />
               <Route path="/search" element={<Search />} />

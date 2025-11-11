@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 // Socket.IO instance (singleton)
 let socket: Socket | null = null;
+let subscriberCount = 0; // Track number of components using this hook
 let listenersAttached = false; // prevent duplicate listener registration across mounts/HMR
 
 /**
@@ -62,6 +63,9 @@ export function useRealTimeUpdates() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    // Increment subscriber count for this component
+    subscriberCount++;
+
     // Get backend URL from environment or use default
     const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -93,7 +97,7 @@ export function useRealTimeUpdates() {
         });
       }
     }
-    // Attach listeners once
+    // Attach listeners once (when first subscriber joins)
     if (!listenersAttached && socket) {
       listenersAttached = true;
 
@@ -333,7 +337,11 @@ export function useRealTimeUpdates() {
 
     // Cleanup on unmount
     return () => {
-      if (socket && listenersAttached) {
+      // Decrement subscriber count
+      subscriberCount--;
+
+      // Only remove listeners when last subscriber unmounts
+      if (socket && listenersAttached && subscriberCount === 0) {
         // Remove all listeners added by this hook
         socket.off('project:created');
         socket.off('project:updated');

@@ -177,47 +177,47 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        <div className="mx-auto max-w-5xl w-full box-border">
+        <div className="mx-auto max-w-5xl w-full box-border px-3 sm:px-6">
           {/* Hero Header Section */}
-          <div className="mb-8 card-elevated p-6">
-            <div className="flex items-start justify-between gap-6 mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
+          <div className="mb-6 sm:mb-8 card-elevated p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6 mb-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
                   {project.isFeatured && (
-                    <span className="badge-primary text-xs">⭐ Featured</span>
+                    <span className="badge-primary text-xs px-2 py-1">⭐ Featured</span>
                   )}
                 </div>
-                <h1 className="text-3xl font-black text-foreground mb-2">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground mb-2 break-words">
                   {project.title}
                 </h1>
-                <p className="text-base text-muted-foreground mb-4 leading-relaxed">
+                <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mb-3 sm:mb-4 leading-relaxed">
                   {project.tagline}
                 </p>
               </div>
 
               {/* Score Badge */}
-              <div className="badge-primary flex flex-col items-center justify-center px-6 py-4 rounded-[15px] flex-shrink-0">
-                <div className="text-3xl font-black text-black">{project.proofScore?.total || 0}</div>
-                <div className="text-xs font-bold text-black">Score</div>
+              <div className="badge-primary flex flex-col items-center justify-center px-4 sm:px-6 py-3 sm:py-4 rounded-[15px] flex-shrink-0 whitespace-nowrap">
+                <div className="text-xl sm:text-2xl lg:text-3xl font-black text-black">{project.proofScore?.total || 0}</div>
+                <div className="text-xs font-bold text-black mt-1">Score</div>
               </div>
             </div>
 
             {/* Vote Section */}
-            <div className="border-t-4 border-black pt-4 mb-4">
-              <div className="flex items-center gap-4">
+            <div className="border-t-4 border-black pt-3 sm:pt-4 mb-3 sm:mb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 <VoteButtons
                   projectId={project.id}
                   voteCount={project.voteCount}
                   userVote={project.userVote as 'up' | 'down' | null}
                 />
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   Vote to show your support for this project
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {project.demoUrl && (
                 <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="btn-primary">
                   <ExternalLink className="mr-2 h-5 w-5 inline" />

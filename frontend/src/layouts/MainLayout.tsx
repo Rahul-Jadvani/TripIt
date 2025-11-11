@@ -63,10 +63,28 @@ export function MainLayout() {
 
 function FooterMascot() {
   const [useGif, setUseGif] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  // Check user's motion preference on mount
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   const containerClass = "pointer-events-none select-none absolute top-0 right-2 sm:right-4 -translate-y-[85%] w-28 sm:w-40 md:w-56 lg:w-64 z-40 drop-shadow-[3px_4px_0_rgba(0,0,0,0.6)]";
 
   // If video fails to load on device, fall back to GIF
   const handleVideoError = () => setUseGif(true);
+
+  // If user prefers reduced motion, don't autoplay
+  const shouldAutoPlay = !prefersReducedMotion;
 
   return (
     <div className={containerClass}>
@@ -74,11 +92,11 @@ function FooterMascot() {
         <video
           key="footer-video"
           className="block w-full h-auto"
-          autoPlay
+          autoPlay={shouldAutoPlay}
           loop
           muted
           playsInline
-          preload="auto"
+          preload="none"
           poster="/assets/leaderboard.png"
           onError={handleVideoError}
         >
@@ -86,11 +104,12 @@ function FooterMascot() {
           <source src="/assets/Untitleddesign2-ezgif.com-gif-maker.mp4" type="video/mp4" />
         </video>
       ) : (
-        // GIF fallback (may show a tiny restart gap on some browsers)
+        // Static fallback image for users with motion sensitivity
         <img
           src="/assets/Untitleddesign2-ezgif.com-gif-maker.gif"
           alt="footer character"
           className="block w-full h-auto"
+          loading="lazy"
         />
       )}
     </div>

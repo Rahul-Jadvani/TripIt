@@ -1,0 +1,145 @@
+/* Notification Center Styles - Scoped to NotificationCenter component */
+
+.notificationContainer {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  max-width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style-type: none;
+  color: black;
+}
+
+.notificationItem {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  padding: 10px 12px;
+  border-radius: 10px;
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 8px 0px;
+  background-color: #f3f3f3;
+  transition: all 250ms ease;
+  border: 3px solid black;
+  --grid-color: rgba(225, 225, 225, 0.7);
+  background-image: linear-gradient(
+      0deg,
+      transparent 23%,
+      var(--grid-color) 24%,
+      var(--grid-color) 25%,
+      transparent 26%,
+      transparent 73%,
+      var(--grid-color) 74%,
+      var(--grid-color) 75%,
+      transparent 76%,
+      transparent
+    ),
+    linear-gradient(
+      90deg,
+      transparent 23%,
+      var(--grid-color) 24%,
+      var(--grid-color) 25%,
+      transparent 26%,
+      transparent 73%,
+      var(--grid-color) 74%,
+      var(--grid-color) 75%,
+      transparent 76%,
+      transparent
+    );
+  background-size: 55px 55px;
+}
+
+.notificationItem:hover {
+  transform: translateY(-1px);
+}
+
+.notificationItem:active {
+  transform: translateY(-2px);
+}
+
+.notificationClose {
+  padding: 2px;
+  border-radius: 6px;
+  transition: all 250ms;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.notificationClose:hover {
+  background-color: rgba(204, 204, 204, 0.45);
+}
+
+.notificationClose:hover svg {
+  color: rgb(0, 0, 0);
+}
+
+.notificationIcon {
+  display: flex;
+  align-items: center;
+}
+
+.notificationContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notificationText {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.notificationProgressBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: currentColor;
+  width: 100%;
+  animation: progressBar 4s linear forwards;
+}
+
+.success {
+  color: #047857;
+  background-color: #7dffbc;
+  --grid-color: rgba(16, 185, 129, 0.25);
+}
+
+.info {
+  color: #1e3a8a;
+  background-color: #7eb8ff;
+  --grid-color: rgba(59, 131, 246, 0.25);
+}
+
+.warning {
+  color: #78350f;
+  background-color: #ffe57e;
+  --grid-color: rgba(245, 159, 11, 0.25);
+}
+
+.error {
+  color: #7f1d1d;
+  background-color: #ff7e7e;
+  --grid-color: rgba(239, 68, 68, 0.25);
+}
+
+@keyframes progressBar {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.notificationItem svg {
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}

@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '@/services/api';
 
-export function useUserStats() {
+export function useUserStats(enabled: boolean = true) {
   return useQuery({
     queryKey: ['userStats'],
     queryFn: async () => {
       const response = await api.get('/users/stats');
       return response.data;
     },
+    enabled: enabled, // Gate requests for unauthenticated users
     staleTime: 1000 * 60 * 2, // Stats fresh for 2 minutes
     gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
     refetchInterval: 1000 * 60, // Auto-refresh every 60 seconds
@@ -17,8 +18,8 @@ export function useUserStats() {
   });
 }
 
-export function useDashboardStats() {
-  const { data: userStats, isLoading: statsLoading } = useUserStats();
+export function useDashboardStats(enabled: boolean = true) {
+  const { data: userStats, isLoading: statsLoading } = useUserStats(enabled);
 
   return useQuery({
     queryKey: ['dashboardStats', userStats?.data?.user_id],

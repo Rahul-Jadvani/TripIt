@@ -214,12 +214,16 @@ export function usePrefetch() {
         const effectiveType: string | undefined = connection?.effectiveType; // 'slow-2g' | '2g' | '3g' | '4g'
         const isFastNetwork = !saveData && (!effectiveType || effectiveType === '4g');
 
-        const scheduleIdle = (cb: () => void) => {
+        const scheduleIdle = (cb: () => void, priority: 'high' | 'normal' = 'normal') => {
           const win: any = typeof window !== 'undefined' ? window : undefined;
           if (win && typeof win.requestIdleCallback === 'function') {
-            win.requestIdleCallback(cb, { timeout: 2000 });
+            // Higher priority work gets shorter timeout
+            const timeout = priority === 'high' ? 2000 : 4000;
+            win.requestIdleCallback(cb, { timeout });
           } else {
-            setTimeout(cb, 0);
+            // Fallback: schedule with setTimeout
+            const delay = priority === 'high' ? 0 : 1000;
+            setTimeout(cb, delay);
           }
         };
 
@@ -229,16 +233,31 @@ export function usePrefetch() {
         ]);
 
         if (isFastNetwork) {
+          // Stage 1 (high priority): Feed pagination + user data (if authenticated)
+          scheduleIdle(() => {
+            Promise.allSettled([
+              ...feedDeferred.map((fn) => fn()),
+              ...userDataPromises, // Only fires if token exists
+            ]).catch(() => {});
+          }, 'high');
+
+          // Stage 2 (normal priority): Public directory data + leaderboards
           scheduleIdle(() => {
             Promise.allSettled([
               ...leaderboardPromises,
               ...chainsPromises,
               ...investorsPromises,
-              ...feedDeferred.map((fn) => fn()),
-              ...userDataPromises,
-              ...adminPanelPromises,
             ]).catch(() => {});
-          });
+          }, 'normal');
+
+          // Stage 3 (deferred): Admin panel (only if user is admin)
+          if (user?.isAdmin && adminPanelPromises.length > 0) {
+            scheduleIdle(() => {
+              Promise.allSettled([
+                ...adminPanelPromises,
+              ]).catch(() => {});
+            }, 'normal');
+          }
         }
 
         // Log results for diagnostics

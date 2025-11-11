@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
+import { API_BASE } from '@/services/api';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -35,9 +36,13 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      console.log('🚀 Attempting registration with:', { email, username });
+      if (import.meta.env.DEV) {
+        console.log('🚀 Attempting registration with:', { email, username });
+      }
       await register(email, password, username);
-      console.log('✅ Registration successful');
+      if (import.meta.env.DEV) {
+        console.log('✅ Registration successful');
+      }
       toast.success('Account created successfully! Please log in.');
       navigate('/login');
     } catch (error: any) {
@@ -90,38 +95,39 @@ export default function Register() {
 
   return (
     <div className="bg-background min-h-screen">
-      <div className="container mx-auto px-6 py-12">
+      <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-12">
         <div className="mx-auto max-w-md">
           <form onSubmit={handleSubmit}>
-            <div className="card-elevated p-8">
+            <div className="card-elevated p-4 sm:p-8">
               {/* Header */}
-              <div className="mb-8 flex justify-center">
-                <div className="h-14 w-14 rounded-[12px] border-4 border-black bg-secondary grid place-items-center shadow-[6px_6px_0_0_#000]">
-                  <img src="/logo.png" alt="ZERO" className="h-8 w-8 object-contain" />
+              <div className="mb-6 sm:mb-8 flex justify-center">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-[12px] border-4 border-black bg-secondary grid place-items-center shadow-[6px_6px_0_0_#000]">
+                  <img src="/logo.png" alt="ZERO" className="h-6 w-6 sm:h-8 sm:w-8 object-contain" />
                 </div>
               </div>
 
-              <div className="mb-8 text-center">
-                <h1 className="text-4xl font-black text-foreground mb-2">Create an account</h1>
-                <p className="text-base text-muted-foreground">
+              <div className="mb-6 sm:mb-8 text-center">
+                <h1 className="text-2xl sm:text-4xl font-black text-foreground mb-2">Create an account</h1>
+                <p className="text-xs sm:text-base text-muted-foreground">
                   Join 0x.ship and start sharing your projects
                 </p>
               </div>
 
               {/* Form Fields */}
-              <div className="space-y-4 mb-6">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
+              <div className="space-y-3 sm:space-y-4 mb-5 sm:mb-6">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="username" className="text-xs sm:text-sm">Username *</Label>
                   <Input
                     id="username"
                     placeholder="johndoe"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
+                    className="text-sm sm:text-base h-9 sm:h-10"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="email" className="text-xs sm:text-sm">Email *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -129,10 +135,11 @@ export default function Register() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="text-sm sm:text-base h-9 sm:h-10"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="password" className="text-xs sm:text-sm">Password *</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -141,20 +148,20 @@ export default function Register() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="pr-10"
+                      className="pr-10 sm:pr-12 text-sm sm:text-base h-9 sm:h-10"
                     />
                     <button
                       type="button"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       onClick={() => toggleTimed('pwd')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-xs sm:text-sm">Confirm Password *</Label>
                   <div className="relative">
                     <Input
                       id="confirmPassword"
@@ -163,13 +170,13 @@ export default function Register() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className="pr-10"
+                      className="pr-10 sm:pr-12 text-sm sm:text-base h-9 sm:h-10"
                     />
                     <button
                       type="button"
                       aria-label={showConfirm ? 'Hide password' : 'Show password'}
                       onClick={() => toggleTimed('confirm')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                     >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -180,14 +187,31 @@ export default function Register() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="btn-primary w-full mb-4"
+                className="btn-primary w-full mb-3 sm:mb-4 text-sm sm:text-base"
                 disabled={isLoading}
               >
                 {isLoading ? 'Creating account...' : 'Sign up'}
               </button>
 
+              {/* OAuth Providers */}
+              <div className="my-3 sm:my-4 flex items-center gap-2 sm:gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <button
+                type="button"
+                className="btn-secondary w-full mb-3 sm:mb-4 text-sm sm:text-base"
+                onClick={() => {
+                  window.location.href = `${API_BASE}/auth/google/login`;
+                }}
+              >
+                Continue with Google
+              </button>
+
               {/* Login Link */}
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-xs sm:text-sm text-muted-foreground">
                 Already have an account?{' '}
                 <Link to="/login" className="text-primary font-bold hover:opacity-80 transition-quick">
                   Login

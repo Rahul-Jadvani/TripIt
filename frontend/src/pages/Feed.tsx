@@ -67,7 +67,8 @@ export default function Feed() {
   const { data: topBuilders = [] } = useBuildersLeaderboard(8);
   const { data: buildersForCount = [] } = useBuildersLeaderboard(50);
   const { data: investors = [] } = usePublicInvestors();
-  const { data: dashboard } = useDashboardStats();
+  // Only load dashboard stats if user is authenticated (prevents 401 errors for guests)
+  const { data: dashboard } = useDashboardStats(!!user);
   const investorsHref = user ? '/investor-directory' : '/investors';
 
   // Normalize investors to an array defensively
@@ -77,30 +78,39 @@ export default function Feed() {
         ? (investors as any).investors
         : []);
 
-  // Prefetch additional pages for carousel infinite scroll + progressive deeper pages
+  // Prefetch additional pages on-demand when user scrolls (lazy prefetch)
+  // Pages 2-3 are already prefetched by usePrefetch hook in idle time, so we only prefetch deeper pages here
   useEffect(() => {
-    // Only prefetch after primary data loads
+    // Only prefetch page 3 on-demand to avoid duplicate work with usePrefetch
     if (!hotLoading && !topLoading) {
-      const prefetchPages = async () => {
-        // Prefetch pages 2-3 for all categories
+      const prefetchDeepPages = async () => {
+        // Prefetch page 3 only (page 2 handled by usePrefetch idle batch)
         for (const sort of ['trending', 'top-rated', 'newest']) {
-          for (let page = 2; page <= 3; page++) {
-            queryClient.prefetchQuery({
-              queryKey: ['projects', sort, page],
-              queryFn: async () => {
-                const response = await projectsService.getAll(sort, page);
-                return {
-                  ...response.data,
-                  data: response.data.data || [],
-                };
-              },
-              staleTime: 1000 * 60 * 5,
-            });
-          }
+          queryClient.prefetchQuery({
+            queryKey: ['projects', sort, 3],
+            queryFn: async () => {
+              const response = await projectsService.getAll(sort, 3);
+              return {
+                ...response.data,
+                data: response.data.data || [],
+              };
+            },
+            staleTime: 1000 * 60 * 5,
+          });
         }
       };
 
-      prefetchPages();
+      // Schedule this for idle time to avoid competing with critical prefetch
+      const scheduleIdle = (cb: () => void) => {
+        const win: any = typeof window !== 'undefined' ? window : undefined;
+        if (win && typeof win.requestIdleCallback === 'function') {
+          win.requestIdleCallback(cb, { timeout: 5000 });
+        } else {
+          setTimeout(cb, 2000); // Delay on older browsers
+        }
+      };
+
+      scheduleIdle(prefetchDeepPages);
     }
   }, [hotLoading, topLoading, queryClient]);
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { subscribeNotice, Notice } from '@/lib/notifications';
+import styles from './NotificationCenter.module.css';
 
 // UI host subscribes to notification bus
 
@@ -20,13 +21,28 @@ export function NotificationCenterHost() {
 
   const remove = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
 
+  const getNotificationClass = (type: string) => {
+    switch (type) {
+      case 'success':
+        return styles.success;
+      case 'info':
+        return styles.info;
+      case 'warning':
+        return styles.warning;
+      case 'error':
+        return styles.error;
+      default:
+        return '';
+    }
+  };
+
   return (
     <div>
-      <ul className="notification-container">
+      <ul className={styles.notificationContainer}>
         {items.map((n) => (
-          <li key={n.id} className={`notification-item ${n.type !== 'default' ? n.type : ''}`}>
-            <div className="notification-content">
-              <div className="notification-icon">
+          <li key={n.id} className={`${styles.notificationItem} ${getNotificationClass(n.type)}`}>
+            <div className={styles.notificationContent}>
+              <div className={styles.notificationIcon}>
                 {n.type === 'success' && (
                   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.5 11.5 11 14l4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -54,88 +70,17 @@ export function NotificationCenterHost() {
                   </svg>
                 )}
               </div>
-              <div className="notification-text">{n.text}</div>
+              <div className={styles.notificationText}>{n.text}</div>
             </div>
-            <button className="notification-icon notification-close" onClick={() => remove(n.id)} aria-label="Close notification">
+            <button className={`${styles.notificationIcon} ${styles.notificationClose}`} onClick={() => remove(n.id)} aria-label="Close notification">
               <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
                 <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 17.94 6M18 18 6.06 6" />
               </svg>
             </button>
-            <div className="notification-progress-bar" />
+            <div className={styles.notificationProgressBar} />
           </li>
         ))}
       </ul>
-      <style>{`
-  .notification-container {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 1000;
-    max-width: min(420px, 90vw);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    list-style-type: none;
-    color: black;
-  }
-  .notification-item {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    overflow: hidden;
-    padding: 10px 12px;
-    border-radius: 10px;
-    box-shadow: rgba(0, 0, 0, 0.25) 0px 8px 0px;
-    background-color: #f3f3f3;
-    transition: all 250ms ease;
-    border: 3px solid black;
-    --grid-color: rgba(225, 225, 225, 0.7);
-    background-image: linear-gradient(
-        0deg,
-        transparent 23%,
-        var(--grid-color) 24%,
-        var(--grid-color) 25%,
-        transparent 26%,
-        transparent 73%,
-        var(--grid-color) 74%,
-        var(--grid-color) 75%,
-        transparent 76%,
-        transparent
-      ),
-      linear-gradient(
-        90deg,
-        transparent 23%,
-        var(--grid-color) 24%,
-        var(--grid-color) 25%,
-        transparent 26%,
-        transparent 73%,
-        var(--grid-color) 74%,
-        var(--grid-color) 75%,
-        transparent 76%,
-        transparent
-      );
-    background-size: 55px 55px;
-  }
-  .notification-item:hover { transform: translateY(-1px); }
-  .notification-item:active { transform: translateY(-2px); }
-  .notification-item .notification-close { padding: 2px; border-radius: 6px; transition: all 250ms; background: transparent; border: none; }
-  .notification-item .notification-close:hover { background-color: rgba(204, 204, 204, 0.45); }
-  .notification-item .notification-close:hover svg { color: rgb(0, 0, 0); }
-  .notification-item svg { width: 16px; height: 16px; color: inherit; }
-  .notification-icon { display: flex; align-items: center; }
-  .notification-content { display: flex; align-items: center; gap: 8px; }
-  .notification-text { font-size: 0.85rem; font-weight: 600; }
-  .notification-progress-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: currentColor; width: 100%; animation: progressBar 4s linear forwards; }
-
-  .success { color: #047857; background-color: #7dffbc; --grid-color: rgba(16, 185, 129, 0.25); }
-  .info { color: #1e3a8a; background-color: #7eb8ff; --grid-color: rgba(59, 131, 246, 0.25); }
-  .warning { color: #78350f; background-color: #ffe57e; --grid-color: rgba(245, 159, 11, 0.25); }
-  .error { color: #7f1d1d; background-color: #ff7e7e; --grid-color: rgba(239, 68, 68, 0.25); }
-
-  @keyframes progressBar { from { transform: translateX(0); } to { transform: translateX(-100%); } }
-      `}</style>
     </div>
   );
 }
