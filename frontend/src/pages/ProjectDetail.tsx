@@ -178,118 +178,111 @@ export default function ProjectDetail() {
         )}
 
         <div className="mx-auto max-w-5xl w-full box-border px-3 sm:px-6">
-          {/* Hero Header Section */}
-          <div className="mb-6 sm:mb-8 card-elevated p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6 mb-4">
+          {/* ===== HERO SECTION ===== */}
+          <div className="mb-8 card-elevated p-6">
+            {/* Title & Score Row */}
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-4">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   {project.isFeatured && (
                     <span className="badge-primary text-xs px-2 py-1">⭐ Featured</span>
                   )}
                 </div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground mb-2 break-words">
+                <h1 className="text-3xl lg:text-4xl font-black text-foreground mb-2 break-words">
                   {project.title}
                 </h1>
-                <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mb-3 sm:mb-4 leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed mb-2">
                   {project.tagline}
                 </p>
               </div>
-
-              {/* Score Badge */}
-              <div className="badge-primary flex flex-col items-center justify-center px-4 sm:px-6 py-3 sm:py-4 rounded-[15px] flex-shrink-0 whitespace-nowrap">
-                <div className="text-xl sm:text-2xl lg:text-3xl font-black text-black">{project.proofScore?.total || 0}</div>
+              <div className="badge-primary flex flex-col items-center justify-center px-6 py-4 rounded-[15px] flex-shrink-0 whitespace-nowrap">
+                <div className="text-2xl font-black text-black">{project.proofScore?.total || 0}</div>
                 <div className="text-xs font-bold text-black mt-1">Score</div>
               </div>
             </div>
 
-            {/* Vote Section */}
-            <div className="border-t-4 border-black pt-3 sm:pt-4 mb-3 sm:mb-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                <VoteButtons
-                  projectId={project.id}
-                  voteCount={project.voteCount}
-                  userVote={project.userVote as 'up' | 'down' | null}
-                />
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  Vote to show your support for this project
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {project.demoUrl && (
-                <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="btn-primary">
-                  <ExternalLink className="mr-2 h-5 w-5 inline" />
-                  View Live Demo
-                </a>
-              )}
-              {project.githubUrl && (
-                <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary">
-                  <Github className="mr-2 h-5 w-5 inline" />
-                  View Code
-                </a>
-              )}
-              <BadgeAwarder projectId={project.id} />
-
-              {/* Project Owner Actions */}
-              {user?.id === project.authorId && (
-                <>
-                  <button onClick={() => setShowPostUpdate(true)} className="btn-primary">
-                    <Sparkles className="mr-2 h-4 w-4 inline" />
-                    Post Update
-                  </button>
-                  <Link to={`/project/${project.id}/edit`} className="btn-secondary">
-                    <Edit className="mr-2 h-4 w-4 inline" />
-                    Edit Project
-                  </Link>
-                </>
-              )}
-
-              {/* Share and Save buttons */}
-              <button onClick={handleShare} className="btn-secondary">
-                <Share2 className="mr-2 h-4 w-4 inline" />
-                Share
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
-                className={`btn-secondary disabled:opacity-50 ${isSaved ? 'bg-primary text-black hover:bg-primary/90' : ''}`}
-              >
-                <Bookmark className={`mr-2 h-4 w-4 inline ${isSaved ? 'fill-current' : ''}`} />
-                {isSaved ? 'Saved' : 'Save'}
-              </button>
-              {user?.id !== project.authorId && (
-                <IntroRequest projectId={project.id} builderId={project.authorId} />
-              )}
-            </div>
-
-            {/* View Count - Subtle display in corner */}
-            <div className="mt-4 pt-4 border-t border-border/30 flex justify-end">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/40 rounded-lg border border-border/50">
-                <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {project.viewCount?.toLocaleString() || 0} {project.viewCount === 1 ? 'view' : 'views'}
+            {/* Quick Stats */}
+            <div className="flex items-center gap-4 py-3 border-y border-border/30 mb-4">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  {project.viewCount?.toLocaleString() || 0} views
                 </span>
+              </div>
+              <VoteButtons
+                projectId={project.id}
+                voteCount={project.voteCount}
+                userVote={project.userVote as 'up' | 'down' | null}
+              />
+            </div>
+
+            {/* Action Buttons - Organized in rows */}
+            <div className="space-y-3">
+              {/* Primary Actions */}
+              <div className="flex flex-wrap gap-2">
+                {project.demoUrl && (
+                  <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm">
+                    <ExternalLink className="h-4 w-4" />
+                    Demo
+                  </a>
+                )}
+                {project.githubUrl && (
+                  <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
+                    <Github className="h-4 w-4" />
+                    Code
+                  </a>
+                )}
+                <button
+                  onClick={handleSave}
+                  disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
+                  className={`btn-secondary text-sm disabled:opacity-50 ${isSaved ? 'bg-primary text-black hover:bg-primary/90' : ''}`}
+                >
+                  <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+                  {isSaved ? 'Saved' : 'Save'}
+                </button>
+                <button onClick={handleShare} className="btn-secondary text-sm">
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </button>
+              </div>
+
+              {/* Secondary Actions */}
+              <div className="flex flex-wrap gap-2">
+                <BadgeAwarder projectId={project.id} />
+                {user?.id !== project.authorId && (
+                  <IntroRequest projectId={project.id} builderId={project.authorId} />
+                )}
+                {user?.id === project.authorId && (
+                  <>
+                    <button onClick={() => setShowPostUpdate(true)} className="btn-primary text-sm">
+                      <Sparkles className="h-4 w-4" />
+                      Post Update
+                    </button>
+                    <Link to={`/project/${project.id}/edit`} className="btn-secondary text-sm">
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Creator & Stats Section */}
+          {/* ===== CREATOR & VERIFICATION SECTION ===== */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {/* Creator Card */}
-            <div className="card-elevated p-5 md:col-span-3">
-              <div className="flex items-center gap-3 mb-4">
-                <Avatar className="h-12 w-12 border-3 border-primary">
+            {/* Creator Card - Spans full width on mobile */}
+            <div className="card-elevated p-5 md:col-span-2">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-14 w-14 border-2 border-primary">
                   <AvatarImage src={project.author?.avatar} alt={project.author?.username} />
-                  <AvatarFallback className="bg-primary text-black font-bold text-sm">
+                  <AvatarFallback className="bg-primary text-black font-bold">
                     {project.author?.username?.slice(0, 2).toUpperCase() || 'NA'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <Link
                     to={`/u/${project.author?.username}`}
-                    className="text-lg font-bold text-primary hover:opacity-80 transition-quick"
+                    className="text-base font-bold text-primary hover:opacity-80 transition-quick block"
                   >
                     {project.author?.username}
                   </Link>
@@ -301,102 +294,15 @@ export default function ProjectDetail() {
                   )}
                 </div>
               </div>
-
-              {/* Team Members / Crew */}
-              {project.team_members && project.team_members.length > 0 && (
-                <div className="border-t border-border/50 pt-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Crew</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {project.team_members.map((member: any, idx: number) => {
-                      const MemberCard = (
-                        <div
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/30 rounded-lg border border-border"
-                        >
-                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-                            <span className="text-xs font-bold text-primary">
-                              {member.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="text-left">
-                            <p className="text-sm font-semibold text-foreground leading-none">{member.name}</p>
-                            {member.role && (
-                              <p className="text-xs text-muted-foreground leading-none mt-0.5">{member.role}</p>
-                            )}
-                          </div>
-                        </div>
-                      );
-
-                      return member.user_id && member.username ? (
-                        <Link
-                          key={idx}
-                          to={`/u/${member.username}`}
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          {MemberCard}
-                        </Link>
-                      ) : (
-                        <div key={idx}>
-                          {MemberCard}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Validation Status Card */}
+            <ValidationStatusCard badges={project.badges} />
           </div>
 
-          {/* Missing Fields Alert for Project Owner */}
-          {user?.id === project.authorId && (
-            (() => {
-              const missingFields = [];
-              if (!project.categories || project.categories.length === 0) missingFields.push('Categories');
-              if (!project.project_story) missingFields.push('Project Journey');
-              if (!project.inspiration) missingFields.push('Inspiration');
-              if (!project.market_comparison) missingFields.push('Market Comparison');
-              if (!project.novelty_factor) missingFields.push('Novelty Factor');
-              if (!project.pitch_deck_url) missingFields.push('Pitch Deck');
-
-              if (missingFields.length > 0) {
-                return (
-                  <div className="card-elevated p-4 mb-8 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-2 border-yellow-500/30">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <h3 className="font-bold text-foreground mb-1">Complete Your Project Profile</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Add these sections to help visitors understand your project better:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {missingFields.map(field => (
-                            <span key={field} className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded border border-yellow-500/30">
-                              {field}
-                            </span>
-                          ))}
-                        </div>
-                        <button
-                          onClick={() => window.location.href = `/edit-project/${project.id}`}
-                          className="mt-3 px-4 py-2 bg-yellow-500 text-black rounded-md font-semibold hover:bg-yellow-600 transition-colors text-sm"
-                        >
-                          Edit Project to Add These Fields
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()
-          )}
-
-          {/* Verification Cards Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {/* 0xCert Verification */}
-            {project.author?.has_oxcert && (
-              <div className="card-elevated p-5">
+          {/* ===== 0xCERT VERIFICATION SECTION ===== */}
+          {project.author?.has_oxcert && (
+            <div className="card-elevated p-6 mb-8">
                 <h3 className="font-black text-sm mb-3 text-foreground flex items-center gap-2">
                   <Shield className="h-4 w-4 text-primary" />
                   0xCert Verification
@@ -484,58 +390,95 @@ export default function ProjectDetail() {
               </div>
             )}
 
-            {/* Validation Status Card */}
-            <ValidationStatusCard badges={project.badges} />
+          {/* ===== PROJECT INFO SECTION ===== */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {/* Categories */}
+            {project.categories && project.categories.length > 0 && (
+              <div className="card-elevated p-5">
+                <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-primary" />
+                  Categories
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {project.categories.map((category: string) => (
+                    <Badge key={category} variant="default" className="px-2.5 py-1 text-xs font-semibold bg-primary text-black hover:bg-primary/90">
+                      {category}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Chains */}
+            {project.chains && project.chains.length > 0 && (
+              <div className="card-elevated p-5">
+                <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-primary" />
+                  Chains ({project.chains.length})
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {project.chains.map((chain: any) => (
+                    <ChainBadge key={chain.id} chain={chain} size="sm" showPin={chain.is_pinned} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Categories Section */}
-          {project.categories && project.categories.length > 0 && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Tag className="h-6 w-6 text-primary" />
-                Categories
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {project.categories.map((category: string) => (
-                  <Badge key={category} variant="default" className="px-3 py-1.5 text-sm font-semibold bg-primary text-black hover:bg-primary/90">
-                    {category}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+          {/* ===== MISSING FIELDS ALERT ===== */}
+          {user?.id === project.authorId && (
+            (() => {
+              const missingFields = [];
+              if (!project.categories || project.categories.length === 0) missingFields.push('Categories');
+              if (!project.project_story) missingFields.push('Project Journey');
+              if (!project.inspiration) missingFields.push('Inspiration');
+              if (!project.market_comparison) missingFields.push('Market Comparison');
+              if (!project.novelty_factor) missingFields.push('Novelty Factor');
+              if (!project.pitch_deck_url) missingFields.push('Pitch Deck');
+
+              if (missingFields.length > 0) {
+                return (
+                  <div className="card-elevated p-4 mb-8 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-2 border-yellow-500/30">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="font-bold text-foreground mb-1">Complete Your Project Profile</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Add these sections to improve your profile visibility:
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {missingFields.map(field => (
+                            <span key={field} className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-600 rounded border border-yellow-500/30">
+                              {field}
+                            </span>
+                          ))}
+                        </div>
+                        <Link to={`/project/${project.id}/edit`} className="inline-block px-3 py-1.5 bg-yellow-500 text-black rounded text-xs font-semibold hover:bg-yellow-600 transition-colors">
+                          Edit Project
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()
           )}
 
-          {/* Chains Section */}
-          {project.chains && project.chains.length > 0 && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Link2 className="h-6 w-6 text-primary" />
-                Published in Chains
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                {project.chains.map((chain: any) => (
-                  <ChainBadge key={chain.id} chain={chain} size="md" showPin={chain.is_pinned} />
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                This project is featured in {project.chains.length} chain{project.chains.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          )}
-
-          {/* About Section */}
+          {/* ===== DESCRIPTION SECTION ===== */}
           <div className="card-elevated p-6 mb-8">
-            <h2 className="text-2xl font-black mb-4 text-foreground">About This Project</h2>
+            <h2 className="text-lg font-black mb-3 text-foreground">About This Project</h2>
             <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
               {project.description}
             </div>
           </div>
 
+          {/* ===== PROJECT DETAILS SECTION ===== */}
           {/* Project Story Section */}
           {project.project_story && (
             <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <FileText className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
                 Project Journey
               </h2>
               <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
@@ -547,8 +490,8 @@ export default function ProjectDetail() {
           {/* Inspiration Section */}
           {project.inspiration && (
             <div className="card-elevated p-6 mb-8 bg-gradient-to-br from-secondary/30 to-secondary/10 border-2 border-primary/20">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Lightbulb className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-primary" />
                 The Spark
               </h2>
               <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm italic">
@@ -560,8 +503,8 @@ export default function ProjectDetail() {
           {/* Market Comparison Section */}
           {project.market_comparison && (
             <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
                 Market Landscape
               </h2>
               <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
@@ -573,8 +516,8 @@ export default function ProjectDetail() {
           {/* Novelty Factor Section */}
           {project.novelty_factor && (
             <div className="card-elevated p-6 mb-8 bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
                 What Makes It Unique
               </h2>
               <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm font-medium">
@@ -586,8 +529,8 @@ export default function ProjectDetail() {
           {/* Pitch Deck Section */}
           {project.pitch_deck_url && (
             <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <FileText className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
                 Pitch Deck
               </h2>
               <a
@@ -602,11 +545,12 @@ export default function ProjectDetail() {
             </div>
           )}
 
+          {/* ===== MEDIA & RESOURCES SECTION ===== */}
           {/* Hackathon Details */}
           {((project.hackathons && project.hackathons.length > 0) || project.hackathonName || project.hackathonDate) && (
             <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Award className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <Award className="h-4 w-4 text-primary" />
                 Hackathon Details
               </h2>
               <div className="space-y-4">
@@ -663,7 +607,10 @@ export default function ProjectDetail() {
           {/* Screenshots Section */}
           {project.screenshots && project.screenshots.length > 0 && (
             <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground">Screenshots</h2>
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                Screenshots
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {project.screenshots.map((screenshot: string, index: number) => (
                   <div key={index} className="relative group cursor-pointer" onClick={() => window.open(screenshot, '_blank')}>
@@ -688,8 +635,8 @@ export default function ProjectDetail() {
           {/* Tech Stack Section */}
           {project.techStack && project.techStack.length > 0 && (
             <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Code className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <Code className="h-4 w-4 text-primary" />
                 Tech Stack
               </h2>
               <div className="flex flex-wrap gap-2">
@@ -702,23 +649,26 @@ export default function ProjectDetail() {
             </div>
           )}
 
+          {/* ===== TEAM SECTION ===== */}
           {/* Team/Crew Section */}
           {project.team_members && project.team_members.length > 0 && (
             <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Users className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
                 Team & Crew
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {project.team_members.map((member: any, index: number) => {
                   const MemberCard = (
-                    <div className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg border border-border">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/20 border-2 border-primary/30">
-                        <Users className="h-6 w-6 text-primary" />
+                    <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/20 border-2 border-primary/30 flex-shrink-0">
+                        <span className="text-xs font-bold text-primary">
+                          {member.name.charAt(0).toUpperCase()}
+                        </span>
                       </div>
-                      <div>
-                        <p className="font-bold text-foreground">{member.name}</p>
-                        <p className="text-sm text-muted-foreground">{member.role || 'Team Member'}</p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-foreground truncate">{member.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{member.role || 'Team Member'}</p>
                       </div>
                     </div>
                   );
@@ -741,49 +691,10 @@ export default function ProjectDetail() {
             </div>
           )}
 
-          {/* Associated Chains Section */}
-          {project.chains && project.chains.length > 0 && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-2xl font-black mb-4 text-foreground flex items-center gap-2">
-                <Layers className="h-6 w-6 text-primary" />
-                Part of Chains
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {project.chains.map((chain: any) => (
-                  <Link
-                    key={chain.id}
-                    to={`/chains/${chain.slug}`}
-                    className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all"
-                  >
-                    <Avatar className="h-12 w-12 border-2 border-border">
-                      {chain.logo_url ? (
-                        <AvatarImage src={chain.logo_url} alt={chain.name} />
-                      ) : (
-                        <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                          {chain.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-foreground truncate">{chain.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Added {new Date(chain.added_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {chain.is_pinned && (
-                      <Badge variant="default" className="flex-shrink-0">
-                        Pinned
-                      </Badge>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
+          {/* ===== COMMUNITY SECTION ===== */}
           {/* Comments Section */}
           <div id="comments" className="card-elevated p-6 scroll-mt-20">
-            <h2 className="text-2xl font-black mb-6 text-foreground">Comments & Discussion</h2>
+            <h2 className="text-lg font-black mb-4 text-foreground">Comments & Discussion</h2>
             <CommentSection projectId={id || String(project.id)} altProjectId={String(project.id)} />
           </div>
         </div>
