@@ -58,7 +58,15 @@ export function useAdminProjects(params: { search?: string; perPage?: number } =
 
 // Infinite scroll version for projects
 export function useAdminProjectsInfinite(params: { search?: string } = {}) {
-  return useInfiniteQuery({
+  const {
+    data,
+    isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetching,
+    error,
+    status,
+  } = useInfiniteQuery({
     queryKey: ['admin', 'projects', 'infinite', params],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await adminService.getProjects({
@@ -80,6 +88,22 @@ export function useAdminProjectsInfinite(params: { search?: string } = {}) {
     staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 30,
   });
+
+  // Flatten all pages into a single array
+  const allItems = data?.pages?.flatMap((page: any) => {
+    if (Array.isArray(page)) return page;
+    return page.projects || page.data || [];
+  }) || [];
+
+  return {
+    items: allItems,
+    isLoading,
+    isFetching,
+    error,
+    hasNextPage,
+    fetchNextPage,
+    status,
+  };
 }
 
 export function useAdminInvestorRequests() {
@@ -272,7 +296,15 @@ export function useRejectInvestorRequest() {
 
 // Infinite scroll version for badges
 export function useAdminBadgesInfinite(params: { search?: string; filterBadgeType?: string } = {}) {
-  return useInfiniteQuery({
+  const {
+    data,
+    isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetching,
+    error,
+    status,
+  } = useInfiniteQuery({
     queryKey: ['admin', 'badges', 'infinite', params],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await adminService.getAllBadges({
@@ -291,4 +323,20 @@ export function useAdminBadgesInfinite(params: { search?: string; filterBadgeTyp
     staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 30,
   });
+
+  // Flatten all pages into a single array
+  const allItems = data?.pages?.flatMap((page: any) => {
+    if (Array.isArray(page)) return page;
+    return page.badges || page.data || [];
+  }) || [];
+
+  return {
+    items: allItems,
+    isLoading,
+    isFetching,
+    error,
+    hasNextPage,
+    fetchNextPage,
+    status,
+  };
 }

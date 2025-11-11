@@ -183,6 +183,23 @@ function BadgeManagementList({ observerTarget }: BadgeManagementListProps) {
     fetchNextPage();
   };
 
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!observerTarget.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !loading) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, loading, fetchNextPage]);
+
   // Client-side filtering
   const filteredBadges = useMemo(() => {
     return allBadges.filter(badge => {
@@ -1062,6 +1079,24 @@ export default function Admin() {
   const awardCustomBadgeMutation = useAwardCustomBadge();
   const approveInvestorMutation = useApproveInvestorRequest();
   const rejectInvestorMutation = useRejectInvestorRequest();
+
+  // Intersection Observer for infinite scroll - Projects
+  useEffect(() => {
+    if (!projectsObserverTarget.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && projectsHasNextPage && !projectsLoading) {
+          fetchNextProjectsPage();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    observer.observe(projectsObserverTarget.current);
+    return () => observer.disconnect();
+  }, [projectsHasNextPage, projectsLoading, fetchNextProjectsPage]);
+
 
   // ==================== Action Handlers ====================
 
