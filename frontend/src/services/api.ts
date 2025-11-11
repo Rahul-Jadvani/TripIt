@@ -114,8 +114,8 @@ api.interceptors.response.use(
 
 // Projects
 export const projectsService = {
-  getAll: (sort: string = 'hot', page: number = 1) =>
-    api.get(`/projects?sort=${sort}&page=${page}`),
+  getAll: (sort: string = 'hot', page: number = 1, includeDetailed: boolean = false) =>
+    api.get(`/projects?sort=${sort}&page=${page}${includeDetailed ? '&include=detailed' : ''}`),
   getById: (id: string) => api.get(`/projects/${id}`),
   create: (data: any) => api.post('/projects', data),
   update: (id: string, data: any) => api.put(`/projects/${id}`, data),
@@ -267,9 +267,10 @@ export const adminService = {
     api.post(`/admin/validators/${validatorId}/permissions`, permissions),
 
   // Projects
-  getProjects: (params: { search?: string; perPage?: number } = {}) => {
+  getProjects: (params: { search?: string; page?: number; perPage?: number } = {}) => {
     const queryParams = new URLSearchParams();
     if (params.search) queryParams.append('search', params.search);
+    if (params.page) queryParams.append('page', params.page.toString());
     if (params.perPage) queryParams.append('per_page', params.perPage.toString());
     return api.get(`/admin/projects?${queryParams.toString()}`);
   },

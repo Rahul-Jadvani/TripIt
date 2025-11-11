@@ -60,11 +60,11 @@ export default function InvestorDashboard() {
     enabled: !!user,
   });
 
-  // Fetch projects
+  // Fetch projects with detailed data (scores, badges, etc.)
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects', filters.sort],
     queryFn: async () => {
-      const response = await projectsService.getAll(filters.sort, 1);
+      const response = await projectsService.getAll(filters.sort, 1, true);
       return response.data;
     },
   });
