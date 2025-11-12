@@ -31,7 +31,29 @@ export function useMarkNotificationAsRead() {
 
   return useMutation({
     mutationFn: (notificationId: string) => notificationApi.markAsRead(notificationId),
+    onMutate: (notificationId) => {
+      // Optimistic update for notifications
+      queryClient.setQueryData(['notifications', { limit: 10 }], (old: any) => {
+        if (!old?.notifications) return old;
+        return {
+          ...old,
+          notifications: old.notifications.map((n: any) =>
+            n.id === notificationId ? { ...n, is_read: true } : n
+          ),
+        };
+      });
+
+      // Optimistic update for unread count
+      queryClient.setQueryData(['unreadCount'], (old: any) => {
+        if (!old?.count) return old;
+        return {
+          ...old,
+          count: Math.max(0, old.count - 1),
+        };
+      });
+    },
     onSuccess: () => {
+      // Refetch to ensure sync with server
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },

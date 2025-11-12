@@ -306,6 +306,66 @@ export function useRealTimeUpdates() {
         // Invalidate message count badge
         queryClient.refetchQueries({ queryKey: ['messages', 'count'] });
       });
+      // New persistent notification (from votes, comments, etc.)
+      socket.on('new_notification', (notification) => {
+        // Show toast for immediate feedback
+        const title = notification.title || 'New Notification';
+        const message = notification.message || '';
+
+        // Display toast based on notification type
+        switch (notification.notification_type) {
+          case 'vote':
+            toast('👍 ' + title, {
+              description: message,
+              duration: 5000,
+            });
+            // Play subtle sound
+            playNotificationSound('message');
+            break;
+          case 'comment':
+          case 'comment_reply':
+            toast('💬 ' + title, {
+              description: message,
+              duration: 5000,
+            });
+            playNotificationSound('message');
+            break;
+          default:
+            toast(title, {
+              description: message,
+              duration: 5000,
+            });
+        }
+
+        // Update notifications cache (add to top of list)
+        queryClient.setQueryData(
+          ['notifications', {}],
+          (old: any = {}) => {
+            const oldData = old.data || [];
+            // Check if notification already exists
+            const exists = oldData.some((n: any) => n.id === notification.id);
+            return exists
+              ? old
+              : {
+                  ...old,
+                  data: [notification, ...oldData],
+                  total: (old?.total || 0) + 1,
+                };
+          }
+        );
+
+        // Update unread count
+        queryClient.setQueryData(
+          ['unreadCount'],
+          (old: any = { unread_count: 0 }) => ({
+            unread_count: (old?.unread_count || 0) + 1,
+          })
+        );
+
+        // Invalidate to ensure sync with server
+        queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+      });
+
       socket.on('message:read', () => {
         // Refetch message count as a message was marked read
         queryClient.refetchQueries({ queryKey: ['messages', 'count'] });

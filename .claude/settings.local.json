@@ -24,7 +24,13 @@
       "Bash(timeout /t 8)",
       "Bash(nul)",
       "Bash(ping:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(echo:*)",
+      "Bash(DATABASE_URL=\"postgresql://user:password@localhost:5432/oxship\" python:*)",
+      "Bash(netstat:*)",
+      "Bash(tasklist:*)",
+      "Bash(pkill:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

@@ -780,8 +780,15 @@ def upvote_project(user_id, project_id):
 
         # Emit Socket.IO event for real-time vote updates
         from services.socket_service import SocketService
-        SocketService.emit_vote_cast(project_id, 'up')
+        SocketService.emit_vote_cast(project_id, 'up', project.proof_score)
         SocketService.emit_leaderboard_updated()
+
+        # Notify project owner of the vote
+        from models.user import User
+        from utils.notifications import notify_project_vote
+        voter = User.query.get(user_id)
+        if voter:
+            notify_project_vote(project.user_id, project, voter, 'up')
 
         return success_response(project.to_dict(include_creator=True), 'Project upvoted', 200)
     except Exception as e:
@@ -827,8 +834,15 @@ def downvote_project(user_id, project_id):
 
         # Emit Socket.IO event for real-time vote updates
         from services.socket_service import SocketService
-        SocketService.emit_vote_cast(project_id, 'down')
+        SocketService.emit_vote_cast(project_id, 'down', project.proof_score)
         SocketService.emit_leaderboard_updated()
+
+        # Notify project owner of the vote
+        from models.user import User
+        from utils.notifications import notify_project_vote
+        voter = User.query.get(user_id)
+        if voter:
+            notify_project_vote(project.user_id, project, voter, 'down')
 
         return success_response(project.to_dict(include_creator=True), 'Project downvoted', 200)
     except Exception as e:

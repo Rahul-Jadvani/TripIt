@@ -155,6 +155,19 @@ def cast_vote(user_id):
             SocketService.emit_vote_cast(project_id, vote_type, new_score)
             SocketService.emit_leaderboard_updated()
 
+            # Notify project owner of the vote (only if creating new vote, not changing)
+            try:
+                from models.user import User
+                from utils.notifications import notify_project_vote
+                voter = User.query.get(user_id)
+                if voter and not existing_vote:
+                    # Only notify on new vote creation, not on vote changes
+                    notify_project_vote(project.user_id, project, voter, vote_type)
+            except Exception as e:
+                print(f"[ERROR] Failed to send vote notification: {e}")
+                import traceback
+                traceback.print_exc()
+
             # DEBUG: Show response data
             response_data = project.to_dict(include_creator=False, user_id=user_id)
             print(f"[VOTE_RESPONSE] Returning project {project_id}:")

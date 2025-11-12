@@ -28,6 +28,11 @@ class Notification(db.Model):
     # Related Entities (nullable, depends on type)
     project_id = db.Column(db.String(36), db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=True)
     chain_id = db.Column(db.String(36), db.ForeignKey('chains.id', ondelete='CASCADE'), nullable=True)
+    # PENDING MIGRATION: comment_id column
+    # This field will be added via: migrations/add_comment_id_to_notifications.sql
+    # Temporarily commented to avoid SELECT errors on databases without this column
+    # Uncomment after running the migration
+    # comment_id = db.Column(db.String(36), db.ForeignKey('comments.id', ondelete='CASCADE'), nullable=True)
     actor_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)  # Who triggered
 
     # Redirect URL
@@ -45,6 +50,7 @@ class Notification(db.Model):
     actor = db.relationship('User', foreign_keys=[actor_id])
     project = db.relationship('Project', foreign_keys=[project_id])
     chain = db.relationship('Chain', foreign_keys=[chain_id])
+    # comment = db.relationship('Comment', foreign_keys=[comment_id])  # PENDING: Uncomment after migration
 
     # Indexes
     __table_args__ = (
@@ -82,21 +88,42 @@ class Notification(db.Model):
         }
 
         if include_relations:
-            if self.actor:
-                data['actor'] = self.actor.to_dict()
-            if self.project:
-                data['project'] = {
-                    'id': self.project.id,
-                    'title': self.project.title,
-                    'tagline': self.project.tagline,
-                }
-            if self.chain:
-                data['chain'] = {
-                    'id': self.chain.id,
-                    'name': self.chain.name,
-                    'slug': self.chain.slug,
-                    'logo_url': self.chain.logo_url,
-                }
+            try:
+                if self.actor:
+                    data['actor'] = self.actor.to_dict()
+            except Exception as e:
+                print(f"[Notification.to_dict] Error loading actor: {str(e)}")
+                data['actor'] = None
+
+            try:
+                if self.project:
+                    data['project'] = {
+                        'id': self.project.id,
+                        'title': self.project.title,
+                        'tagline': self.project.tagline,
+                    }
+            except Exception as e:
+                print(f"[Notification.to_dict] Error loading project: {str(e)}")
+                data['project'] = None
+
+            try:
+                if self.chain:
+                    data['chain'] = {
+                        'id': self.chain.id,
+                        'name': self.chain.name,
+                        'slug': self.chain.slug,
+                        'logo_url': self.chain.logo_url,
+                    }
+            except Exception as e:
+                print(f"[Notification.to_dict] Error loading chain: {str(e)}")
+                data['chain'] = None
+
+            # PENDING: Add comment data after migration
+            # if self.comment:
+            #     data['comment'] = {
+            #         'id': self.comment.id,
+            #         'content': self.comment.content[:100],
+            #     }
 
         return data
 

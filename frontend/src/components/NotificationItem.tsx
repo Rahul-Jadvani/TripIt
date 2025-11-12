@@ -9,7 +9,9 @@ import {
   UserPlus,
   Star,
   AlertCircle,
-  Trash2
+  Trash2,
+  ThumbsUp,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +40,12 @@ const NotificationIcon = ({ type }: { type: string }) => {
       return <Star className={cn(iconClass, "text-yellow-500")} />;
     case 'chain_project_request':
       return <AlertCircle className={cn(iconClass, "text-blue-500")} />;
+    case 'vote':
+      return <ThumbsUp className={cn(iconClass, "text-green-500")} />;
+    case 'comment':
+      return <MessageSquare className={cn(iconClass, "text-cyan-500")} />;
+    case 'comment_reply':
+      return <MessageSquare className={cn(iconClass, "text-cyan-500")} />;
     default:
       return <Bell className={cn(iconClass, "text-muted-foreground")} />;
   }
@@ -53,8 +61,9 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
   const notificationContent = (
     <div
       className={cn(
-        "flex gap-3 p-4 rounded-lg transition-colors cursor-pointer hover:bg-accent/50",
-        !notification.is_read && "bg-accent/30"
+        "flex gap-3 p-4 transition-colors cursor-pointer",
+        !notification.is_read && "bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-900/30",
+        notification.is_read && "hover:bg-accent/50"
       )}
       onClick={handleClick}
     >

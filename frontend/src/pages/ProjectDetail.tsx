@@ -106,7 +106,7 @@ export default function ProjectDetail() {
     }
   };
 
-  // Track unique project view on page load
+  // Track unique project view on page load and handle comment anchors
   useEffect(() => {
     if (id && !isLoading && !error) {
       // Get or create anonymous session ID for unique tracking
@@ -130,6 +130,26 @@ export default function ProjectDetail() {
       }).catch(() => {
         // Silently fail - view tracking is not critical
       });
+
+      // Handle comment anchor navigation (jump to specific comment)
+      const hash = window.location.hash;
+      if (hash.startsWith('#comment-')) {
+        // Delay scroll to ensure comments are loaded
+        const timer = setTimeout(() => {
+          const commentId = hash.replace('#comment-', '');
+          const commentElement = document.getElementById(`comment-${commentId}`);
+          if (commentElement) {
+            commentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Highlight the comment briefly
+            commentElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+            setTimeout(() => {
+              commentElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+            }, 3000);
+          }
+        }, 500);
+
+        return () => clearTimeout(timer);
+      }
     }
   }, [id, isLoading, error]);
 

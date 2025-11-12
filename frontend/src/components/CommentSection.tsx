@@ -108,7 +108,7 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
           <p className="text-center text-muted-foreground">No comments yet. Be the first to comment!</p>
         ) : (
           comments.map((comment: any) => (
-            <Card key={comment.id} className="p-4">
+            <Card key={comment.id} id={`comment-${comment.id}`} className="p-4">
               <div className="flex gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={comment.author.avatar} alt={comment.author.username} />

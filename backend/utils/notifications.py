@@ -7,7 +7,7 @@ from models.chain import ChainFollower
 
 
 def create_notification(user_id, notification_type, title, message,
-                        project_id=None, chain_id=None, actor_id=None, redirect_url=None):
+                        project_id=None, chain_id=None, comment_id=None, actor_id=None, redirect_url=None):
     """
     Create and save a notification to the database
 
@@ -18,12 +18,17 @@ def create_notification(user_id, notification_type, title, message,
         message: Notification message
         project_id: Related project ID (optional)
         chain_id: Related chain ID (optional)
+        comment_id: Related comment ID (optional)
         actor_id: ID of user who triggered the notification (optional)
         redirect_url: URL to redirect to when notification is clicked (optional)
 
     Returns:
         Notification object
     """
+    print(f"\n[Notifications] Creating notification for user {user_id}")
+    print(f"[Notifications] Type: {notification_type}, Title: {title}")
+
+    # Build notification with all fields except comment_id (pending migration)
     notification = Notification(
         user_id=user_id,
         notification_type=notification_type,
@@ -31,18 +36,30 @@ def create_notification(user_id, notification_type, title, message,
         message=message,
         project_id=project_id,
         chain_id=chain_id,
+        # PENDING MIGRATION: comment_id will be added after migration runs
+        # comment_id=comment_id,
         actor_id=actor_id,
         redirect_url=redirect_url
     )
     db.session.add(notification)
     db.session.commit()
+    print(f"[Notifications] ✅ Notification saved to database: ID={notification.id}")
 
     # Emit real-time notification via WebSocket
+    # CRITICAL: Room name must match the room user joined in app.py (str(user_id), not f'user_{user_id}')
     try:
-        socketio.emit('new_notification', notification.to_dict(include_relations=True),
-                      room=f'user_{user_id}')
+        # Serialize notification to dict BEFORE emitting
+        notification_dict = notification.to_dict(include_relations=True)
+        print(f"[Notifications] 📤 Emitting to room: {str(user_id)}")
+        print(f"[Notifications] Notification data: {notification_dict}")
+        socketio.emit('new_notification', notification_dict, room=str(user_id))
+        print(f"[Notifications] ✅ Socket.IO emit successful to room {str(user_id)}")
     except Exception as e:
-        print(f"Error emitting notification: {e}")
+        print(f"\n[Notifications] ❌ ERROR emitting WebSocket notification to user {user_id}")
+        print(f"[Notifications] Exception type: {type(e).__name__}")
+        print(f"[Notifications] Exception message: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
     return notification
 
@@ -283,3 +300,121 @@ def mark_all_as_read(user_id):
 
     db.session.commit()
     return count
+
+
+def notify_project_vote(project_owner_id, project, voter, vote_type):
+    """
+    Notify project owner when someone votes on their project
+
+    Args:
+        project_owner_id: ID of project owner
+        project: Project object
+        voter: User who voted
+        vote_type: 'up' or 'down'
+    """
+    try:
+        print(f"\n[Notifications] notify_project_vote called:")
+        print(f"  Project owner: {project_owner_id}")
+        print(f"  Voter: {voter.id} (@{voter.username})")
+        print(f"  Vote type: {vote_type}")
+        print(f"  Project: {project.id} ({project.title})")
+
+        # Don't notify if owner voted for their own project
+        if project_owner_id == voter.id:
+            print(f"[Notifications] Skipping notification - owner voted on own project")
+            return
+
+        vote_label = "upvoted" if vote_type == "up" else "downvoted"
+
+        create_notification(
+            user_id=project_owner_id,
+            notification_type='vote',
+            title=f"{voter.username} {vote_label} your project",
+            message=f"{voter.username} {vote_label} '{project.title}'",
+            project_id=project.id,
+            actor_id=voter.id,
+            redirect_url=f"/project/{project.id}"
+        )
+    except Exception as e:
+        print(f"[Notifications] ❌ ERROR in notify_project_vote: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+def notify_comment_posted(project_owner_id, project, comment, commenter):
+    """
+    Notify project owner when someone comments on their project
+
+    Args:
+        project_owner_id: ID of project owner
+        project: Project object
+        comment: Comment object
+        commenter: User who commented
+    """
+    try:
+        print(f"\n[Notifications] notify_comment_posted called:")
+        print(f"  Project owner: {project_owner_id}")
+        print(f"  Commenter: {commenter.id} (@{commenter.username})")
+        print(f"  Project: {project.id} ({project.title})")
+
+        # Don't notify if owner commented on their own project
+        if project_owner_id == commenter.id:
+            print(f"[Notifications] Skipping notification - owner commented on own project")
+            return
+
+        # Preview first 50 characters of comment
+        comment_preview = comment.content[:50] + ("..." if len(comment.content) > 50 else "")
+
+        create_notification(
+            user_id=project_owner_id,
+            notification_type='comment',
+            title=f"{commenter.username} commented on your project",
+            message=f'"{comment_preview}"',
+            project_id=project.id,
+            # PENDING MIGRATION: comment_id will be added after migration runs
+            # comment_id=comment.id,
+            actor_id=commenter.id,
+            redirect_url=f"/project/{project.id}#comment-{comment.id}"
+        )
+    except Exception as e:
+        print(f"[Notifications] ❌ ERROR in notify_comment_posted: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+def notify_comment_reply(comment_author_id, original_comment, reply_comment, replier):
+    """
+    Notify user when someone replies to their comment
+
+    Args:
+        comment_author_id: ID of original comment author
+        original_comment: Original comment object
+        reply_comment: Reply comment object
+        replier: User who replied
+    """
+    try:
+        # Don't notify if author replied to their own comment
+        if comment_author_id == replier.id:
+            return
+
+        # Get project from original comment
+        project = original_comment.project
+
+        # Preview first 50 characters of reply
+        reply_preview = reply_comment.content[:50] + ("..." if len(reply_comment.content) > 50 else "")
+
+        create_notification(
+            user_id=comment_author_id,
+            notification_type='comment_reply',
+            title=f"{replier.username} replied to your comment",
+            message=f'"{reply_preview}"',
+            project_id=project.id,
+            # PENDING MIGRATION: comment_id will be added after migration runs
+            # comment_id=reply_comment.id,
+            actor_id=replier.id,
+            redirect_url=f"/project/{project.id}#comment-{reply_comment.id}"
+        )
+    except Exception as e:
+        print(f"[Notifications] ERROR in notify_comment_reply: {str(e)}")
+        import traceback
+        traceback.print_exc()

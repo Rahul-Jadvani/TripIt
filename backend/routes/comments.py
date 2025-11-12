@@ -105,6 +105,28 @@ def create_comment(user_id):
         from services.socket_service import SocketService
         SocketService.emit_comment_added(validated_data['project_id'], comment.to_dict(include_author=True))
 
+        # Notify project owner of new comment
+        try:
+            from utils.notifications import notify_comment_posted, notify_comment_reply
+            from models.user import User
+            commenter = User.query.get(user_id)
+
+            if commenter:
+                # If it's a reply to another comment, notify the parent comment author
+                if validated_data.get('parent_id'):
+                    from models.comment import Comment as CommentModel
+                    parent_comment = CommentModel.query.get(validated_data['parent_id'])
+                    if parent_comment and parent_comment.user_id != user_id:
+                        notify_comment_reply(parent_comment.user_id, parent_comment, comment, commenter)
+                else:
+                    # Otherwise notify project owner
+                    notify_comment_posted(project.user_id, project, comment, commenter)
+        except Exception as e:
+            logger.error(f"❌ POST /comments NOTIFICATION ERROR: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Don't fail the response - comment was already created and emitted
+            # Just log the notification error
+
         return success_response(comment.to_dict(include_author=True), 'Comment created', 201)
 
     except ValidationError as e:
