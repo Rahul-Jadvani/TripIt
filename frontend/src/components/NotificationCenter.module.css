@@ -8,9 +8,10 @@
   max-width: min(420px, 90vw);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   list-style-type: none;
-  color: black;
+  color: #f8fbff;
+  pointer-events: none;
 }
 
 .notificationItem {
@@ -20,63 +21,69 @@
   align-items: center;
   gap: 12px;
   overflow: hidden;
-  padding: 10px 12px;
-  border-radius: 10px;
-  box-shadow: rgba(0, 0, 0, 0.25) 0px 8px 0px;
-  background-color: #f3f3f3;
-  transition: all 250ms ease;
-  border: 3px solid black;
-  --grid-color: rgba(225, 225, 225, 0.7);
-  background-image: linear-gradient(
+  padding: 14px 16px;
+  border-radius: 16px;
+  box-shadow:
+    0 12px 30px rgba(2, 6, 23, 0.65),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background-color: rgba(8, 11, 24, 0.95);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  --grid-color: rgba(255, 255, 255, 0.04);
+  background-image:
+    linear-gradient(
       0deg,
+      transparent 20%,
+      var(--grid-color) 21%,
+      var(--grid-color) 22%,
       transparent 23%,
-      var(--grid-color) 24%,
-      var(--grid-color) 25%,
-      transparent 26%,
-      transparent 73%,
-      var(--grid-color) 74%,
-      var(--grid-color) 75%,
-      transparent 76%,
-      transparent
+      transparent 77%,
+      var(--grid-color) 78%,
+      var(--grid-color) 79%,
+      transparent 80%
     ),
     linear-gradient(
       90deg,
+      transparent 20%,
+      var(--grid-color) 21%,
+      var(--grid-color) 22%,
       transparent 23%,
-      var(--grid-color) 24%,
-      var(--grid-color) 25%,
-      transparent 26%,
-      transparent 73%,
-      var(--grid-color) 74%,
-      var(--grid-color) 75%,
-      transparent 76%,
-      transparent
+      transparent 77%,
+      var(--grid-color) 78%,
+      var(--grid-color) 79%,
+      transparent 80%
     );
-  background-size: 55px 55px;
+  background-size: 58px 58px;
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
 }
 
 .notificationItem:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 35px rgba(2, 6, 23, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .notificationItem:active {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .notificationClose {
   padding: 2px;
   border-radius: 6px;
   transition: all 250ms;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   border: none;
   cursor: pointer;
 }
 
 .notificationClose:hover {
-  background-color: rgba(204, 204, 204, 0.45);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .notificationClose:hover svg {
-  color: rgb(0, 0, 0);
+  color: #ffffff;
 }
 
 .notificationIcon {
@@ -93,6 +100,7 @@
 .notificationText {
   font-size: 0.85rem;
   font-weight: 600;
+  color: #f8fbff;
 }
 
 .notificationProgressBar {
@@ -100,33 +108,37 @@
   bottom: 0;
   left: 0;
   height: 2px;
-  background: currentColor;
+  background: rgba(255, 255, 255, 0.8);
   width: 100%;
   animation: progressBar 4s linear forwards;
 }
 
 .success {
-  color: #047857;
-  background-color: #7dffbc;
-  --grid-color: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 18px 40px rgba(16, 185, 129, 0.25);
+  --grid-color: rgba(16, 185, 129, 0.15);
 }
 
 .info {
-  color: #1e3a8a;
-  background-color: #7eb8ff;
-  --grid-color: rgba(59, 131, 246, 0.25);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 18px 40px rgba(59, 130, 246, 0.25);
+  --grid-color: rgba(59, 130, 246, 0.18);
 }
 
 .warning {
-  color: #78350f;
-  background-color: #ffe57e;
-  --grid-color: rgba(245, 159, 11, 0.25);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 18px 40px rgba(245, 158, 11, 0.3);
+  --grid-color: rgba(245, 158, 11, 0.15);
 }
 
 .error {
-  color: #7f1d1d;
-  background-color: #ff7e7e;
-  --grid-color: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 18px 40px rgba(239, 68, 68, 0.28);
+  --grid-color: rgba(239, 68, 68, 0.18);
 }
 
 @keyframes progressBar {
@@ -142,4 +154,5 @@
   width: 16px;
   height: 16px;
   color: inherit;
+  opacity: 0.9;
 }

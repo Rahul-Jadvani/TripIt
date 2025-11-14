@@ -49,6 +49,12 @@ export const notificationApi = {
     const response = await api.get('/notifications/unread-count');
     return response.data;
   },
+
+  // Delete all notifications
+  async deleteAll(): Promise<{ data: { count: number } }> {
+    const response = await api.delete('/notifications/all');
+    return response.data;
+  },
 };
 
 export default notificationApi;

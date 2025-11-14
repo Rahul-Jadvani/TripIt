@@ -302,6 +302,7 @@ export function TopRatedCarousel({
                               projectId={project.id}
                               voteCount={project.voteCount}
                               userVote={project.userVote as 'up' | 'down' | null}
+                              projectOwnerId={project.authorId || project.user_id}
                             />
                           </div>
                           <button className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-smooth border border-border text-xs font-medium">

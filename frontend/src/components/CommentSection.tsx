@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { ThumbsUp, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { resolveProjectId } from '@/utils/projectId';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface CommentSectionProps {
   projectId: string;
@@ -19,6 +20,8 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
   const { user } = useAuth();
   const navigate = useNavigate();
   const [commentText, setCommentText] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
   const resolvedProjectId = resolveProjectId(projectId, altProjectId);
 
   const { data: commentsData, isLoading, error } = useComments(projectId, altProjectId);
@@ -48,8 +51,14 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
   };
 
   const handleDelete = (commentId: string) => {
-    if (window.confirm('Delete this comment?')) {
-      deleteCommentMutation.mutate(commentId);
+    setCommentToDelete(commentId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (commentToDelete) {
+      await deleteCommentMutation.mutateAsync(commentToDelete);
+      setCommentToDelete(null);
     }
   };
 
@@ -158,6 +167,24 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
           ))
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          onOpenChange={(open) => {
+            setShowDeleteConfirm(open);
+            if (!open && !deleteCommentMutation.isPending) {
+              setCommentToDelete(null);
+            }
+          }}
+          title="Delete comment?"
+          description="This comment will be permanently deleted. This action cannot be undone."
+          actionLabel="Delete"
+          cancelLabel="Cancel"
+          onConfirm={handleConfirmDelete}
+          isLoading={deleteCommentMutation.isPending}
+          isDangerous={true}
+        />
     </div>
   );
 }

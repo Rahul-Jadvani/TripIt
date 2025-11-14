@@ -61,9 +61,10 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
   const notificationContent = (
     <div
       className={cn(
-        "flex gap-3 p-4 transition-colors cursor-pointer",
-        !notification.is_read && "bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-900/30",
-        notification.is_read && "hover:bg-accent/50"
+        "flex gap-3 p-4 rounded-xl border transition-all duration-200 cursor-pointer bg-background/60 hover:bg-background/80 shadow-sm",
+        notification.is_read
+          ? "border-border/50 hover:border-primary/40"
+          : "border-primary/40 bg-primary/10 hover:bg-primary/15 shadow-[0_12px_35px_rgba(59,130,246,0.18)]"
       )}
       onClick={handleClick}
     >
@@ -73,7 +74,7 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
 
       <div className="flex-1 space-y-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium leading-tight">
+          <p className="text-sm font-semibold leading-tight text-foreground">
             {notification.title}
           </p>
           {!notification.is_read && (

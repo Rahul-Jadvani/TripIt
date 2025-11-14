@@ -163,3 +163,27 @@ def get_unread_notification_count(user_id):
 
     except Exception as e:
         return error_response('Error', str(e), 500)
+
+
+@notifications_bp.route('/all', methods=['DELETE'])
+@token_required
+def delete_all_notifications(user_id):
+    """Delete all notifications for the authenticated user"""
+    try:
+        deleted = Notification.query.filter(
+            Notification.user_id == user_id
+        ).delete(synchronize_session=False)
+        db.session.commit()
+
+        from utils.cache import CacheService
+        CacheService.invalidate_user_notifications(user_id)
+        CacheService.cache_unread_count(user_id, 0, ttl=300)
+
+        return success_response(
+            {'count': deleted},
+            'Notifications cleared successfully',
+            200
+        )
+    except Exception as e:
+        db.session.rollback()
+        return error_response('Error', str(e), 500)

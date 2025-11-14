@@ -7,6 +7,7 @@ import { useUserProjects, useDeleteProject } from '@/hooks/useProjects';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
 import { PostUpdateModal } from '@/components/PostUpdateModal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -16,6 +17,14 @@ export default function MyProjects() {
   const deleteProjectMutation = useDeleteProject();
   const queryClient = useQueryClient();
   const [showPostUpdate, setShowPostUpdate] = useState<string | null>(null);
+  const [projectPendingDeletion, setProjectPendingDeletion] = useState<{ id: string; title: string } | null>(null);
+  const handleConfirmDelete = async () => {
+    if (!projectPendingDeletion) return;
+    await deleteProjectMutation.mutateAsync(projectPendingDeletion.id);
+    queryClient.invalidateQueries({ queryKey: ['user-projects'] });
+    setProjectPendingDeletion(null);
+  };
+
   return (
     <div className="bg-background min-h-screen overflow-hidden">
       <div className="container mx-auto px-6 py-12 overflow-hidden">
@@ -95,10 +104,9 @@ export default function MyProjects() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-                                deleteProjectMutation.mutate(project.id);
-                              }
+                              setProjectPendingDeletion({ id: project.id, title: project.title });
                             }}
+                            disabled={deleteProjectMutation.isPending}
                             className="btn-secondary inline-flex items-center gap-2 px-3 py-2 text-destructive hover:bg-destructive/10 border-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -138,6 +146,22 @@ export default function MyProjects() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(projectPendingDeletion)}
+        onOpenChange={(open) => {
+          if (!open && !deleteProjectMutation.isPending) {
+            setProjectPendingDeletion(null);
+          }
+        }}
+        title={projectPendingDeletion ? `Delete ${projectPendingDeletion.title}?` : 'Delete project?'}
+        description="This action cannot be undone. All associated updates and stats will be removed."
+        actionLabel="Delete project"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteProjectMutation.isPending}
+        isDangerous
+      />
     </div>
   );
 }

@@ -229,8 +229,12 @@ export function useDeleteProject() {
 
   return useMutation({
     mutationFn: (projectId: string) => projectsService.delete(projectId),
-    onSuccess: () => {
+    onSuccess: (_data, projectId) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['user-projects'] });
       toast.success('Project deleted successfully!');
     },
     onError: () => {

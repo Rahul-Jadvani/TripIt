@@ -1,8 +1,9 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers } from 'lucide-react';
+import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChainBadge } from '@/components/ChainBadge';
 import { useCheckIfSaved, useSaveProject, useUnsaveProject } from '@/hooks/useSavedProjects';
@@ -29,6 +30,7 @@ export default function ProjectDetail() {
   const unsaveMutation = useUnsaveProject();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [showPostUpdate, setShowPostUpdate] = useState(false);
+  const [showProfileChecklist, setShowProfileChecklist] = useState(false);
   const queryClient = useQueryClient();
 
   // Manage sticker positions (persist in localStorage)
@@ -175,9 +177,265 @@ export default function ProjectDetail() {
 
   const project = data.data;
 
+  const insightCards = [
+    project.project_story && (
+      <div key="story" className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+          Project Journey
+        </h2>
+        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+          {project.project_story}
+        </div>
+      </div>
+    ),
+    project.inspiration && (
+      <div
+        key="inspiration"
+        className="card-elevated p-6 bg-gradient-to-br from-secondary/30 to-secondary/10 border-2 border-primary/20"
+      >
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Lightbulb className="h-4 w-4 text-primary" />
+          The Spark
+        </h2>
+        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm italic">
+          {project.inspiration}
+        </div>
+      </div>
+    ),
+    project.market_comparison && (
+      <div key="market" className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          Market Landscape
+        </h2>
+        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+          {project.market_comparison}
+        </div>
+      </div>
+    ),
+    project.novelty_factor && (
+      <div
+        key="novelty"
+        className="card-elevated p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30"
+      >
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          What Makes It Unique
+        </h2>
+        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm font-medium">
+          {project.novelty_factor}
+        </div>
+      </div>
+    ),
+  ].filter(Boolean) as ReactNode[];
+
+  const renderMissingFieldsAlert = () => {
+    if (user?.id !== project.authorId) return null;
+
+    const missingFields: string[] = [];
+    if (!project.categories || project.categories.length === 0) missingFields.push('Categories');
+    if (!project.project_story) missingFields.push('Project Journey');
+    if (!project.inspiration) missingFields.push('Inspiration');
+    if (!project.market_comparison) missingFields.push('Market Comparison');
+    if (!project.novelty_factor) missingFields.push('Novelty Factor');
+    if (!project.pitch_deck_url) missingFields.push('Pitch Deck');
+
+    if (!missingFields.length) return null;
+
+    if (!showProfileChecklist) {
+      return (
+        <button
+          type="button"
+          onClick={() => setShowProfileChecklist(true)}
+          className="inline-flex items-center gap-2 text-xs text-muted-foreground border border-dashed border-yellow-500/50 rounded-full px-3 py-1 hover:bg-yellow-500/10 transition-colors"
+        >
+          <Info className="h-3.5 w-3.5 text-yellow-500" />
+          Complete your project profile
+        </button>
+      );
+    }
+
+    return (
+      <div className="card-elevated p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-2 border-yellow-500/30">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-bold text-foreground mb-1">Complete Your Project Profile</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              Add these sections to improve your profile visibility:
+            </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {missingFields.map((field) => (
+                <span
+                  key={field}
+                  className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-600 rounded border border-yellow-500/30"
+                >
+                  {field}
+                </span>
+              ))}
+            </div>
+            <Link
+              to={`/project/${project.id}/edit`}
+              className="inline-block px-3 py-1.5 bg-yellow-500 text-black rounded text-xs font-semibold hover:bg-yellow-600 transition-colors"
+            >
+              Edit Project
+            </Link>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowProfileChecklist(false)}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Hide profile checklist"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCreatorCard = () => {
+    if (!project.author) return null;
+
+    return (
+      <div className="card-elevated p-5">
+        <h3 className="font-black text-sm mb-3 text-foreground flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          Creator
+        </h3>
+        <div className="flex items-center gap-3">
+          <Avatar className="h-14 w-14 border-2 border-primary">
+            <AvatarImage src={project.author.avatar} alt={project.author.username} />
+            <AvatarFallback className="bg-primary/20 text-primary font-bold">
+              {project.author?.username?.slice(0, 2).toUpperCase() || 'NA'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <Link
+              to={`/u/${project.author?.username}`}
+              className="text-base font-bold text-primary hover:opacity-80 transition-quick block truncate"
+            >
+              {project.author?.username}
+            </Link>
+            {project.hackathonName && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                <Calendar className="h-3 w-3" />
+                {project.hackathonName}
+                {project.hackathonDate && (
+                  <span className="text-muted-foreground/80">
+                    • {new Date(project.hackathonDate).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderOxCertCard = () => {
+    if (!project.author?.has_oxcert) return null;
+
+    return (
+      <div className="card-elevated p-6">
+        <h3 className="font-black text-sm mb-3 text-foreground flex items-center gap-2">
+          <Shield className="h-4 w-4 text-primary" />
+          0xCert Verification
+        </h3>
+
+        {project.author?.oxcert_metadata?.image && (
+          <div className="relative w-full aspect-square mb-3 rounded-lg overflow-hidden border-2 border-primary/30">
+            <img
+              src={project.author.oxcert_metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/')}
+              alt={project.author.oxcert_metadata.name || '0xCert NFT'}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                if (fallback) fallback.classList.remove('hidden');
+              }}
+            />
+            <div className="hidden absolute inset-0 flex items-center justify-center bg-secondary/50">
+              <ImageIcon className="h-12 w-12 text-muted-foreground" />
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2 text-sm text-foreground">
+          {project.author?.oxcert_metadata?.name && (
+            <div>
+              <p className="text-xs text-muted-foreground">Name</p>
+              <p className="font-semibold">{project.author.oxcert_metadata.name}</p>
+            </div>
+          )}
+          {project.author?.oxcert_token_id && (
+            <div>
+              <p className="text-xs text-muted-foreground">Token ID</p>
+              <p className="font-mono">#{project.author.oxcert_token_id}</p>
+            </div>
+          )}
+          {project.author?.wallet_address && (
+            <div>
+              <p className="text-xs text-muted-foreground">Wallet</p>
+              <p className="font-mono break-all">{project.author.wallet_address}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2 p-2 bg-primary rounded border border-primary text-black font-bold">
+            Verified on-chain
+            <span className="ml-auto text-xs">+10 pts</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCategoriesCard = () => {
+    if (!project.categories || project.categories.length === 0) return null;
+
+    return (
+      <div className="card-elevated p-5">
+        <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
+          <Tag className="h-4 w-4 text-primary" />
+          Categories
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {project.categories.map((category: string) => (
+            <Badge
+              key={category}
+              variant="default"
+              className="px-2.5 py-1 text-xs font-semibold bg-primary text-black hover:bg-primary/90"
+            >
+              {category}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderChainsCard = () => {
+    if (!project.chains || project.chains.length === 0) return null;
+
+    return (
+      <div className="card-elevated p-5">
+        <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
+          <Link2 className="h-4 w-4 text-primary" />
+          Chains ({project.chains.length})
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {project.chains.map((chain: any) => (
+            <ChainBadge key={chain.id} chain={chain} size="sm" showPin={chain.is_pinned} />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-background min-h-screen overflow-hidden">
-      <div className="container mx-auto px-6 py-12 relative">
+      <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-6 lg:px-8 py-8 relative">
         {/* Project Updates - Post-it stickers (draggable anywhere) */}
         {updatesData && updatesData.length > 0 && (
           <div className="fixed inset-0 pointer-events-none z-50">
@@ -197,11 +455,11 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        <div className="mx-auto max-w-5xl w-full box-border px-3 sm:px-6">
+        <div className="space-y-8">
           {/* ===== HERO SECTION ===== */}
-          <div className="mb-8 card-elevated p-6">
+          <div className="card-elevated p-6">
             {/* Title & Score Row */}
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-4">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
                   {project.isFeatured && (
@@ -211,515 +469,279 @@ export default function ProjectDetail() {
                 <h1 className="text-3xl lg:text-4xl font-black text-foreground mb-2 break-words">
                   {project.title}
                 </h1>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {project.tagline}
                 </p>
-              </div>
-              <div className="badge-primary flex flex-col items-center justify-center px-6 py-4 rounded-[15px] flex-shrink-0 whitespace-nowrap">
-                <div className="text-2xl font-black text-black">{project.proofScore?.total || 0}</div>
-                <div className="text-xs font-bold text-black mt-1">Score</div>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="flex items-center gap-4 py-3 border-y border-border/30 mb-4">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  {project.viewCount?.toLocaleString() || 0} views
-                </span>
-              </div>
-              <VoteButtons
-                projectId={project.id}
-                voteCount={project.voteCount}
-                userVote={project.userVote as 'up' | 'down' | null}
-              />
-            </div>
-
-            {/* Action Buttons - Organized in rows */}
-            <div className="space-y-3">
-              {/* Primary Actions */}
-              <div className="flex flex-wrap gap-2">
-                {project.demoUrl && (
-                  <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm">
-                    <ExternalLink className="h-4 w-4" />
-                    Demo
-                  </a>
-                )}
-                {project.githubUrl && (
-                  <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
-                    <Github className="h-4 w-4" />
-                    Code
-                  </a>
-                )}
-                <button
-                  onClick={handleSave}
-                  disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
-                  className={`btn-secondary text-sm disabled:opacity-50 ${isSaved ? 'bg-primary text-black hover:bg-primary/90' : ''}`}
-                >
-                  <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
-                  {isSaved ? 'Saved' : 'Save'}
-                </button>
-                <button onClick={handleShare} className="btn-secondary text-sm">
-                  <Share2 className="h-4 w-4" />
-                  Share
-                </button>
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Eye className="h-4 w-4" />
+                    {project.viewCount?.toLocaleString() || 0} views
+                  </div>
+                  <VoteButtons
+                    projectId={project.id}
+                    voteCount={project.voteCount}
+                    userVote={project.userVote as 'up' | 'down' | null}
+                    projectOwnerId={project.authorId || project.user_id}
+                  />
+                </div>
               </div>
 
-              {/* Secondary Actions */}
-              <div className="flex flex-wrap gap-2">
-                <BadgeAwarder projectId={project.id} />
-                {user?.id !== project.authorId && (
-                  <IntroRequest projectId={project.id} builderId={project.authorId} />
-                )}
-                {user?.id === project.authorId && (
-                  <>
-                    <button onClick={() => setShowPostUpdate(true)} className="btn-primary text-sm">
-                      <Sparkles className="h-4 w-4" />
-                      Post Update
-                    </button>
-                    <Link to={`/project/${project.id}/edit`} className="btn-secondary text-sm">
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ===== CREATOR & VERIFICATION SECTION ===== */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {/* Creator Card - Spans full width on mobile */}
-            <div className="card-elevated p-5 md:col-span-2">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-14 w-14 border-2 border-primary">
-                  <AvatarImage src={project.author?.avatar} alt={project.author?.username} />
-                  <AvatarFallback className="bg-primary text-black font-bold">
-                    {project.author?.username?.slice(0, 2).toUpperCase() || 'NA'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <Link
-                    to={`/u/${project.author?.username}`}
-                    className="text-base font-bold text-primary hover:opacity-80 transition-quick block"
+              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
+                    className={`btn-secondary h-10 px-4 text-sm flex items-center gap-1.5 disabled:opacity-50 ${isSaved ? 'bg-primary text-black hover:bg-primary/90' : ''}`}
                   >
-                    {project.author?.username}
+                    <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+                    {isSaved ? 'Saved' : 'Save'}
+                  </button>
+                  <button onClick={handleShare} className="btn-secondary h-10 px-4 text-sm flex items-center gap-1.5">
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </button>
+                </div>
+                <div className="badge-primary flex flex-col items-center justify-center px-6 py-3 rounded-[15px] whitespace-nowrap min-w-[110px]">
+                  <div className="text-2xl font-black text-black">{project.proofScore?.total || 0}</div>
+                  <div className="text-xs font-bold text-black mt-1">Score</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {project.demoUrl && (
+                <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm">
+                  <ExternalLink className="h-4 w-4" />
+                  Demo
+                </a>
+              )}
+              {project.githubUrl && (
+                <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
+                  <Github className="h-4 w-4" />
+                  Code
+                </a>
+              )}
+              <BadgeAwarder projectId={project.id} />
+              {user?.id !== project.authorId && (
+                <IntroRequest projectId={project.id} builderId={project.authorId} />
+              )}
+              {user?.id === project.authorId && (
+                <>
+                  <button onClick={() => setShowPostUpdate(true)} className="btn-primary text-sm flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4" />
+                    Post Update
+                  </button>
+                  <Link to={`/project/${project.id}/edit`} className="btn-secondary text-sm flex items-center gap-1.5">
+                    <Edit className="h-4 w-4" />
+                    Edit
                   </Link>
-                  {project.hackathonName && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                      <Calendar className="h-3 w-3" />
-                      {project.hackathonName} • {project.hackathonDate && new Date(project.hackathonDate).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              </div>
+                </>
+              )}
             </div>
-
-            {/* Validation Status Card */}
-            <ValidationStatusCard badges={project.badges} />
           </div>
 
-          {/* ===== 0xCERT VERIFICATION SECTION ===== */}
-          {project.author?.has_oxcert && (
-            <div className="card-elevated p-6 mb-8">
-                <h3 className="font-black text-sm mb-3 text-foreground flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  0xCert Verification
-                </h3>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.85fr)]">
+            <div className="space-y-6">
+              {renderMissingFieldsAlert()}
 
-                {/* NFT Image */}
-                {project.author?.oxcert_metadata?.image && (
-                  <div className="relative w-full aspect-square mb-3 rounded-lg overflow-hidden border-2 border-primary/30">
-                    <img
-                      src={project.author.oxcert_metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/')}
-                      alt={project.author.oxcert_metadata.name || '0xCert NFT'}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.classList.remove('hidden');
-                      }}
-                    />
-                    <div className="hidden absolute inset-0 flex items-center justify-center bg-secondary/50">
-                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                  </div>
-                )}
+              <div className="card-elevated p-6">
+                <h2 className="text-lg font-black mb-3 text-foreground">About This Project</h2>
+                <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+                  {project.description}
+                </div>
+              </div>
 
-                {/* NFT Details */}
-                <div className="space-y-2">
-                  {project.author?.oxcert_metadata?.name && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Name</p>
-                      <p className="text-sm font-semibold text-foreground">{project.author.oxcert_metadata.name}</p>
-                    </div>
-                  )}
+              {insightCards.length > 0 && (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {insightCards}
+                </div>
+              )}
 
-                  {project.author?.oxcert_token_id && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Token ID</p>
-                      <p className="text-sm font-mono text-foreground">#{project.author.oxcert_token_id}</p>
-                    </div>
-                  )}
+              {project.pitch_deck_url && (
+                <div className="card-elevated p-6">
+                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Pitch Deck
+                  </h2>
+                  <a
+                    href={project.pitch_deck_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary inline-flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                    View Pitch Deck
+                  </a>
+                </div>
+              )}
 
-                  <div>
-                    <p className="text-xs text-muted-foreground">Wallet</p>
-                    <p className="text-sm font-mono text-foreground break-all">{project.author?.wallet_address}</p>
-                  </div>
-
-                  {/* Verification Score */}
-                  <div className="flex items-center gap-2 p-2 bg-primary rounded border border-primary hover:bg-primary/90 transition-all duration-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-black hover:scale-110 transition-transform duration-200 stroke-black" fill="none" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-sm text-black font-bold">Verified</span>
-                    <span className="text-xs text-black font-bold ml-auto">+10pts</span>
-                  </div>
-
-                  {/* Attributes */}
-                  {project.author?.oxcert_metadata?.attributes && project.author.oxcert_metadata.attributes.length > 0 && (
-                    <div className="pt-2">
-                      <p className="text-xs text-muted-foreground mb-2">Attributes</p>
-                      <div className="space-y-1">
-                        {project.author.oxcert_metadata.attributes.map((attr, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-secondary/30 rounded border border-border">
-                            <p className="text-xs text-muted-foreground">{attr.trait_type}</p>
-                            <p className="text-xs font-medium text-foreground">{attr.value}</p>
+              {((project.hackathons && project.hackathons.length > 0) ||
+                project.hackathonName ||
+                project.hackathonDate) && (
+                <div className="card-elevated p-6">
+                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                    <Award className="h-4 w-4 text-primary" />
+                    Hackathon Details
+                  </h2>
+                  <div className="space-y-4">
+                    {project.hackathons && project.hackathons.length > 0 ? (
+                      project.hackathons.map((hackathon: any, index: number) => (
+                        <div key={index} className="p-4 bg-secondary/20 rounded-lg border-2 border-border">
+                          <div className="space-y-2">
+                            {hackathon.name && (
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
+                                <span className="text-sm text-foreground font-medium">{hackathon.name}</span>
+                              </div>
+                            )}
+                            {hackathon.date && (
+                              <div className="flex items-center gap-3">
+                                <Calendar className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
+                                <span className="text-sm text-foreground">
+                                  {new Date(hackathon.date).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  })}
+                                </span>
+                              </div>
+                            )}
+                            {hackathon.prize && (
+                              <div className="flex items-center gap-3">
+                                <Trophy className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Prize:</span>
+                                <span className="text-sm text-foreground font-medium">{hackathon.prize}</span>
+                              </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Explorer Links */}
-                  <div className="flex flex-col gap-2 pt-2">
-                    {project.author?.full_wallet_address && (
-                      <a
-                        href={`https://kairos.kaiascan.io/account/${project.author.full_wallet_address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-primary text-xs inline-flex items-center justify-center gap-2 w-full"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        View Wallet
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-          {/* ===== PROJECT INFO SECTION ===== */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {/* Categories */}
-            {project.categories && project.categories.length > 0 && (
-              <div className="card-elevated p-5">
-                <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
-                  <Tag className="h-4 w-4 text-primary" />
-                  Categories
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {project.categories.map((category: string) => (
-                    <Badge key={category} variant="default" className="px-2.5 py-1 text-xs font-semibold bg-primary text-black hover:bg-primary/90">
-                      {category}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Chains */}
-            {project.chains && project.chains.length > 0 && (
-              <div className="card-elevated p-5">
-                <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
-                  <Link2 className="h-4 w-4 text-primary" />
-                  Chains ({project.chains.length})
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {project.chains.map((chain: any) => (
-                    <ChainBadge key={chain.id} chain={chain} size="sm" showPin={chain.is_pinned} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ===== MISSING FIELDS ALERT ===== */}
-          {user?.id === project.authorId && (
-            (() => {
-              const missingFields = [];
-              if (!project.categories || project.categories.length === 0) missingFields.push('Categories');
-              if (!project.project_story) missingFields.push('Project Journey');
-              if (!project.inspiration) missingFields.push('Inspiration');
-              if (!project.market_comparison) missingFields.push('Market Comparison');
-              if (!project.novelty_factor) missingFields.push('Novelty Factor');
-              if (!project.pitch_deck_url) missingFields.push('Pitch Deck');
-
-              if (missingFields.length > 0) {
-                return (
-                  <div className="card-elevated p-4 mb-8 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-2 border-yellow-500/30">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <h3 className="font-bold text-foreground mb-1">Complete Your Project Profile</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Add these sections to improve your profile visibility:
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {missingFields.map(field => (
-                            <span key={field} className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-600 rounded border border-yellow-500/30">
-                              {field}
-                            </span>
-                          ))}
                         </div>
-                        <Link to={`/project/${project.id}/edit`} className="inline-block px-3 py-1.5 bg-yellow-500 text-black rounded text-xs font-semibold hover:bg-yellow-600 transition-colors">
-                          Edit Project
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()
-          )}
-
-          {/* ===== DESCRIPTION SECTION ===== */}
-          <div className="card-elevated p-6 mb-8">
-            <h2 className="text-lg font-black mb-3 text-foreground">About This Project</h2>
-            <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
-              {project.description}
-            </div>
-          </div>
-
-          {/* ===== PROJECT DETAILS SECTION ===== */}
-          {/* Project Story Section */}
-          {project.project_story && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Project Journey
-              </h2>
-              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
-                {project.project_story}
-              </div>
-            </div>
-          )}
-
-          {/* Inspiration Section */}
-          {project.inspiration && (
-            <div className="card-elevated p-6 mb-8 bg-gradient-to-br from-secondary/30 to-secondary/10 border-2 border-primary/20">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-primary" />
-                The Spark
-              </h2>
-              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm italic">
-                {project.inspiration}
-              </div>
-            </div>
-          )}
-
-          {/* Market Comparison Section */}
-          {project.market_comparison && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Market Landscape
-              </h2>
-              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
-                {project.market_comparison}
-              </div>
-            </div>
-          )}
-
-          {/* Novelty Factor Section */}
-          {project.novelty_factor && (
-            <div className="card-elevated p-6 mb-8 bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                What Makes It Unique
-              </h2>
-              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm font-medium">
-                {project.novelty_factor}
-              </div>
-            </div>
-          )}
-
-          {/* Pitch Deck Section */}
-          {project.pitch_deck_url && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Pitch Deck
-              </h2>
-              <a
-                href={project.pitch_deck_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <ExternalLink className="h-5 w-5" />
-                View Pitch Deck
-              </a>
-            </div>
-          )}
-
-          {/* ===== MEDIA & RESOURCES SECTION ===== */}
-          {/* Hackathon Details */}
-          {((project.hackathons && project.hackathons.length > 0) || project.hackathonName || project.hackathonDate) && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <Award className="h-4 w-4 text-primary" />
-                Hackathon Details
-              </h2>
-              <div className="space-y-4">
-                {/* Display new hackathons array if available */}
-                {project.hackathons && project.hackathons.length > 0 ? (
-                  project.hackathons.map((hackathon: any, index: number) => (
-                    <div key={index} className="p-4 bg-secondary/20 rounded-lg border-2 border-border">
-                      <div className="space-y-2">
-                        {hackathon.name && (
+                      ))
+                    ) : (
+                      <div className="space-y-3">
+                        {project.hackathonName && (
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
-                            <span className="text-sm text-foreground font-medium">{hackathon.name}</span>
+                            <span className="text-sm text-foreground font-medium">{project.hackathonName}</span>
                           </div>
                         )}
-                        {hackathon.date && (
+                        {project.hackathonDate && (
                           <div className="flex items-center gap-3">
                             <Calendar className="h-4 w-4 text-primary" />
                             <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
-                            <span className="text-sm text-foreground">{new Date(hackathon.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                            <span className="text-sm text-foreground">
+                              {new Date(project.hackathonDate).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                            </span>
                           </div>
                         )}
-                        {hackathon.prize && (
-                          <div className="flex items-center gap-3">
-                            <Trophy className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Prize:</span>
-                            <span className="text-sm text-foreground font-medium">{hackathon.prize}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  /* Fallback to old single hackathon fields for backward compatibility */
-                  <div className="space-y-3">
-                    {project.hackathonName && (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
-                        <span className="text-sm text-foreground font-medium">{project.hackathonName}</span>
-                      </div>
-                    )}
-                    {project.hackathonDate && (
-                      <div className="flex items-center gap-3">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
-                        <span className="text-sm text-foreground">{new Date(project.hackathonDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Screenshots Section */}
-          {project.screenshots && project.screenshots.length > 0 && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-primary" />
-                Screenshots
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.screenshots.map((screenshot: string, index: number) => (
-                  <div key={index} className="relative group cursor-pointer" onClick={() => window.open(screenshot, '_blank')}>
-                    <img
-                      src={screenshot}
-                      alt={`${project.title} - Screenshot ${index + 1}`}
-                      className="w-full h-64 object-cover rounded-lg border-2 border-black transition-transform hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
-                      <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <span className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                      Screenshot {index + 1}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Tech Stack Section */}
-          {project.techStack && project.techStack.length > 0 && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <Code className="h-4 w-4 text-primary" />
-                Tech Stack
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {project.techStack.map((tech: string) => (
-                  <span key={tech} className="label-chip">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ===== TEAM SECTION ===== */}
-          {/* Team/Crew Section */}
-          {project.team_members && project.team_members.length > 0 && (
-            <div className="card-elevated p-6 mb-8">
-              <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                Team & Crew
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {project.team_members.map((member: any, index: number) => {
-                  const MemberCard = (
-                    <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
-                      <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/20 border-2 border-primary/30 flex-shrink-0">
-                        <span className="text-xs font-bold text-primary">
-                          {member.name.charAt(0).toUpperCase()}
+              {project.screenshots && project.screenshots.length > 0 && (
+                <div className="card-elevated p-6">
+                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                    Screenshots
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {project.screenshots.map((screenshot: string, index: number) => (
+                      <div
+                        key={index}
+                        className="relative group cursor-pointer"
+                        onClick={() => window.open(screenshot, '_blank')}
+                      >
+                        <img
+                          src={screenshot}
+                          alt={`${project.title} - Screenshot ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg border border-border/60 shadow-lg group-hover:opacity-90 transition-opacity"
+                        />
+                        <span className="absolute bottom-2 right-2 text-[10px] bg-black/70 text-white px-2 py-1 rounded-full">
+                          Screenshot {index + 1}
                         </span>
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-foreground truncate">{member.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{member.role || 'Team Member'}</p>
-                      </div>
-                    </div>
-                  );
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                  return member.user_id && member.username ? (
-                    <Link
-                      key={index}
-                      to={`/u/${member.username}`}
-                      className="hover:opacity-80 transition-opacity"
-                    >
-                      {MemberCard}
-                    </Link>
-                  ) : (
-                    <div key={index}>
-                      {MemberCard}
-                    </div>
-                  );
-                })}
+              {project.techStack && project.techStack.length > 0 && (
+                <div className="card-elevated p-6">
+                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                    <Code className="h-4 w-4 text-primary" />
+                    Tech Stack
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {project.techStack.map((tech: string) => (
+                      <span key={tech} className="label-chip">
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {project.team_members && project.team_members.length > 0 && (
+                <div className="card-elevated p-6">
+                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Team & Crew
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {project.team_members.map((member: any, index: number) => {
+                      const MemberCard = (
+                        <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
+                          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/20 border-2 border-primary/30 flex-shrink-0">
+                            <span className="text-xs font-bold text-primary">
+                              {member.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm text-foreground truncate">{member.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{member.role || 'Team Member'}</p>
+                          </div>
+                        </div>
+                      );
+
+                      return member.user_id && member.username ? (
+                        <Link
+                          key={index}
+                          to={`/u/${member.username}`}
+                          className="hover:opacity-80 transition-opacity"
+                        >
+                          {MemberCard}
+                        </Link>
+                      ) : (
+                        <div key={index}>{MemberCard}</div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div id="comments" className="card-elevated p-6 scroll-mt-20">
+                <h2 className="text-lg font-black mb-4 text-foreground">Comments & Discussion</h2>
+                <CommentSection projectId={id || String(project.id)} altProjectId={String(project.id)} />
               </div>
             </div>
-          )}
 
-          {/* ===== COMMUNITY SECTION ===== */}
-          {/* Comments Section */}
-          <div id="comments" className="card-elevated p-6 scroll-mt-20">
-            <h2 className="text-lg font-black mb-4 text-foreground">Comments & Discussion</h2>
-            <CommentSection projectId={id || String(project.id)} altProjectId={String(project.id)} />
+            <div className="space-y-6">
+              {renderCreatorCard()}
+              <ValidationStatusCard badges={project.badges} />
+              {renderOxCertCard()}
+              {renderCategoriesCard()}
+              {renderChainsCard()}
+            </div>
           </div>
         </div>
       </div>
-
       {/* Share Dialog */}
       <ShareDialog
         open={shareDialogOpen}

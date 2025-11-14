@@ -268,6 +268,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 projectId={project.id}
                 voteCount={project.voteCount}
                 userVote={project.userVote as 'up' | 'down' | null}
+                projectOwnerId={project.authorId || project.user_id}
               />
             </div>
             {/* Comment count button */}
