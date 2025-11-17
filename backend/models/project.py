@@ -53,6 +53,13 @@ class Project(db.Model):
     quality_score = db.Column(db.Integer, default=0)
     trending_score = db.Column(db.Float, default=0.0, index=True)  # Reddit-style hot score
 
+    # AI Scoring Metadata
+    score_breakdown = db.Column(db.JSON, default=dict)  # Detailed scoring breakdown
+    scoring_status = db.Column(db.String(20), default='pending', index=True)  # pending, processing, completed, failed, retrying
+    scoring_retry_count = db.Column(db.Integer, default=0)  # Number of retry attempts
+    last_scored_at = db.Column(db.DateTime, nullable=True, index=True)  # Last successful scoring
+    scoring_error = db.Column(db.Text, nullable=True)  # Error message from last failed attempt
+
     # Engagement Metrics
     upvotes = db.Column(db.Integer, default=0, index=True)
     downvotes = db.Column(db.Integer, default=0)
@@ -130,6 +137,12 @@ class Project(db.Model):
             'validation_score': self.validation_score,
             'quality_score': self.quality_score,
             'trending_score': self.trending_score,
+            # AI Scoring fields
+            'scoring_status': self.scoring_status,
+            'score_breakdown': self.score_breakdown,
+            'scoring_retry_count': self.scoring_retry_count,
+            'last_scored_at': self.last_scored_at.isoformat() if self.last_scored_at else None,
+            'scoring_error': self.scoring_error,
             'upvotes': self.upvotes,
             'downvotes': self.downvotes,
             'upvote_ratio': round(self.get_upvote_ratio(), 2),

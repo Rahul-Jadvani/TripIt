@@ -117,14 +117,36 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 </div>
 
                 <div className="flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 px-3 py-2 min-w-[70px]">
-                  <span className="text-xl font-bold text-primary">
-                    {project.proofScore?.total && project.proofScore.total > 0
-                      ? project.proofScore.total
-                      : Math.max(project.voteCount || 0, 0)}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-medium">
-                    {project.proofScore?.total && project.proofScore.total > 0 ? 'Score' : 'Votes'}
-                  </span>
+                  {(() => {
+                    const scoringStatus = project.scoring_status || project.scoringStatus;
+                    const hasScore = project.proofScore?.total && project.proofScore.total > 0;
+                    const isLegacyProject = !scoringStatus; // Old projects don't have scoring_status
+
+                    return (
+                      <>
+                        <span className="text-xl font-bold text-primary">
+                          {hasScore ? project.proofScore.total : Math.max(project.voteCount || 0, 0)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-medium">
+                          {hasScore ? (isLegacyProject ? 'Score' : 'AI Score') : 'Votes'}
+                        </span>
+                        {/* Only show status badges for NEW projects (not legacy) */}
+                        {!isLegacyProject && scoringStatus && scoringStatus !== 'completed' && (
+                          <span className={`text-[8px] font-bold mt-0.5 px-1.5 py-0.5 rounded ${
+                            scoringStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-600' :
+                            scoringStatus === 'processing' ? 'bg-blue-500/20 text-blue-600 animate-pulse' :
+                            scoringStatus === 'retrying' ? 'bg-orange-500/20 text-orange-600' :
+                            'bg-red-500/20 text-red-600'
+                          }`}>
+                            {scoringStatus === 'pending' ? '⏳ Pending' :
+                             scoringStatus === 'processing' ? '🔄 Analyzing' :
+                             scoringStatus === 'retrying' ? '🔁 Retry' :
+                             '⚠️ Failed'}
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

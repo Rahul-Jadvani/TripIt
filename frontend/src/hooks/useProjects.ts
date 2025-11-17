@@ -71,6 +71,17 @@ export function transformProject(backendProject: any) {
       validation: backendProject.validation_score || 0,
       quality: backendProject.quality_score || 0,
     },
+    // AI Scoring fields
+    scoring_status: backendProject.scoring_status,
+    scoringStatus: backendProject.scoring_status,
+    score_breakdown: backendProject.score_breakdown,
+    scoreBreakdown: backendProject.score_breakdown,
+    scoring_retry_count: backendProject.scoring_retry_count || 0,
+    scoringRetryCount: backendProject.scoring_retry_count || 0,
+    last_scored_at: backendProject.last_scored_at,
+    lastScoredAt: backendProject.last_scored_at,
+    scoring_error: backendProject.scoring_error,
+    scoringError: backendProject.scoring_error,
     badges: backendProject.badges || [],
     voteCount: (backendProject.upvotes || 0) - (backendProject.downvotes || 0),
     commentCount: backendProject.comment_count || 0,
@@ -130,8 +141,19 @@ export function useProjectById(id: string) {
 
     // Always fetch fresh data when component mounts to ensure latest votes/comments
     refetchOnMount: 'always',
-    // Background refetch for project details
-    refetchInterval: 1000 * 60 * 2, // Refresh every 2 minutes (votes/comments change)
+    // Conditional polling: Fast refresh when AI scoring is in progress
+    refetchInterval: (query) => {
+      const project = query.state.data?.data;
+      const scoringStatus = project?.scoring_status || project?.scoringStatus;
+
+      // Fast polling (5s) when AI is analyzing the project
+      if (scoringStatus === 'pending' || scoringStatus === 'processing' || scoringStatus === 'retrying') {
+        return 5000; // 5 seconds
+      }
+
+      // Normal polling (2 min) for completed/failed or no AI scoring
+      return 1000 * 60 * 2; // 2 minutes
+    },
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     // Don't use placeholderData for project details to avoid showing stale data when navigating between projects
@@ -239,6 +261,25 @@ export function useDeleteProject() {
     },
     onError: () => {
       toast.error('Failed to delete project');
+    },
+  });
+}
+
+export function useRescoreProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => {
+      return projectsService.rescoreProject(projectId);
+    },
+    onSuccess: (_data, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('AI scoring has been queued. Your project will be re-analyzed in ~30-60 seconds.');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to rescore project';
+      toast.error(errorMessage);
     },
   });
 }

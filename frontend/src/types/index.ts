@@ -83,6 +83,17 @@ export interface Project {
   proofScore: ProofScore;
   proof_score?: ProofScore; // Backend field
   badges: Badge[];
+  // AI Scoring fields
+  scoring_status?: 'pending' | 'processing' | 'completed' | 'failed' | 'retrying'; // Backend field
+  scoringStatus?: 'pending' | 'processing' | 'completed' | 'failed' | 'retrying';
+  score_breakdown?: any; // Backend field - detailed AI scoring breakdown
+  scoreBreakdown?: any;
+  scoring_retry_count?: number; // Backend field
+  scoringRetryCount?: number;
+  last_scored_at?: string; // Backend field
+  lastScoredAt?: string;
+  scoring_error?: string; // Backend field - error message if scoring failed
+  scoringError?: string;
   // Engagement metrics
   voteCount: number;
   vote_count?: number; // Backend field

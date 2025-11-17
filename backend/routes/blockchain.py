@@ -10,7 +10,7 @@ from utils.decorators import token_required, optional_auth
 from utils.blockchain import BlockchainService
 from utils.validators import validate_ethereum_address
 from utils.helpers import success_response, error_response
-from utils.scores import ProofScoreCalculator
+# Legacy scoring removed - using AI scoring system
 from utils.cache import CacheService
 
 blockchain_bp = Blueprint('blockchain', __name__)
@@ -57,10 +57,14 @@ def verify_cert(user_id):
             user.oxcert_metadata = nft_details.get('metadata')
             user.oxcert_tx_hash = nft_details.get('tx_hash')
 
-        # Get all projects to update scores
+        # Get all projects to update scores via AI system
         if result['has_cert']:
+            from tasks.scoring_tasks import score_project_task
             for project in user.projects:
-                ProofScoreCalculator.update_project_scores(project)
+                try:
+                    score_project_task.delay(project.id)
+                except Exception as e:
+                    print(f"Failed to queue 0xCert rescore: {e}")
                 CacheService.invalidate_project(project.id)
 
         db.session.commit()

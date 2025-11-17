@@ -67,6 +67,43 @@ class Config:
     PINATA_SECRET_API_KEY = os.getenv('PINATA_SECRET_API_KEY')
     PINATA_JWT = os.getenv('PINATA_JWT')
 
+    # OpenAI API Configuration
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+    OPENAI_MAX_TOKENS = int(os.getenv('OPENAI_MAX_TOKENS', 2000))
+    OPENAI_TEMPERATURE = float(os.getenv('OPENAI_TEMPERATURE', 0.3))
+
+    # Celery Configuration
+    CELERY_BROKER_URL = os.getenv(
+        'CELERY_BROKER_URL',
+        os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    )
+    CELERY_RESULT_BACKEND = os.getenv(
+        'CELERY_RESULT_BACKEND',
+        os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    )
+
+    # SSL Configuration for rediss:// (Upstash Redis TLS)
+    import ssl
+    CELERY_BROKER_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
+    }
+    CELERY_REDIS_BACKEND_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
+    }
+
+    CELERY_TASK_TRACK_STARTED = True
+    CELERY_TASK_TIME_LIMIT = 600  # 10 minutes max per task
+    CELERY_TASK_SOFT_TIME_LIMIT = 540  # 9 minutes soft limit
+    CELERY_TASK_ACKS_LATE = True
+    CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+    # Scoring Configuration
+    SCORING_RATE_LIMIT_HOURS = int(os.getenv('SCORING_RATE_LIMIT_HOURS', 1))
+    SCORING_MAX_RETRIES = int(os.getenv('SCORING_MAX_RETRIES', 10))
+    SCORING_RETRY_BACKOFF = int(os.getenv('SCORING_RETRY_BACKOFF', 300))  # 5 minutes
+    SCORING_GITHUB_CACHE_DAYS = int(os.getenv('SCORING_GITHUB_CACHE_DAYS', 7))
+
     # CORS
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:8080').split(',')
 

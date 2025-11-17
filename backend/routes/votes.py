@@ -10,7 +10,7 @@ from models.project import Project
 from schemas.vote import VoteCreateSchema
 from utils.decorators import token_required
 from utils.helpers import success_response, error_response, get_pagination_params, paginated_response
-from utils.scores import ProofScoreCalculator
+# Legacy scoring removed - community score updated by AI system
 from utils.cache import CacheService
 from marshmallow import ValidationError
 
@@ -120,8 +120,8 @@ def cast_vote(user_id):
 
                 db.session.add(vote)
 
-            # Recalculate scores
-            ProofScoreCalculator.update_project_scores(project)
+            # Community score will be updated by periodic AI rescoring
+            # or trigger immediate rescore for high-priority projects if needed
 
             db.session.commit()
 

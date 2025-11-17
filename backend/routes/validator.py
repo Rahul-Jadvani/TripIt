@@ -12,7 +12,8 @@ from models.validator_assignment import ValidatorAssignment
 from utils.decorators import validator_required, admin_or_validator_required
 from utils.cache import CacheService
 from services.socket_service import SocketService
-from utils.scores import ProofScoreCalculator
+# Legacy scoring removed - using AI scoring system
+from tasks.scoring_tasks import score_project_task
 
 validator_bp = Blueprint('validator', __name__)  # Validator routes blueprint
 
@@ -136,8 +137,11 @@ def validate_assigned_project(user_id, assignment_id):
             )
             db.session.add(badge)
 
-            # Update project validation score
-            ProofScoreCalculator.update_project_scores(project)
+            # Update project validation score via AI system
+            try:
+                score_project_task.delay(project.id)
+            except Exception as e:
+                print(f"Failed to queue validator badge rescore: {e}")
 
         db.session.commit()
 
@@ -418,8 +422,11 @@ def award_badge(user_id):
                 other.status = 'completed'
                 other.review_notes = f'Validated by another validator ({user_id})'
 
-        # Update project scores
-        ProofScoreCalculator.update_project_scores(project)
+        # Update project scores via AI system
+        try:
+            score_project_task.delay(project.id)
+        except Exception as e:
+            print(f"Failed to queue validator assignment rescore: {e}")
 
         db.session.commit()
 

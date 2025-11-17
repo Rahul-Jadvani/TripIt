@@ -14,7 +14,9 @@ from models.user import User
 from schemas.project import ProjectSchema, ProjectCreateSchema, ProjectUpdateSchema
 from utils.decorators import token_required, admin_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
-from utils.scores import ProofScoreCalculator
+# Old scoring system removed - using async AI scoring
+# from utils.scores import ProofScoreCalculator
+from tasks.scoring_tasks import score_project_task, check_rate_limit
 from utils.cache import CacheService
 
 projects_bp = Blueprint('projects', __name__)
@@ -542,10 +544,18 @@ def create_project(user_id):
         db.session.add(project)
         db.session.flush()  # Flush to get the relationship loaded
 
-        # Calculate initial scores
-        ProofScoreCalculator.update_project_scores(project)
+        # Set initial scoring status (AI scoring will run async)
+        project.scoring_status = 'pending'
+        project.proof_score = 0  # Will be updated by async task
 
         db.session.commit()
+
+        # Trigger async AI scoring task
+        try:
+            score_project_task.delay(project.id)
+        except Exception as e:
+            # Log error but don't fail project creation
+            print(f"Failed to queue scoring task: {e}")
 
         # Add to chains if chain_ids provided
         chain_ids = validated_data.get('chain_ids', [])
@@ -662,7 +672,7 @@ def update_project(user_id, project_id):
                 setattr(project, key, value)
 
         project.updated_at = datetime.utcnow()
-        ProofScoreCalculator.update_project_scores(project)
+        # Scoring handled by async AI system
 
         db.session.commit()
         CacheService.invalidate_project(project_id)
@@ -771,7 +781,7 @@ def upvote_project(user_id, project_id):
             db.session.add(vote)
 
         # Recalculate scores
-        ProofScoreCalculator.update_project_scores(project)
+        # Scoring handled by async AI system
         db.session.commit()
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_leaderboard()  # Vote affects leaderboard
@@ -827,7 +837,7 @@ def downvote_project(user_id, project_id):
             db.session.add(vote)
 
         # Recalculate scores
-        ProofScoreCalculator.update_project_scores(project)
+        # Scoring handled by async AI system
         db.session.commit()
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_leaderboard()  # Vote affects leaderboard
@@ -873,7 +883,7 @@ def remove_vote(user_id, project_id):
             project.downvotes = max(0, project.downvotes - 1)
 
         db.session.delete(vote)
-        ProofScoreCalculator.update_project_scores(project)
+        # Scoring handled by async AI system
         db.session.commit()
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_leaderboard()  # Vote removal affects leaderboard

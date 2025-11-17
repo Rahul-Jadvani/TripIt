@@ -41,6 +41,7 @@ import {
   useToggleChainFeatured,
 } from '@/hooks/useAdminChains';
 import CoffeeLoader from '@/components/CoffeeLoader';
+import { AdminScoringConfig } from '@/components/AdminScoringConfig';
 
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -1301,6 +1302,9 @@ export default function Admin() {
               </Card>
             </div>
           )}
+
+          {/* AI Scoring Configuration */}
+          <AdminScoringConfig />
         </TabsContent>
 
         {/* Users Tab */}

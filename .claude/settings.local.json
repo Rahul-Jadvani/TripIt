@@ -30,7 +30,12 @@
       "Bash(netstat:*)",
       "Bash(tasklist:*)",
       "Bash(pkill:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(timeout /t 3)",
+      "Bash(if not exist \"services\\scoring\" mkdir \"services\\scoring\")",
+      "Bash(if not exist \"tasks\" mkdir \"tasks\")",
+      "Bash(\"services\\scoring\\__init__.py\")",
+      "Bash(\"tasks\\__init__.py\")"
     ],
     "deny": [],
     "ask": []

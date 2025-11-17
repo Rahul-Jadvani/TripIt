@@ -14,7 +14,6 @@ import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckC
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PublishLoader, PublishSuccess } from '@/components/PublishLoader';
 import { toast } from 'sonner';
-import { WalletVerification } from '@/components/WalletVerification';
 import { UserSearchSelect } from '@/components/UserSearchSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
@@ -647,52 +646,52 @@ export default function Publish() {
             {/* Proof Score Info - Collapsible */}
             {showProofScoreInfo && (
               <div className="bg-primary/10 border-4 border-primary rounded-[15px] p-6 mt-6 animate-in slide-in-from-top-2">
-                <h2 className="text-lg font-black text-foreground mb-4">Maximize Your Proof Score (0-100)</h2>
+                <h2 className="text-lg font-black text-foreground mb-4">AI-Powered Proof Score (0-100)</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h3 className="text-sm font-bold text-foreground mb-2">Quality Score (Max 20 points)</h3>
+                    <h3 className="text-sm font-bold text-foreground mb-2">Code Quality (Max 20 points)</h3>
                     <ul className="space-y-1 text-muted-foreground text-xs">
-                      <li>✓ Demo URL: +5 points</li>
-                      <li>✓ GitHub URL: +5 points</li>
-                      <li>✓ Screenshots: +5 points</li>
-                      <li>✓ Description (200+ chars): +5 points</li>
+                      <li>🤖 AI analyzes your GitHub repo</li>
+                      <li>✓ Repository structure & organization</li>
+                      <li>✓ README quality & documentation</li>
+                      <li>✓ File organization & patterns</li>
+                      <li>✓ Code quality indicators</li>
                     </ul>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-foreground mb-2">Verification Score (Max 20 points)</h3>
+                    <h3 className="text-sm font-bold text-foreground mb-2">Team Verification (Max 20 points)</h3>
                     <ul className="space-y-1 text-muted-foreground text-xs">
-                      <li>✓ Email verified: +5 points</li>
-                      <li>✓ 0xCert connected: +10 points</li>
-                      <li>✓ GitHub connected: +5 points</li>
+                      <li>🤖 AI analyzes your team's GitHub</li>
+                      <li>✓ Past project experience</li>
+                      <li>✓ Contribution history</li>
+                      <li>✓ Profile strength & activity</li>
+                      <li>✓ Technical credibility</li>
                     </ul>
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-foreground mb-2">Community Score (Max 30 points)</h3>
                     <ul className="space-y-1 text-muted-foreground text-xs">
                       <li>✓ Upvote ratio: up to 20 points</li>
-                      <li>✓ Comments: up to 10 points</li>
+                      <li>✓ Comment engagement: up to 10 points</li>
+                      <li>💡 Encourage community feedback!</li>
                     </ul>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-foreground mb-2">Validation Score (Max 30 points)</h3>
+                    <h3 className="text-sm font-bold text-foreground mb-2">AI Validation (Max 30 points)</h3>
                     <ul className="space-y-1 text-muted-foreground text-xs">
-                      <li>✓ Badges from experts</li>
-                      <li>✓ Silver: 10 points</li>
-                      <li>✓ Gold: 15 points</li>
-                      <li>✓ Platinum: 20 points</li>
+                      <li>🤖 GPT-4 analyzes your project</li>
+                      <li>✓ Competitive positioning analysis</li>
+                      <li>✓ Market fit & TAM evaluation</li>
+                      <li>✓ Success criteria assessment</li>
+                      <li>✓ Innovation & impact potential</li>
                     </ul>
                   </div>
                 </div>
                 <p className="mt-4 text-xs text-foreground font-bold bg-primary/20 p-3 rounded-lg border-2 border-primary">
-                  <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Tip: Fill in all optional fields to achieve a maximum Quality Score of 20/20!</span>
+                  <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Tip: Connect your GitHub and provide a quality README for best AI analysis results. Scoring is automatic and takes ~30-60 seconds!</span>
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Wallet & Verification Section */}
-          <div className="mb-8">
-            <WalletVerification />
           </div>
 
           <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
@@ -766,11 +765,10 @@ export default function Publish() {
                   <div className="space-y-3">
                     <Label htmlFor="description" className="text-base font-bold">
                       Description *
-                      <span className="ml-2 text-xs badge-info">+5 Quality Score for 200+ chars</span>
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe your project in detail (minimum 200 characters for quality score)"
+                      placeholder="Describe your project in detail (minimum 200 characters recommended)"
                       rows={8}
                       aria-invalid={!!errors.description}
                       className={`text-base ${errors.description ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
@@ -783,7 +781,7 @@ export default function Publish() {
                       </p>
                     )}
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Minimum 200 characters recommended for +5 quality score</p>
+                      <p className="text-xs text-muted-foreground">Detailed description helps AI better analyze your project</p>
                       <span className={`badge ${descLength >= 200 ? 'badge-success' : 'badge-warning'}`}>
                         {descLength} / 200+
                       </span>
@@ -1115,7 +1113,6 @@ export default function Publish() {
                   <div className="space-y-2">
                     <Label htmlFor="demoUrl">
                       Demo URL
-                      <span className="ml-2 text-xs badge-info">+5 Quality Score</span>
                     </Label>
                     <Input
                       id="demoUrl"
@@ -1128,13 +1125,12 @@ export default function Publish() {
                     {errors.demoUrl && (
                       <p className="text-sm text-destructive">{errors.demoUrl.message}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">Add a working demo to earn +5 quality score</p>
+                    <p className="text-xs text-muted-foreground">A working demo helps showcase your project's functionality</p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="githubUrl">
-                      GitHub URL
-                      <span className="ml-2 text-xs badge-info">+5 Quality Score</span>
+                      GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
                     </Label>
                     <Input
                       id="githubUrl"
@@ -1165,7 +1161,7 @@ export default function Publish() {
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Link your repository to earn +5 quality score
+                      GitHub repo required for AI to analyze code quality and team credentials
                       {user?.github_connected && (
                         <span className="text-primary font-medium"> (Connected as @{user.github_username})</span>
                       )}
@@ -1419,12 +1415,10 @@ export default function Publish() {
               <div className="card-elevated p-8" id="screenshotsSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
                   Screenshots <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
-                  <span className="ml-2 text-xs badge-info">+5 Quality Score</span>
                 </h2>
                 <div className="space-y-5">
                   <p className="text-sm text-muted-foreground">
-                    Upload screenshots to increase your project's quality score. At least one screenshot earns +5 points.
-                    Images are stored on IPFS via Pinata.
+                    Upload screenshots to showcase your project's UI and features. Images are stored on IPFS via Pinata.
                   </p>
 
                   {/* File Upload Button */}

@@ -10,10 +10,12 @@ from models.badge import ValidationBadge
 from models.investor_request import InvestorRequest
 from models.validator_permissions import ValidatorPermissions
 from models.chain import Chain, ChainModerationLog
+from models.admin_scoring_config import AdminScoringConfig
 from utils.decorators import admin_required
 from utils.cache import CacheService
 from services.socket_service import SocketService
-from utils.scores import ProofScoreCalculator
+from schemas.scoring import UpdateConfigSchema
+from tasks.scoring_tasks import score_project_task
 from uuid import uuid4
 
 admin_bp = Blueprint('admin', __name__)
@@ -953,10 +955,13 @@ def update_badge(user_id, badge_id):
         if 'rationale' in data:
             badge.rationale = data['rationale']
 
-        # Update project scores
+        # Update project scores via AI system
         project = Project.query.get(badge.project_id)
         if project:
-            ProofScoreCalculator.update_project_scores(project)
+            try:
+                score_project_task.delay(project.id)
+            except Exception as e:
+                print(f"Failed to queue badge update rescore: {e}")
 
         db.session.commit()
 
@@ -1005,10 +1010,13 @@ def delete_badge(user_id, badge_id):
                     assignment.reviewed_at = None
                     assignment.review_notes = 'Badge removed by admin - reset to pending'
 
-        # Update project scores
+        # Update project scores via AI system
         project = Project.query.get(project_id)
         if project:
-            ProofScoreCalculator.update_project_scores(project)
+            try:
+                score_project_task.delay(project.id)
+            except Exception as e:
+                print(f"Failed to queue badge delete rescore: {e}")
 
         db.session.commit()
 
@@ -1068,8 +1076,11 @@ def award_badge_as_admin(user_id):
 
         db.session.add(badge)
 
-        # Update project scores
-        ProofScoreCalculator.update_project_scores(project)
+        # Update project scores via AI system
+        try:
+            score_project_task.delay(project.id)
+        except Exception as e:
+            print(f"Failed to queue custom badge rescore: {e}")
 
         db.session.commit()
 
@@ -1446,6 +1457,211 @@ def get_chain_logs(user_id, slug):
                 'chain': chain.to_dict(include_creator=True),
                 'logs': [log.to_dict(include_admin=True) for log in logs]
             }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ============================================================================
+# SCORING CONFIGURATION
+# ============================================================================
+
+@admin_bp.route('/scoring/config', methods=['GET'])
+@admin_required
+def get_scoring_config(user_id):
+    """
+    Get all scoring configuration values
+
+    Returns:
+        All scoring configurations (weights, LLM config, GitHub weights, etc.)
+    """
+    try:
+        configs = AdminScoringConfig.query.all()
+
+        config_data = {}
+        for config in configs:
+            config_data[config.config_key] = {
+                'value': config.config_value,
+                'updated_at': config.updated_at.isoformat() if config.updated_at else None,
+                'updated_by': config.updated_by
+            }
+
+        return jsonify({
+            'status': 'success',
+            'data': config_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/scoring/config', methods=['PUT'])
+@admin_required
+def update_scoring_config(user_id):
+    """
+    Update scoring configuration
+
+    Body (JSON):
+        {
+            "config_key": "scoring_weights",
+            "config_value": {"quality": 30, "verification": 25, ...}
+        }
+
+    Returns:
+        Updated configuration
+    """
+    try:
+        data = request.get_json()
+
+        # Validate input
+        schema = UpdateConfigSchema()
+        errors = schema.validate(data)
+        if errors:
+            return jsonify({'status': 'error', 'message': 'Validation failed', 'errors': errors}), 400
+
+        config_key = data.get('config_key')
+        config_value = data.get('config_value')
+
+        # Get or create config
+        config = AdminScoringConfig.query.filter_by(config_key=config_key).first()
+        if not config:
+            config = AdminScoringConfig(
+                id=str(uuid4()),
+                config_key=config_key
+            )
+            db.session.add(config)
+
+        # Update values
+        config.config_value = config_value
+        config.updated_by = user_id
+        config.updated_at = datetime.utcnow()
+
+        db.session.commit()
+
+        # Clear cache to force reload of new config
+        cache_service = CacheService()
+        cache_service.delete(f'scoring_config:{config_key}')
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Configuration updated successfully',
+            'data': {
+                'config_key': config.config_key,
+                'config_value': config.config_value,
+                'updated_at': config.updated_at.isoformat()
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/projects/<project_id>/rescore', methods=['POST'])
+@admin_required
+def rescore_project(user_id, project_id):
+    """
+    Manually trigger rescoring for a specific project
+
+    Args:
+        project_id: Project UUID
+
+    Returns:
+        Task queued confirmation
+    """
+    try:
+        project = Project.query.get(project_id)
+        if not project:
+            return jsonify({'status': 'error', 'message': 'Project not found'}), 404
+
+        # Check if scoring is already in progress
+        if project.scoring_status == 'processing':
+            return jsonify({
+                'status': 'error',
+                'message': 'Scoring is already in progress for this project'
+            }), 400
+
+        # Reset scoring status
+        project.scoring_status = 'pending'
+        project.scoring_error = None
+        project.scoring_retry_count = 0  # Reset retry count for manual rescore
+        db.session.commit()
+
+        # Queue scoring task
+        task = score_project_task.delay(project.id)
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Project rescoring queued successfully',
+            'data': {
+                'project_id': project.id,
+                'task_id': task.id,
+                'scoring_status': 'queued'
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/scoring/stats', methods=['GET'])
+@admin_required
+def get_scoring_stats(user_id):
+    """
+    Get scoring system statistics
+
+    Returns:
+        Overall scoring statistics (pending, processing, completed, failed)
+    """
+    try:
+        # Count projects by scoring status
+        stats = {
+            'total_projects': Project.query.count(),
+            'pending': Project.query.filter_by(scoring_status='pending').count(),
+            'processing': Project.query.filter_by(scoring_status='processing').count(),
+            'completed': Project.query.filter_by(scoring_status='completed').count(),
+            'failed': Project.query.filter_by(scoring_status='failed').count(),
+            'retrying': Project.query.filter_by(scoring_status='retrying').count(),
+        }
+
+        # Get average scores
+        completed_projects = Project.query.filter_by(scoring_status='completed').all()
+        if completed_projects:
+            stats['average_scores'] = {
+                'proof_score': sum(p.proof_score or 0 for p in completed_projects) / len(completed_projects),
+                'quality_score': sum(p.quality_score or 0 for p in completed_projects) / len(completed_projects),
+                'verification_score': sum(p.verification_score or 0 for p in completed_projects) / len(completed_projects),
+                'validation_score': sum(p.validation_score or 0 for p in completed_projects) / len(completed_projects),
+                'community_score': sum(p.community_score or 0 for p in completed_projects) / len(completed_projects),
+            }
+        else:
+            stats['average_scores'] = {
+                'proof_score': 0,
+                'quality_score': 0,
+                'verification_score': 0,
+                'validation_score': 0,
+                'community_score': 0,
+            }
+
+        # Get recent failures
+        recent_failures = Project.query.filter_by(scoring_status='failed')\
+            .order_by(Project.last_scored_at.desc())\
+            .limit(10)\
+            .all()
+
+        stats['recent_failures'] = [{
+            'project_id': p.id,
+            'project_name': p.project_name,
+            'error': p.scoring_error,
+            'retry_count': p.scoring_retry_count,
+            'last_scored_at': p.last_scored_at.isoformat() if p.last_scored_at else None
+        } for p in recent_failures]
+
+        return jsonify({
+            'status': 'success',
+            'data': stats
         }), 200
 
     except Exception as e:

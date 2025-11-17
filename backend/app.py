@@ -29,6 +29,7 @@ def import_models():
     from models.chain import Chain, ChainProject, ChainProjectRequest, ChainFollower
     from models.chain_post import ChainPost, ChainPostReaction
     from models.notification import Notification
+    from models.admin_scoring_config import AdminScoringConfig
     return True
 
 
@@ -140,6 +141,51 @@ def create_app(config_name=None):
             ReconciliationScheduler.start_daily_scheduler(app, hour=reconciliation_hour)
             print(f"[PERFORMANCE] Daily reconciliation scheduled at {reconciliation_hour}:00 AM")
 
+        # AI SCORING: Start Celery worker and beat scheduler
+        # Skip if disabled (e.g., during testing or if running Celery separately)
+        if not app.config.get('TESTING') and not os.environ.get('DISABLE_CELERY'):
+            from tasks.retry_failed_scores import setup_periodic_tasks
+            from celery_app import celery
+            import threading
+            import subprocess
+            import sys
+
+            # Setup periodic tasks for Celery Beat
+            setup_periodic_tasks(celery)
+
+            def run_celery_worker():
+                """Run Celery worker in background thread"""
+                try:
+                    # Start Celery worker
+                    worker = celery.Worker(
+                        pool='solo',  # Use solo pool for Windows compatibility
+                        loglevel='info',
+                        concurrency=2
+                    )
+                    worker.start()
+                except Exception as e:
+                    print(f"[AI SCORING] Celery worker error: {e}")
+
+            def run_celery_beat():
+                """Run Celery beat scheduler in background thread"""
+                try:
+                    # Start Celery beat
+                    beat = celery.Beat(loglevel='info')
+                    beat.run()
+                except Exception as e:
+                    print(f"[AI SCORING] Celery beat error: {e}")
+
+            # Start Celery worker in background thread
+            worker_thread = threading.Thread(target=run_celery_worker, daemon=True)
+            worker_thread.start()
+            print("[AI SCORING] Celery worker started in background")
+
+            # Start Celery beat in background thread
+            beat_thread = threading.Thread(target=run_celery_beat, daemon=True)
+            beat_thread.start()
+            print("[AI SCORING] Celery beat scheduler started in background")
+            print("[AI SCORING] Retry failed scores task scheduled (every 30 minutes)")
+
     # Health check
     @app.route('/health', methods=['GET'])
     def health_check():
@@ -221,6 +267,7 @@ def register_blueprints(app):
     from routes.chains import chains_bp
     from routes.chain_posts import chain_posts_bp
     from routes.notifications import notifications_bp
+    from routes.scoring import scoring_bp
 
     # PERFORMANCE: Ultra-fast optimized routes
     from routes.prefetch import prefetch_bp
@@ -249,6 +296,7 @@ def register_blueprints(app):
     app.register_blueprint(chains_bp, url_prefix='/api/chains')
     app.register_blueprint(chain_posts_bp, url_prefix='/api/chains')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+    app.register_blueprint(scoring_bp, url_prefix='/api')
 
     # PERFORMANCE: Ultra-fast optimized endpoints
     app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')

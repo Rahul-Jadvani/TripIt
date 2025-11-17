@@ -12,7 +12,7 @@ from models.project import Project
 from schemas.badge import BadgeAwardSchema
 from utils.decorators import admin_required, token_required
 from utils.helpers import success_response, error_response, get_pagination_params
-from utils.scores import ProofScoreCalculator
+# Legacy scoring removed - validation score updated by AI system
 from utils.cache import CacheService
 
 badges_bp = Blueprint('badges', __name__)
@@ -42,8 +42,13 @@ def award_badge(user_id):
 
         db.session.add(badge)
 
-        # Recalculate project scores
-        ProofScoreCalculator.update_project_scores(project)
+        # Badge awarded - validation score will be updated by AI system
+        # Optionally trigger immediate rescore for this project
+        try:
+            from tasks.scoring_tasks import score_project_task
+            score_project_task.delay(project.id)
+        except Exception as e:
+            print(f"Failed to queue badge rescore: {e}")
 
         db.session.commit()
         CacheService.invalidate_project(validated_data['project_id'])

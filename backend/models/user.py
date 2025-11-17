@@ -27,6 +27,7 @@ class User(db.Model):
     # GitHub
     github_username = db.Column(db.String(255), nullable=True)
     github_connected = db.Column(db.Boolean, default=False)
+    github_access_token = db.Column(db.Text, nullable=True)  # For AI scoring GitHub API calls
 
     # Profile
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)

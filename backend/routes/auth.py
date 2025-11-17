@@ -195,7 +195,7 @@ def github_connect():
             f"https://github.com/login/oauth/authorize"
             f"?client_id={current_app.config['GITHUB_CLIENT_ID']}"
             f"&redirect_uri={current_app.config['GITHUB_REDIRECT_URI']}"
-            f"&scope=read:user user:email"
+            f"&scope=read:user user:email repo read:org"
             f"&state={state_with_user}"
         )
 
@@ -393,13 +393,14 @@ def github_callback():
             frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
             return redirect(f"{frontend_url}/publish?github_error=user_fetch_failed")
 
-        # Update user with GitHub info
+        # Update user with GitHub info and access token
         user = User.query.get(user_id)
         if not user:
             return error_response('Error', 'User not found', 404)
 
         user.github_username = github_username
         user.github_connected = True
+        user.github_access_token = access_token  # Store token for AI scoring
         db.session.commit()
 
         # Redirect back to frontend with success
@@ -425,6 +426,7 @@ def github_disconnect():
 
         user.github_username = None
         user.github_connected = False
+        user.github_access_token = None  # Clear stored token
         db.session.commit()
 
         return success_response(None, 'GitHub account disconnected', 200)

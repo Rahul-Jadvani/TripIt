@@ -11,7 +11,7 @@ import { VoteButtons } from '@/components/VoteButtons';
 import { CommentSection } from '@/components/CommentSection';
 import { BadgeAwarder } from '@/components/BadgeAwarder';
 import { IntroRequest } from '@/components/IntroRequest';
-import { ValidationStatusCard } from '@/components/ValidationStatusCard';
+import { AIScoringBreakdownCard } from '@/components/AIScoringBreakdownCard';
 import { ProjectDetailSkeleton } from '@/components/ProjectDetailSkeleton';
 import { ShareDialog } from '@/components/ShareDialog';
 import { ProjectUpdateSticker } from '@/components/ProjectUpdateSticker';
@@ -734,7 +734,7 @@ export default function ProjectDetail() {
 
             <div className="space-y-6">
               {renderCreatorCard()}
-              <ValidationStatusCard badges={project.badges} />
+              <AIScoringBreakdownCard project={project} />
               {renderOxCertCard()}
               {renderCategoriesCard()}
               {renderChainsCard()}

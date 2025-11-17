@@ -120,6 +120,7 @@ export const projectsService = {
   create: (data: any) => api.post('/projects', data),
   update: (id: string, data: any) => api.put(`/projects/${id}`, data),
   delete: (id: string) => api.delete(`/projects/${id}`),
+  rescoreProject: (projectId: string) => api.post(`/admin/projects/${projectId}/rescore`),
   getByUser: (userId: string) => api.get(`/users/${userId}/projects`),
   getTaggedProjects: (userId: string) => api.get(`/users/${userId}/tagged-projects`),
 };
@@ -337,6 +338,13 @@ export const adminService = {
   updateFeedbackStatus: (feedbackId: string, data: { status: string; admin_notes?: string }) =>
     api.patch(`/feedback/admin/${feedbackId}/status`, data),
   deleteFeedback: (feedbackId: string) => api.delete(`/feedback/admin/${feedbackId}`),
+
+  // Scoring Configuration
+  getScoringConfig: () => api.get('/admin/scoring/config'),
+  updateScoringConfig: (data: { config_key: string; config_value: any }) =>
+    api.put('/admin/scoring/config', data),
+  getScoringStats: () => api.get('/admin/scoring/stats'),
+  rescoreProject: (projectId: string) => api.post(`/admin/projects/${projectId}/rescore`),
 };
 
 // Public Investors (non-admin convenience wrapper)
