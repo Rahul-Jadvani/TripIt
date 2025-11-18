@@ -125,9 +125,27 @@ def validate_assigned_project(user_id, assignment_id):
             other.status = 'completed'  # Mark as completed but not validated
             other.review_notes = f'Validated by another validator ({user_id})'
 
-        # Award badge
+        # Award badge (ENFORCE: 1 project = 1 badge only)
         project = assignment.project
         if project:
+            # Check if project already has a badge
+            existing_badge = ValidationBadge.query.filter_by(project_id=project.id).first()
+            if existing_badge:
+                # Get validator name
+                validator = User.query.get(existing_badge.validator_id)
+                validator_name = validator.display_name if validator else "Unknown Validator"
+
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Badge already awarded by {validator_name}',
+                    'existing_badge': {
+                        'type': existing_badge.badge_type,
+                        'awarded_by': validator_name,
+                        'awarded_at': existing_badge.created_at.isoformat() if existing_badge.created_at else None
+                    }
+                }), 400
+
+            # Award new badge
             badge = ValidationBadge(
                 project_id=project.id,
                 validator_id=user_id,
@@ -377,16 +395,23 @@ def award_badge(user_id):
         if not project:
             return jsonify({'status': 'error', 'message': 'Project not found'}), 404
 
-        # Check if validator already awarded a badge to this project
-        existing_badge = ValidationBadge.query.filter_by(
-            project_id=project_id,
-            validator_id=user_id
-        ).first()
+        # ENFORCE: 1 PROJECT = 1 BADGE ONLY
+        # Check if ANY badge exists for this project (not just from this validator)
+        existing_badge = ValidationBadge.query.filter_by(project_id=project_id).first()
 
         if existing_badge:
+            # Get validator name
+            validator = User.query.get(existing_badge.validator_id)
+            validator_name = validator.display_name if validator else "Unknown Validator"
+
             return jsonify({
                 'status': 'error',
-                'message': 'You have already awarded a badge to this project'
+                'message': f'Badge already awarded by {validator_name}',
+                'existing_badge': {
+                    'type': existing_badge.badge_type,
+                    'awarded_by': validator_name,
+                    'awarded_at': existing_badge.created_at.isoformat() if existing_badge.created_at else None
+                }
             }), 400
 
         # Create badge
@@ -422,17 +447,26 @@ def award_badge(user_id):
                 other.status = 'completed'
                 other.review_notes = f'Validated by another validator ({user_id})'
 
-        # Update project scores via AI system
-        try:
-            score_project_task.delay(project.id)
-        except Exception as e:
-            print(f"Failed to queue validator assignment rescore: {e}")
+        # Badge awarded - recalculate validation score (math only, no AI re-analysis)
+        from utils.scoring_helpers import recalculate_validation_score_with_badge
+        recalc_result = recalculate_validation_score_with_badge(project)
+
+        if recalc_result.get('success'):
+            # Update project scores with recalculated values
+            project.proof_score = recalc_result['proof_score']
+            project.validation_score = recalc_result['validation_score']
+            project.score_breakdown = recalc_result['breakdown']
+        else:
+            print(f"Failed to recalculate scores: {recalc_result.get('error')}")
 
         db.session.commit()
 
         # Invalidate cache and emit real-time update
         CacheService.invalidate_project(project_id)
+        CacheService.invalidate_leaderboard()  # Badges affect leaderboard
+        CacheService.invalidate_project_badges(project_id)  # Invalidate badges cache
         SocketService.emit_badge_awarded(project_id, badge.to_dict(include_validator=True))
+        SocketService.emit_leaderboard_updated()  # Badges affect leaderboard
 
         return jsonify({
             'status': 'success',

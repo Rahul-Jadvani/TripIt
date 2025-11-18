@@ -417,6 +417,10 @@ def update_project(user_id, project_id):
 
         # Update allowed fields
         allowed_fields = ['title', 'description', 'demo_url', 'github_url', 'category', 'tags']
+        # Track if score-affecting fields were changed
+        score_affecting_fields = {'description', 'github_url', 'category'}
+        needs_rescore = any(field in score_affecting_fields and field in data for field in score_affecting_fields)
+
         for field in allowed_fields:
             if field in data:
                 setattr(project, field, data[field])
@@ -426,6 +430,15 @@ def update_project(user_id, project_id):
 
         # Invalidate cache
         CacheService.invalidate_project(project_id)
+
+        # Trigger rescore if score-affecting fields were changed
+        if needs_rescore:
+            try:
+                from tasks.scoring_tasks import score_project_task
+                score_project_task.delay(project.id)
+                CacheService.invalidate_leaderboard()  # Scores affect leaderboard
+            except Exception as e:
+                print(f"Failed to queue admin project rescore: {e}")
 
         return jsonify({
             'status': 'success',
@@ -1065,6 +1078,25 @@ def award_badge_as_admin(user_id):
         if not project:
             return jsonify({'status': 'error', 'message': 'Project not found'}), 404
 
+        # ENFORCE: 1 PROJECT = 1 BADGE ONLY
+        # Check if ANY badge already exists for this project
+        existing_badge = ValidationBadge.query.filter_by(project_id=project_id).first()
+
+        if existing_badge:
+            # Get validator name
+            validator = User.query.get(existing_badge.validator_id)
+            validator_name = validator.display_name if validator else "Unknown Validator"
+
+            return jsonify({
+                'status': 'error',
+                'message': f'Badge already awarded by {validator_name}',
+                'existing_badge': {
+                    'type': existing_badge.badge_type,
+                    'awarded_by': validator_name,
+                    'awarded_at': existing_badge.created_at.isoformat() if existing_badge.created_at else None
+                }
+            }), 400
+
         # Create badge
         badge = ValidationBadge(
             project_id=project_id,
@@ -1076,17 +1108,48 @@ def award_badge_as_admin(user_id):
 
         db.session.add(badge)
 
-        # Update project scores via AI system
-        try:
-            score_project_task.delay(project.id)
-        except Exception as e:
-            print(f"Failed to queue custom badge rescore: {e}")
+        # Update ValidatorAssignment status to 'validated' if exists
+        # This ensures the project shows in validator's "validated" dashboard section
+        from models.validator_assignment import ValidatorAssignment
+        assignment = ValidatorAssignment.query.filter_by(
+            validator_id=validator_id,
+            project_id=project_id
+        ).first()
+
+        if assignment:
+            assignment.status = 'validated'
+            assignment.validated_by = validator_id
+            assignment.reviewed_at = datetime.utcnow()
+            assignment.review_notes = rationale
+
+            # Mark other assignments for this project as 'completed'
+            other_assignments = ValidatorAssignment.query.filter(
+                ValidatorAssignment.project_id == project_id,
+                ValidatorAssignment.id != assignment.id
+            ).all()
+
+            for other in other_assignments:
+                other.status = 'completed'
+                other.review_notes = f'Validated by another validator ({validator_id})'
+
+        # Badge awarded - recalculate validation score (math only, no AI re-analysis)
+        from utils.scoring_helpers import recalculate_validation_score_with_badge
+        recalc_result = recalculate_validation_score_with_badge(project)
+
+        if recalc_result.get('success'):
+            # Update project scores with recalculated values
+            project.proof_score = recalc_result['proof_score']
+            project.validation_score = recalc_result['validation_score']
+            project.score_breakdown = recalc_result['breakdown']
+        else:
+            print(f"Failed to recalculate scores: {recalc_result.get('error')}")
 
         db.session.commit()
 
         # Invalidate cache and emit real-time update
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_leaderboard()
+        CacheService.invalidate_project_badges(project_id)
         SocketService.emit_badge_awarded(project_id, badge.to_dict(include_validator=True))
 
         return jsonify({

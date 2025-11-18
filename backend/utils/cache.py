@@ -15,12 +15,20 @@ class CacheService:
         try:
             redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
             # Handle both redis:// and rediss:// (TLS) connections
-            # Upstash uses rediss:// for TLS
-            return redis.from_url(
-                redis_url,
-                decode_responses=True,
-                ssl_cert_reqs=None  # For Upstash TLS compatibility
-            )
+            # Only pass SSL params for rediss:// (TLS), not for local redis://
+            if redis_url.startswith('rediss://'):
+                # Upstash uses rediss:// for TLS
+                return redis.from_url(
+                    redis_url,
+                    decode_responses=True,
+                    ssl_cert_reqs=None  # For Upstash TLS compatibility
+                )
+            else:
+                # Local Redis - no SSL
+                return redis.from_url(
+                    redis_url,
+                    decode_responses=True
+                )
         except Exception as e:
             print(f"Redis connection failed: {e}")
             return None
@@ -29,6 +37,12 @@ class CacheService:
     def set(key: str, value, ttl: int = 3600):
         """Set cache value with TTL (default 1 hour)"""
         try:
+            # Prevent caching Flask Response objects
+            from flask import Response
+            if isinstance(value, Response):
+                print(f"Cache set error: Cannot cache Flask Response object (key: {key})")
+                return False
+
             client = CacheService.get_redis_client()
             if client:
                 # Serialize if not string

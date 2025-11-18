@@ -83,14 +83,16 @@ class Config:
         os.getenv('REDIS_URL', 'redis://localhost:6379/0')
     )
 
-    # SSL Configuration for rediss:// (Upstash Redis TLS)
-    import ssl
-    CELERY_BROKER_USE_SSL = {
-        'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
-    }
-    CELERY_REDIS_BACKEND_USE_SSL = {
-        'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
-    }
+    # SSL Configuration for rediss:// (only when using TLS)
+    # Only apply SSL settings if using rediss:// URLs
+    if CELERY_BROKER_URL.startswith('rediss://'):
+        import ssl
+        CELERY_BROKER_USE_SSL = {
+            'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
+        }
+        CELERY_REDIS_BACKEND_USE_SSL = {
+            'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
+        }
 
     CELERY_TASK_TRACK_STARTED = True
     CELERY_TASK_TIME_LIMIT = 600  # 10 minutes max per task

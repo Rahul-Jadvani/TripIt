@@ -112,6 +112,10 @@ class ScoringEngine:
                 },
                 'validation': {
                     'score': validation_score,
+                    'mode': validation_result.get('mode', 'ai_only'),
+                    'human_validator_score': validation_result.get('human_validator_score', 0),
+                    'ai_score_normalized': validation_result.get('ai_score_normalized', 0),
+                    'badges': validation_result.get('badges', []),
                     'competitive': validation_result.get('competitive', {}),
                     'market_fit': validation_result.get('market_fit', {}),
                     'success_criteria': validation_result.get('success_criteria', {}),

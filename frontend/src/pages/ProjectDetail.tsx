@@ -10,6 +10,7 @@ import { useCheckIfSaved, useSaveProject, useUnsaveProject } from '@/hooks/useSa
 import { VoteButtons } from '@/components/VoteButtons';
 import { CommentSection } from '@/components/CommentSection';
 import { BadgeAwarder } from '@/components/BadgeAwarder';
+import { ProjectBadges } from '@/components/ProjectBadges';
 import { IntroRequest } from '@/components/IntroRequest';
 import { AIScoringBreakdownCard } from '@/components/AIScoringBreakdownCard';
 import { ProjectDetailSkeleton } from '@/components/ProjectDetailSkeleton';
@@ -735,6 +736,7 @@ export default function ProjectDetail() {
             <div className="space-y-6">
               {renderCreatorCard()}
               <AIScoringBreakdownCard project={project} />
+              <ProjectBadges projectId={project.id} />
               {renderOxCertCard()}
               {renderCategoriesCard()}
               {renderChainsCard()}

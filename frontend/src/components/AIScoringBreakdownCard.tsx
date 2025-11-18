@@ -1,7 +1,8 @@
-import { Brain, Github, Users, Trophy, Heart, Loader2, AlertCircle, CheckCircle2, Clock, RefreshCw, Info } from 'lucide-react';
+import { Brain, Github, Users, Trophy, Heart, Loader2, AlertCircle, CheckCircle2, Clock, RefreshCw, Info, ChevronDown, ChevronUp, Award } from 'lucide-react';
 import { Project } from '@/types';
 import { useRescoreProject } from '@/hooks/useProjects';
 import { useAuth } from '@/context/AuthContext';
+import { useState } from 'react';
 
 interface AIScoringBreakdownCardProps {
   project: Project;
@@ -15,6 +16,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
   const scoreBreakdown = project.score_breakdown || project.scoreBreakdown;
   const retryCount = project.scoring_retry_count || project.scoringRetryCount || 0;
   const scoringError = project.scoring_error || project.scoringError;
+  const [reasoningExpanded, setReasoningExpanded] = useState(false);
 
   // Legacy projects (created before AI system) - don't have scoring_status
   // Show simple score breakdown without AI analysis indicators
@@ -137,25 +139,39 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
           <div className="p-3 bg-secondary/30 rounded-lg border border-border">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Brain className="h-4 w-4 text-primary" />
+                {scoreBreakdown?.validation?.mode === 'hybrid' ? (
+                  <Award className="h-4 w-4 text-yellow-500" />
+                ) : (
+                  <Brain className="h-4 w-4 text-primary" />
+                )}
                 <span className="text-xs font-bold text-foreground">
                   {isLegacyProject
                     ? 'Validation'
                     : scoreBreakdown?.validation?.mode === 'hybrid'
-                      ? 'Validation (Expert + AI)'
+                      ? 'Expert + AI Validation'
                       : 'AI Validation'}
                 </span>
                 {/* Info tooltip for hybrid mode */}
                 {!isLegacyProject && scoreBreakdown?.validation?.mode === 'hybrid' && (
                   <div className="group relative">
                     <Info className="h-3 w-3 text-muted-foreground hover:text-primary cursor-help transition-smooth" />
-                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 w-64 p-3 bg-popover border border-border rounded-lg shadow-xl text-[10px] text-foreground">
+                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 w-72 p-3 bg-popover border border-border rounded-lg shadow-xl text-[10px] text-foreground">
                       <strong className="text-primary">Hybrid Validation Scoring</strong>
                       <p className="mt-1 text-muted-foreground leading-relaxed">
-                        When expert validators award badges, this score combines:
-                        <br />• <strong>Human validation</strong> (0-20 pts from badges)
-                        <br />• <strong>AI market analysis</strong> (0-10 pts)
-                        <br />Without badges, AI provides full validation (0-30 pts).
+                        This project has expert validation! The score combines:
+                      </p>
+                      <div className="mt-2 space-y-1.5 text-muted-foreground">
+                        <div className="flex items-start gap-2">
+                          <Award className="h-3 w-3 text-yellow-500 flex-shrink-0 mt-0.5" />
+                          <span><strong className="text-yellow-500">Expert Badge:</strong> {scoreBreakdown.validation.human_validator_score || 0}/20 pts from validator</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Brain className="h-3 w-3 text-blue-500 flex-shrink-0 mt-0.5" />
+                          <span><strong className="text-blue-500">AI Analysis:</strong> {scoreBreakdown.validation.ai_score_normalized?.toFixed(1) || 0}/10 pts from market analysis</span>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-[9px] text-muted-foreground italic">
+                        Without badges, AI provides full validation (0-30 pts).
                       </p>
                     </div>
                   </div>
@@ -166,16 +182,35 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
               </span>
             </div>
 
-            {/* Hybrid mode breakdown */}
-            {!isLegacyProject && scoreBreakdown?.validation?.mode === 'hybrid' && (
-              <div className="mb-2 text-[10px] text-foreground">
-                <span className="font-semibold text-primary">
-                  Human: {scoreBreakdown.validation.human_validator_score || 0}/20
-                </span>
-                {' + '}
-                <span className="font-semibold text-blue-500">
-                  AI: {scoreBreakdown.validation.ai_score_normalized || 0}/10
-                </span>
+            {/* Hybrid mode breakdown - Show badge info */}
+            {!isLegacyProject && scoreBreakdown?.validation?.mode === 'hybrid' && scoreBreakdown?.validation?.badges && (
+              <div className="mb-2 space-y-1.5">
+                {/* Badge info */}
+                {scoreBreakdown.validation.badges.map((badge: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded border border-yellow-500/30">
+                    <Award className="h-3.5 w-3.5 text-yellow-500" />
+                    <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase">
+                      {badge.type} Badge
+                    </span>
+                    <span className="text-[10px] text-yellow-700 dark:text-yellow-300 ml-auto">
+                      +{badge.points} pts
+                    </span>
+                  </div>
+                ))}
+                {/* Score split */}
+                <div className="flex items-center gap-2 text-[10px] text-foreground mt-2">
+                  <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                    Expert: {scoreBreakdown.validation.human_validator_score || 0}/20
+                  </span>
+                  <span className="text-muted-foreground">+</span>
+                  <span className="font-semibold text-blue-500">
+                    AI: {scoreBreakdown.validation.ai_score_normalized?.toFixed(1) || 0}/10
+                  </span>
+                  <span className="text-muted-foreground">=</span>
+                  <span className="font-black text-primary">
+                    {(project.proofScore?.validation || 0).toFixed(1)}/30
+                  </span>
+                </div>
               </div>
             )}
 
@@ -183,13 +218,32 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
               {isLegacyProject
                 ? 'Badges from expert validators (Silver, Gold, Platinum)'
                 : scoreBreakdown?.validation?.mode === 'hybrid'
-                  ? 'Expert validator badges combined with AI market analysis'
+                  ? 'Expert validator badge combined with AI market analysis'
                   : 'Market fit, competitive analysis, innovation, success criteria'}
             </p>
+
+            {/* Collapsible AI Reasoning */}
             {!isLegacyProject && scoreBreakdown?.validation?.reasoning && (
-              <div className="mt-2 p-2 bg-primary/10 rounded text-[10px] text-foreground">
-                <strong>AI Analysis:</strong> {scoreBreakdown.validation.reasoning.slice(0, 150)}
-                {scoreBreakdown.validation.reasoning.length > 150 && '...'}
+              <div className="mt-2">
+                <button
+                  onClick={() => setReasoningExpanded(!reasoningExpanded)}
+                  className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Brain className="h-3 w-3" />
+                    AI Analysis Details
+                  </span>
+                  {reasoningExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                {reasoningExpanded && (
+                  <div className="mt-2 p-3 bg-secondary/50 rounded border border-border text-[10px] text-foreground leading-relaxed">
+                    {scoreBreakdown.validation.reasoning}
+                  </div>
+                )}
               </div>
             )}
           </div>

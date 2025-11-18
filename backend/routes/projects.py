@@ -666,18 +666,34 @@ def update_project(user_id, project_id):
         schema = ProjectUpdateSchema()
         validated_data = schema.load(data)
 
+        # Track if score-affecting fields were changed
+        SCORE_AFFECTING_FIELDS = {
+            'description', 'market_comparison', 'novelty_factor',
+            'project_story', 'inspiration', 'tech_stack', 'categories',
+            'github_url', 'team_members'
+        }
+        needs_rescore = any(key in SCORE_AFFECTING_FIELDS for key in validated_data.keys())
+
         # Update fields
         for key, value in validated_data.items():
             if value is not None:
                 setattr(project, key, value)
 
         project.updated_at = datetime.utcnow()
-        # Scoring handled by async AI system
 
         db.session.commit()
         CacheService.invalidate_project(project_id)
         CacheService.invalidate_project_feed()  # Updated project affects feed
         CacheService.invalidate_user_projects(user_id)  # User's project list changed
+
+        # Trigger rescore if score-affecting fields were changed
+        if needs_rescore:
+            try:
+                from tasks.scoring_tasks import score_project_task
+                score_project_task.delay(project.id)
+                CacheService.invalidate_leaderboard()  # Scores affect leaderboard
+            except Exception as e:
+                print(f"Failed to queue project rescore after update: {e}")
 
         # Emit Socket.IO event for real-time updates
         from services.socket_service import SocketService

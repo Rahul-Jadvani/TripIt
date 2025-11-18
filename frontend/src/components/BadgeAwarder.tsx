@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAwardBadge } from '@/hooks/useBadges';
+import { useAwardBadge, useBadges } from '@/hooks/useBadges';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Award } from 'lucide-react';
+import { Award, AlertCircle } from 'lucide-react';
 
 interface BadgeAwarderProps {
   projectId: string;
@@ -31,22 +31,61 @@ export function BadgeAwarder({ projectId }: BadgeAwarderProps) {
   const [badgeType, setBadgeType] = useState<'silver' | 'gold' | 'platinum'>('silver');
   const [rationale, setRationale] = useState('');
 
+  // Fetch existing badges for this project
+  const { data: badgesResponse, isLoading: badgesLoading } = useBadges(projectId);
   const awardMutation = useAwardBadge(projectId);
 
   const handleAward = async () => {
-    await awardMutation.mutateAsync({
-      badge_type: badgeType,
-      rationale: rationale || undefined,
-    });
+    try {
+      await awardMutation.mutateAsync({
+        badge_type: badgeType,
+        rationale: rationale || undefined,
+      });
 
-    setBadgeType('silver');
-    setRationale('');
-    setIsOpen(false);
+      setBadgeType('silver');
+      setRationale('');
+      setIsOpen(false);
+    } catch (error) {
+      // Error is already handled by useMutation onError (shows toast)
+      // Just prevent unhandled promise rejection
+      console.error('Failed to award badge:', error);
+    }
   };
 
   // Only show to admins
   if (!user?.isAdmin) {
     return null;
+  }
+
+  // Check if badges already exist (1 PROJECT = 1 BADGE rule)
+  // Response structure: axios wraps backend response, so it's response.data.data
+  const badges = Array.isArray(badgesResponse?.data?.data) ? badgesResponse.data.data : [];
+  const hasBadge = badges.length > 0;
+
+  // If project already has a badge, show info message instead of button
+  if (hasBadge) {
+    const badge = badges[0];
+    return (
+      <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-start gap-2">
+        <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+        <div className="text-xs text-amber-700 dark:text-amber-300">
+          <strong>Badge Already Awarded</strong>
+          <p className="mt-1">
+            This project has a {badge.badgeType} badge. Only one badge per project is allowed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while checking badges
+  if (badgesLoading) {
+    return (
+      <div className="btn-secondary gap-2 inline-flex items-center opacity-50 cursor-not-allowed">
+        <Award className="h-4 w-4" />
+        Checking...
+      </div>
+    );
   }
 
   return (

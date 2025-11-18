@@ -35,7 +35,8 @@
       "Bash(if not exist \"services\\scoring\" mkdir \"services\\scoring\")",
       "Bash(if not exist \"tasks\" mkdir \"tasks\")",
       "Bash(\"services\\scoring\\__init__.py\")",
-      "Bash(\"tasks\\__init__.py\")"
+      "Bash(\"tasks\\__init__.py\")",
+      "Bash(timeout /t 2)"
     ],
     "deny": [],
     "ask": []
