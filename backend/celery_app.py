@@ -19,7 +19,7 @@ def make_celery(app=None):
         app.import_name,
         broker=app.config["CELERY_BROKER_URL"],
         backend=app.config["CELERY_RESULT_BACKEND"],
-        include=["tasks.scoring_tasks", "tasks.vote_tasks"]
+        include=["tasks.scoring_tasks", "tasks.vote_tasks", "tasks.feed_cache_tasks"]
     )
     
     celery.conf.update(
@@ -35,6 +35,39 @@ def make_celery(app=None):
         result_serializer="json",
         timezone="UTC",
         enable_utc=True,
+        # Periodic task schedule (Celery Beat)
+        beat_schedule={
+            # Refresh most requested projects cache every hour
+            'refresh-most-requested-hourly': {
+                'task': 'refresh_most_requested_projects_cache',
+                'schedule': 3600.0,  # 1 hour in seconds
+            },
+            # Refresh recent connections cache every hour
+            'refresh-connections-hourly': {
+                'task': 'refresh_recent_connections_cache',
+                'schedule': 3600.0,  # 1 hour in seconds
+            },
+            # Refresh featured projects cache every hour
+            'refresh-featured-hourly': {
+                'task': 'refresh_featured_projects_cache',
+                'schedule': 3600.0,  # 1 hour in seconds
+            },
+            # Refresh category caches every hour
+            'refresh-categories-hourly': {
+                'task': 'refresh_category_caches',
+                'schedule': 3600.0,  # 1 hour in seconds
+            },
+            # Refresh rising stars cache every hour
+            'refresh-rising-stars-hourly': {
+                'task': 'refresh_rising_stars_cache',
+                'schedule': 3600.0,  # 1 hour in seconds
+            },
+            # Full feed cache refresh every 24 hours
+            'refresh-all-feed-daily': {
+                'task': 'refresh_all_feed_caches',
+                'schedule': 86400.0,  # 24 hours in seconds
+            },
+        },
     )
     
     # Add Flask app context to tasks

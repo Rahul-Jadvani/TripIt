@@ -1078,3 +1078,269 @@ def track_view(user_id, project_id):
     except Exception as e:
         db.session.rollback()
         return error_response('Error', str(e), 500)
+
+
+@projects_bp.route('/most-requested', methods=['GET'])
+@optional_auth
+def get_most_requested_projects(user_id):
+    """Get projects with most intro requests (public endpoint for feed)"""
+    try:
+        # Check cache first (1 hour TTL)
+        cached = CacheService.get('most_requested_projects')
+        if cached:
+            # Add user votes if authenticated
+            if user_id and cached.get('data'):
+                from models.vote import Vote
+                project_ids = [p.get('id') for p in cached['data'] if p.get('id')]
+                if project_ids:
+                    votes = Vote.query.filter(
+                        Vote.user_id == user_id,
+                        Vote.project_id.in_(project_ids)
+                    ).all()
+                    votes_dict = {vote.project_id: vote.vote_type for vote in votes}
+
+                    for project in cached['data']:
+                        project['user_vote'] = votes_dict.get(project.get('id'))
+
+            from flask import jsonify
+            return jsonify(cached), 200
+
+        limit = request.args.get('limit', 20, type=int)
+        limit = min(limit, 50)  # Cap at 50
+
+        # Get projects with most intro requests
+        from models.intro_request import IntroRequest
+        from sqlalchemy import func
+
+        # Count intro requests per project and join with projects
+        project_intro_counts = db.session.query(
+            Project.id,
+            func.count(IntroRequest.id).label('intro_count')
+        ).join(
+            IntroRequest, Project.id == IntroRequest.project_id
+        ).filter(
+            Project.is_deleted == False
+        ).group_by(
+            Project.id
+        ).order_by(
+            func.count(IntroRequest.id).desc()
+        ).limit(limit).all()
+
+        # Get project IDs with intro requests
+        project_ids = [p.id for p in project_intro_counts]
+
+        if not project_ids:
+            # No projects with intro requests, return empty
+            response_data = {
+                'status': 'success',
+                'message': 'Most requested projects retrieved',
+                'data': []
+            }
+            CacheService.set('most_requested_projects', response_data, ttl=3600)
+            from flask import jsonify
+            return jsonify(response_data), 200
+
+        # Fetch full project details with eager loading
+        projects = Project.query.filter(
+            Project.id.in_(project_ids)
+        ).options(joinedload(Project.creator)).all()
+
+        # Create mapping for project order
+        projects_dict = {p.id: p for p in projects}
+
+        # Build response in order of intro count
+        data = []
+        for p_id, intro_count in project_intro_counts:
+            if p_id in projects_dict:
+                project_data = projects_dict[p_id].to_dict(include_creator=True, user_id=user_id)
+                project_data['intro_request_count'] = intro_count
+                data.append(project_data)
+
+        response_data = {
+            'status': 'success',
+            'message': 'Most requested projects retrieved',
+            'data': data
+        }
+
+        # Cache for 1 hour
+        CacheService.set('most_requested_projects', response_data, ttl=3600)
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
+@projects_bp.route('/featured', methods=['GET'])
+@optional_auth
+def get_featured_projects(user_id):
+    """Get featured projects (public endpoint for feed)"""
+    try:
+        # Check cache first (1 hour TTL)
+        cached = CacheService.get('featured_projects')
+        if cached:
+            # Add user votes if authenticated
+            if user_id and cached.get('data'):
+                from models.vote import Vote
+                project_ids = [p.get('id') for p in cached['data'] if p.get('id')]
+                if project_ids:
+                    votes = Vote.query.filter(
+                        Vote.user_id == user_id,
+                        Vote.project_id.in_(project_ids)
+                    ).all()
+                    votes_dict = {vote.project_id: vote.vote_type for vote in votes}
+
+                    for project in cached['data']:
+                        project['user_vote'] = votes_dict.get(project.get('id'))
+
+            from flask import jsonify
+            return jsonify(cached), 200
+
+        limit = request.args.get('limit', 20, type=int)
+        limit = min(limit, 50)  # Cap at 50
+
+        # Get featured projects
+        projects = Project.query.filter_by(
+            is_deleted=False,
+            is_featured=True
+        ).options(joinedload(Project.creator)).order_by(
+            Project.featured_at.desc()
+        ).limit(limit).all()
+
+        data = [p.to_dict(include_creator=True, user_id=user_id) for p in projects]
+
+        response_data = {
+            'status': 'success',
+            'message': 'Featured projects retrieved',
+            'data': data
+        }
+
+        # Cache for 1 hour
+        CacheService.set('featured_projects', response_data, ttl=3600)
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
+@projects_bp.route('/by-category/<category>', methods=['GET'])
+@optional_auth
+def get_projects_by_category(user_id, category):
+    """Get projects by category (public endpoint for feed)"""
+    try:
+        # Check cache first (1 hour TTL)
+        cache_key = f'category_projects_{category}'
+        cached = CacheService.get(cache_key)
+        if cached:
+            # Add user votes if authenticated
+            if user_id and cached.get('data'):
+                from models.vote import Vote
+                project_ids = [p.get('id') for p in cached['data'] if p.get('id')]
+                if project_ids:
+                    votes = Vote.query.filter(
+                        Vote.user_id == user_id,
+                        Vote.project_id.in_(project_ids)
+                    ).all()
+                    votes_dict = {vote.project_id: vote.vote_type for vote in votes}
+
+                    for project in cached['data']:
+                        project['user_vote'] = votes_dict.get(project.get('id'))
+
+            from flask import jsonify
+            return jsonify(cached), 200
+
+        limit = request.args.get('limit', 20, type=int)
+        limit = min(limit, 50)  # Cap at 50
+
+        # Get projects by category using JSON contains operator
+        # For PostgreSQL JSON, we need to use the @> operator or cast to text
+        from sqlalchemy import cast, String, or_
+
+        # Try multiple approaches: exact match or partial match in categories array
+        projects = Project.query.filter(
+            Project.is_deleted == False,
+            or_(
+                # Match if categories JSON contains the category string
+                cast(Project.categories, String).like(f'%"{category}"%'),
+                # Also match variations like "AI/ML" matching "AI"
+                cast(Project.categories, String).ilike(f'%{category}%')
+            )
+        ).options(joinedload(Project.creator)).order_by(
+            Project.proof_score.desc()
+        ).limit(limit).all()
+
+        data = [p.to_dict(include_creator=True, user_id=user_id) for p in projects]
+
+        response_data = {
+            'status': 'success',
+            'message': f'{category} projects retrieved',
+            'data': data
+        }
+
+        # Cache for 1 hour
+        CacheService.set(cache_key, response_data, ttl=3600)
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
+@projects_bp.route('/rising-stars', methods=['GET'])
+@optional_auth
+def get_rising_stars(user_id):
+    """Get rising star projects (new projects with high engagement)"""
+    try:
+        # Check cache first (1 hour TTL)
+        cached = CacheService.get('rising_stars')
+        if cached:
+            # Add user votes if authenticated
+            if user_id and cached.get('data'):
+                from models.vote import Vote
+                project_ids = [p.get('id') for p in cached['data'] if p.get('id')]
+                if project_ids:
+                    votes = Vote.query.filter(
+                        Vote.user_id == user_id,
+                        Vote.project_id.in_(project_ids)
+                    ).all()
+                    votes_dict = {vote.project_id: vote.vote_type for vote in votes}
+
+                    for project in cached['data']:
+                        project['user_vote'] = votes_dict.get(project.get('id'))
+
+            from flask import jsonify
+            return jsonify(cached), 200
+
+        limit = request.args.get('limit', 20, type=int)
+        limit = min(limit, 50)  # Cap at 50
+
+        # Get projects created in last 30 days with high engagement
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+        projects = Project.query.filter(
+            Project.is_deleted == False,
+            Project.created_at >= thirty_days_ago
+        ).options(joinedload(Project.creator)).order_by(
+            (Project.upvotes + Project.comment_count + Project.view_count).desc()
+        ).limit(limit).all()
+
+        data = [p.to_dict(include_creator=True, user_id=user_id) for p in projects]
+
+        response_data = {
+            'status': 'success',
+            'message': 'Rising star projects retrieved',
+            'data': data
+        }
+
+        # Cache for 1 hour
+        CacheService.set('rising_stars', response_data, ttl=3600)
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        return error_response('Error', str(e), 500)

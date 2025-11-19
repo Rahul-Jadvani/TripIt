@@ -123,6 +123,10 @@ export const projectsService = {
   rescoreProject: (projectId: string) => api.post(`/admin/projects/${projectId}/rescore`),
   getByUser: (userId: string) => api.get(`/users/${userId}/projects`),
   getTaggedProjects: (userId: string) => api.get(`/users/${userId}/tagged-projects`),
+  getMostRequested: (limit: number = 20) => api.get(`/projects/most-requested?limit=${limit}`),
+  getFeatured: (limit: number = 20) => api.get(`/projects/featured?limit=${limit}`),
+  getByCategory: (category: string, limit: number = 20) => api.get(`/projects/by-category/${encodeURIComponent(category)}?limit=${limit}`),
+  getRisingStars: (limit: number = 20) => api.get(`/projects/rising-stars?limit=${limit}`),
 };
 
 // Voting
@@ -209,6 +213,7 @@ export const introsService = {
   getSent: () => api.get('/intros/sent'),
   accept: (id: string) => api.put(`/intros/${id}/accept`),
   decline: (id: string) => api.put(`/intros/${id}/decline`),
+  getRecentConnections: (limit: number = 20) => api.get(`/intros/recent-connections?limit=${limit}`),
 };
 
 // Search & Leaderboard

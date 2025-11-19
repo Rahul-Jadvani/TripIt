@@ -176,3 +176,46 @@ def get_sent_intros(user_id):
         return paginated_response(data, total, page, per_page)
     except Exception as e:
         return error_response('Error', str(e), 500)
+
+
+@intros_bp.route('/recent-connections', methods=['GET'])
+def get_recent_connections():
+    """Get recent accepted intro requests (public endpoint for feed)"""
+    try:
+        from utils.cache import CacheService
+
+        # Check cache first (1 hour TTL)
+        cached = CacheService.get('recent_connections')
+        if cached:
+            from flask import jsonify
+            return jsonify(cached), 200
+
+        limit = request.args.get('limit', 20, type=int)
+        limit = min(limit, 50)  # Cap at 50
+
+        # Get recent accepted intros with eager loading
+        from models.intro_request import IntroRequest
+        connections = IntroRequest.query.filter_by(status='accepted')\
+            .options(
+                joinedload(IntroRequest.investor),
+                joinedload(IntroRequest.builder),
+                joinedload(IntroRequest.project)
+            ).order_by(IntroRequest.updated_at.desc())\
+            .limit(limit).all()
+
+        data = [conn.to_dict(include_project=True, include_users=True) for conn in connections]
+
+        response_data = {
+            'status': 'success',
+            'message': 'Recent connections retrieved',
+            'data': data
+        }
+
+        # Cache for 1 hour
+        CacheService.set('recent_connections', response_data, ttl=3600)
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        return error_response('Error', str(e), 500)

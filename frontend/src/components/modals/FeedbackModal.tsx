@@ -46,6 +46,37 @@ const feedbackConfig = {
   },
 };
 
+const accentThemes = {
+  yellow: {
+    headerBg: 'bg-yellow-500/10',
+    badge: 'text-yellow-200 bg-yellow-500/15 border border-yellow-500/30',
+    focusRing: 'focus:ring-yellow-500/30',
+    button: 'bg-yellow-500 hover:bg-yellow-400 text-black',
+    subtle: 'text-yellow-200',
+  },
+  blue: {
+    headerBg: 'bg-sky-500/10',
+    badge: 'text-sky-200 bg-sky-500/15 border border-sky-500/30',
+    focusRing: 'focus:ring-sky-500/30',
+    button: 'bg-sky-500 hover:bg-sky-400 text-black',
+    subtle: 'text-sky-200',
+  },
+  green: {
+    headerBg: 'bg-emerald-500/10',
+    badge: 'text-emerald-200 bg-emerald-500/15 border border-emerald-500/30',
+    focusRing: 'focus:ring-emerald-500/30',
+    button: 'bg-emerald-500 hover:bg-emerald-400 text-black',
+    subtle: 'text-emerald-200',
+  },
+  red: {
+    headerBg: 'bg-rose-500/10',
+    badge: 'text-rose-200 bg-rose-500/15 border border-rose-500/30',
+    focusRing: 'focus:ring-rose-500/30',
+    button: 'bg-rose-500 hover:bg-rose-400 text-black',
+    subtle: 'text-rose-200',
+  },
+};
+
 export function FeedbackModal({
   isOpen,
   onClose,
@@ -117,6 +148,7 @@ export function FeedbackModal({
 
   const config = feedbackConfig[feedbackType];
   const Icon = config.icon;
+  const accent = accentThemes[config.color] || accentThemes.yellow;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -128,37 +160,37 @@ export function FeedbackModal({
         />
 
         {/* Modal */}
-        <div className="relative w-full max-w-lg rounded-lg bg-gray-900 border border-gray-800 shadow-xl">
+        <div className="relative w-full max-w-2xl rounded-2xl border border-white/5 bg-[#050505] shadow-2xl shadow-black/40">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-800 bg-gray-800/50 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.01] px-6 py-5">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-yellow-500/20 p-2">
-                <Icon className="h-5 w-5 text-yellow-400" />
+              <div className={`rounded-xl px-3 py-2 ${accent.headerBg}`}>
+                <Icon className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">{config.title}</h2>
+                <h2 className="text-xl font-semibold text-white">{config.title}</h2>
                 <p className="text-sm text-gray-400">{config.description}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-500 hover:text-white transition-colors rounded-lg p-2 hover:bg-white/5"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Login Required Notice */}
             {!isLoggedIn && (
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-yellow-500/20 border border-yellow-500/50 text-yellow-400">
-                <LogIn className="h-5 w-5 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/[0.02] text-gray-200">
+                <LogIn className="h-5 w-5 flex-shrink-0 text-yellow-300" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Login Required</p>
-                  <p className="text-xs text-yellow-400/80 mt-1">
+                  <p className="text-sm font-semibold text-white">Login Required</p>
+                  <p className="text-xs text-gray-400 mt-1">
                     You need to be logged in to submit feedback.{' '}
-                    <Link to="/login" className="underline hover:text-yellow-300" onClick={onClose}>
+                    <Link to="/login" className="underline text-yellow-300 hover:text-yellow-200" onClick={onClose}>
                       Log in here
                     </Link>
                   </p>
@@ -171,24 +203,32 @@ export function FeedbackModal({
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   What would you like to do?
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {(['suggestion', 'improvement', 'contact', 'report'] as FeedbackType[]).map((type) => {
                     const typeConfig = feedbackConfig[type];
                     const TypeIcon = typeConfig.icon;
                     const isSelected = feedbackType === type;
+                    const typeAccent = accentThemes[typeConfig.color as keyof typeof accentThemes] || accentThemes.yellow;
                     return (
                       <button
                         key={type}
                         type="button"
                         onClick={() => setFeedbackType(type)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                        className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-all text-left ${
                           isSelected
-                            ? 'border-yellow-500 bg-yellow-500/20 text-yellow-400'
-                            : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600'
+                            ? `${typeAccent.badge} shadow-inner`
+                            : 'border-white/5 bg-white/[0.02] text-gray-400 hover:border-white/10 hover:bg-white/[0.04]'
                         }`}
                       >
-                        <TypeIcon className="h-4 w-4" />
-                        <span className="text-sm font-medium capitalize">{type}</span>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5">
+                          <TypeIcon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="text-sm font-semibold capitalize block">{type}</span>
+                          <span className="text-xs text-gray-500">
+                            {type === 'report' ? 'Flag a user or project' : 'Share your thoughts'}
+                          </span>
+                        </div>
                       </button>
                     );
                   })}
@@ -206,7 +246,7 @@ export function FeedbackModal({
                   <select
                     value={reportReason}
                     onChange={(e) => setReportReason(e.target.value as ReportReason)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 bg-[#0c0c0c] border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                   >
                     <option value="spam">Spam</option>
                     <option value="inappropriate">Inappropriate Content</option>
@@ -218,13 +258,17 @@ export function FeedbackModal({
 
                 {/* Optional: Specific project/user IDs */}
                 {(reportedProjectId || reportedUserId) && (
-                  <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-500/50 text-blue-400 text-sm">
-                    <p className="font-medium mb-1">✓ Auto-detected from current page:</p>
+                  <div className="p-4 rounded-xl border border-white/10 bg-white/[0.015] text-sm text-gray-300 space-y-1">
+                    <p className="font-semibold text-white">Context detected from this page:</p>
                     {reportedProjectId && (
-                      <p className="ml-2">→ Project ID: <span className="font-mono">{reportedProjectId}</span></p>
+                      <p className="ml-2">
+                        Project ID: <span className="font-mono text-white">{reportedProjectId}</span>
+                      </p>
                     )}
                     {reportedUserId && (
-                      <p className="ml-2">→ User ID: <span className="font-mono">{reportedUserId}</span></p>
+                      <p className="ml-2">
+                        User ID: <span className="font-mono text-white">{reportedUserId}</span>
+                      </p>
                     )}
                   </div>
                 )}
@@ -238,7 +282,7 @@ export function FeedbackModal({
                       value={reportProjectId}
                       onChange={(e) => setReportProjectId(e.target.value)}
                       placeholder="e.g., proj-123"
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 bg-[#0c0c0c] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                     />
                   </div>
                   <div>
@@ -250,7 +294,7 @@ export function FeedbackModal({
                       value={reportUserId}
                       onChange={(e) => setReportUserId(e.target.value)}
                       placeholder="e.g., user-456"
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 bg-[#0c0c0c] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                     />
                   </div>
                 </div>
@@ -269,7 +313,7 @@ export function FeedbackModal({
                 rows={6}
                 maxLength={2000}
                 required
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 resize-none"
+                className={`w-full px-3 py-3 bg-[#0c0c0c] border border-white/10 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 resize-none ${accent.focusRing}`}
               />
               <p className="mt-1 text-xs text-gray-500">
                 {message.length}/2000 characters (minimum 10)
@@ -286,31 +330,31 @@ export function FeedbackModal({
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                className={`w-full px-3 py-2 bg-[#0c0c0c] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 ${accent.focusRing}`}
               />
             </div>
 
             {/* Success/Error Messages */}
             {submitMutation.isSuccess && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/20 border border-green-500/50 text-green-400">
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-100">
                 <CheckCircle className="h-5 w-5" />
                 <span className="text-sm font-medium">Thank you for your feedback!</span>
               </div>
             )}
 
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400">
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-100">
                 <AlertCircle className="h-5 w-5" />
                 <span className="text-sm font-medium">{error}</span>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                className="px-4 py-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
                 disabled={submitMutation.isPending}
               >
                 Cancel
@@ -318,7 +362,7 @@ export function FeedbackModal({
               <button
                 type="submit"
                 disabled={!isLoggedIn || submitMutation.isPending || submitMutation.isSuccess || message.trim().length < 10}
-                className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-yellow-500 hover:bg-yellow-600 text-white"
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${accent.button}`}
               >
                 <Send className="h-4 w-4" />
                 {!isLoggedIn ? 'Login Required' : submitMutation.isPending ? 'Sending...' : 'Submit'}

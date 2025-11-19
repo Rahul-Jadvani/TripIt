@@ -73,6 +73,49 @@ COMMENT ON COLUMN user_dashboard_stats.active_projects IS 'Projects where is_del
 
 
 -- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Function: recalculate_user_karma
+-- Purpose:  Single place to recompute proof_score/karma aggregates for a user
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION recalculate_user_karma(p_user_id VARCHAR)
+RETURNS VOID AS $$
+DECLARE
+    v_total_score INT;
+BEGIN
+    IF p_user_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    -- Ensure dashboard row exists (defaults handle other columns)
+    INSERT INTO user_dashboard_stats (user_id)
+    VALUES (p_user_id)
+    ON CONFLICT (user_id) DO NOTHING;
+
+    -- Calculate sum of all active project proof scores
+    SELECT COALESCE(SUM(proof_score), 0)
+    INTO v_total_score
+    FROM projects
+    WHERE user_id = p_user_id AND is_deleted = FALSE;
+
+    -- Update denormalized dashboard stats
+    UPDATE user_dashboard_stats
+    SET total_proof_score = v_total_score,
+        karma_score = v_total_score,
+        last_updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = p_user_id;
+
+    -- Mirror the same total on the users table for legacy consumers
+    UPDATE users
+    SET karma = v_total_score
+    WHERE id = p_user_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================================
 -- 2. MESSAGE CONVERSATIONS DENORMALIZED
 -- ============================================================================
 -- Purpose: Pre-compute conversation metadata for instant inbox load
@@ -179,29 +222,21 @@ BEGIN
             SET active_projects = GREATEST(0, active_projects - 1),
                 last_updated_at = CURRENT_TIMESTAMP
             WHERE user_id = NEW.user_id;
+
+            PERFORM recalculate_user_karma(NEW.user_id);
         ELSIF OLD.is_deleted = TRUE AND NEW.is_deleted = FALSE THEN
             -- Project restored
             UPDATE user_dashboard_stats
             SET active_projects = active_projects + 1,
                 last_updated_at = CURRENT_TIMESTAMP
             WHERE user_id = NEW.user_id;
+
+            PERFORM recalculate_user_karma(NEW.user_id);
         END IF;
 
         -- Update total proof score if it changed
         IF OLD.proof_score != NEW.proof_score THEN
-            UPDATE user_dashboard_stats
-            SET total_proof_score = (
-                SELECT COALESCE(SUM(proof_score), 0)
-                FROM projects
-                WHERE user_id = NEW.user_id AND is_deleted = FALSE
-            ),
-            karma_score = (
-                SELECT COALESCE(SUM(proof_score), 0)
-                FROM projects
-                WHERE user_id = NEW.user_id AND is_deleted = FALSE
-            ),
-            last_updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = NEW.user_id;
+            PERFORM recalculate_user_karma(NEW.user_id);
         END IF;
 
     ELSIF TG_OP = 'DELETE' AND OLD.is_deleted = FALSE THEN
@@ -211,6 +246,8 @@ BEGIN
             project_count = GREATEST(0, project_count - 1),
             last_updated_at = CURRENT_TIMESTAMP
         WHERE user_id = OLD.user_id;
+
+        PERFORM recalculate_user_karma(OLD.user_id);
     END IF;
 
     RETURN COALESCE(NEW, OLD);
@@ -260,6 +297,8 @@ BEGIN
         ),
         last_updated_at = CURRENT_TIMESTAMP
     WHERE user_id = project_owner_id;
+
+    PERFORM recalculate_user_karma(project_owner_id);
 
     RETURN NEW;
 END;

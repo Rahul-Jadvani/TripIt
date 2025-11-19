@@ -13,6 +13,7 @@ import { useProjects, transformProject } from '@/hooks/useProjects';
 import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
 import { usePublicInvestors } from '@/hooks/useInvestors';
 import { useDashboardStats } from '@/hooks/useStats';
+import { useMostRequestedProjects, useRecentConnections, useFeaturedProjects, useRisingStars, useCategoryProjects } from '@/hooks/useFeed';
 import { useAuth } from '@/context/AuthContext';
 import { projectsService } from '@/services/api';
 import { Project } from '@/types';
@@ -69,6 +70,18 @@ export default function Feed() {
   const { data: investors = [] } = usePublicInvestors();
   // Only load dashboard stats if user is authenticated (prevents 401 errors for guests)
   const { data: dashboard } = useDashboardStats(!!user);
+  // Load feed-specific data (cached for 1 hour on backend)
+  const { data: mostRequestedData } = useMostRequestedProjects(20);
+  const { data: recentConnectionsData } = useRecentConnections(20);
+  const { data: featuredData } = useFeaturedProjects(10);
+  const { data: risingStarsData } = useRisingStars(20);
+
+  // Dynamic category sections - you can add more categories here
+  const { data: defiData } = useCategoryProjects('DeFi', 20);
+  const { data: aiData } = useCategoryProjects('AI/ML', 20);
+  const { data: gamingData } = useCategoryProjects('Gaming', 20);
+  const { data: saasData } = useCategoryProjects('SaaS', 20);
+
   const investorsHref = user ? '/investor-directory' : '/investors';
 
   // Normalize investors to an array defensively
@@ -119,16 +132,19 @@ export default function Feed() {
 
   // Categorize projects
   const categorizedProjects = useMemo(() => {
-    const allProjects = [...(hotData?.data || [])];
-
     return {
       hot: (hotData?.data || []).slice(0, 20),
       topScored: (topData?.data || []).slice(0, 10),
+      featured: (featuredData?.data || []).slice(0, 10),
+      risingStars: (risingStarsData?.data || []).slice(0, 20),
       newLaunches: (newData?.data || []).slice(0, 20),
-      aiSmartContracts: filterByTechTags(allProjects, ['AI', 'Machine Learning', 'Smart Contract', 'Blockchain']),
-      mostRequested: filterByIntroRequests(allProjects),
+      defi: (defiData?.data || []).slice(0, 20),
+      aiMl: (aiData?.data || []).slice(0, 20),
+      gaming: (gamingData?.data || []).slice(0, 20),
+      saas: (saasData?.data || []).slice(0, 20),
+      mostRequested: (mostRequestedData?.data || []).slice(0, 20),
     };
-  }, [hotData, topData, newData]);
+  }, [hotData, topData, newData, mostRequestedData, featuredData, risingStarsData, defiData, aiData, gamingData, saasData]);
 
   // Compute leading tag/category today from all visible datasets
   const leader = useMemo(() => {
@@ -165,23 +181,7 @@ export default function Feed() {
     return { label, count, percent, icon: iconKey as any };
   }, [hotData, topData, newData]);
 
-  // Filter projects by tech tags
-  function filterByTechTags(projects: Project[], tags: string[]): Project[] {
-    return projects
-      .filter(p =>
-        p.techStack?.some(tech =>
-          tags.some(tag => tech.toLowerCase().includes(tag.toLowerCase()))
-        )
-      )
-      .slice(0, 20);
-  }
-
-  // Filter projects by most intro requests (using commentCount as proxy)
-  function filterByIntroRequests(projects: Project[]): Project[] {
-    return [...projects]
-      .sort((a, b) => (b.commentCount || 0) - (a.commentCount || 0))
-      .slice(0, 20);
-  }
+  // Removed old filter functions - now using real category-based data from backend
 
   return (
     <div className="min-h-screen overflow-hidden">
@@ -225,10 +225,15 @@ export default function Feed() {
             <nav aria-label="Quick sections" className="feed-quick-nav -mt-6">
               <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
                 <a href="#top-rated" className="badge badge-dash badge-secondary hover:opacity-90">Top Rated ({categorizedProjects.topScored.length})</a>
+                {categorizedProjects.featured.length > 0 && <a href="#featured" className="badge badge-dash badge-primary hover:opacity-90">Featured ({categorizedProjects.featured.length})</a>}
                 <a href="#trending" className="badge badge-dash badge-secondary hover:opacity-90">Trending ({categorizedProjects.hot.length})</a>
+                {categorizedProjects.risingStars.length > 0 && <a href="#rising-stars" className="badge badge-dash badge-accent hover:opacity-90">Rising Stars ({categorizedProjects.risingStars.length})</a>}
                 <a href="#new-launches" className="badge badge-dash badge-secondary hover:opacity-90">New Launches ({categorizedProjects.newLaunches.length})</a>
-                <a href="#ai-smart-contracts" className="badge badge-dash badge-secondary hover:opacity-90">AI & Contracts ({categorizedProjects.aiSmartContracts.length})</a>
-                <a href="#most-requested" className="badge badge-dash badge-secondary hover:opacity-90">Most Requested ({categorizedProjects.mostRequested.length})</a>
+                {categorizedProjects.defi.length > 0 && <a href="#defi" className="badge badge-dash badge-secondary hover:opacity-90">DeFi ({categorizedProjects.defi.length})</a>}
+                {categorizedProjects.aiMl.length > 0 && <a href="#ai-ml" className="badge badge-dash badge-secondary hover:opacity-90">AI/ML ({categorizedProjects.aiMl.length})</a>}
+                {categorizedProjects.gaming.length > 0 && <a href="#gaming" className="badge badge-dash badge-secondary hover:opacity-90">Gaming ({categorizedProjects.gaming.length})</a>}
+                {categorizedProjects.saas.length > 0 && <a href="#saas" className="badge badge-dash badge-secondary hover:opacity-90">SaaS ({categorizedProjects.saas.length})</a>}
+                {categorizedProjects.mostRequested.length > 0 && <a href="#most-requested" className="badge badge-dash badge-secondary hover:opacity-90">Most Requested ({categorizedProjects.mostRequested.length})</a>}
               </div>
             </nav>
             {/* Top Rated Projects Carousel - Featured first */}
@@ -335,6 +340,40 @@ export default function Feed() {
               )}
             </div>
 
+            {/* Featured Projects Carousel */}
+            {categorizedProjects.featured.length > 0 && (
+              <section id="featured" className="carousel-cinema scroll-mt-24">
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.featured}
+                      categoryTitle="Featured Projects"
+                      categoryName="featured"
+                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
+              </section>
+            )}
+
+            {/* Rising Stars Carousel - New projects with high engagement */}
+            {categorizedProjects.risingStars.length > 0 && (
+              <section id="rising-stars" className="carousel-cinema scroll-mt-24">
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.risingStars}
+                      categoryTitle="Rising Stars"
+                      categoryName="rising-stars"
+                      categoryIcon={<TrendingUp className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
+              </section>
+            )}
+
             {/* New Launches Carousel */}
             {categorizedProjects.newLaunches.length > 0 && (
               <section id="new-launches" className="carousel-cinema scroll-mt-24">
@@ -352,32 +391,112 @@ export default function Feed() {
               </section>
             )}
 
-            {/* Mini-thread: category hero */}
-            {categorizedProjects.aiSmartContracts?.[0] && (
-              <FeedMiniThread
-                title={`Top AI Builder: ${categorizedProjects.aiSmartContracts[0].author?.displayName || categorizedProjects.aiSmartContracts[0].author?.username || 'Builder'}`}
-                subtitle={categorizedProjects.aiSmartContracts[0].title}
-                href={`/project/${categorizedProjects.aiSmartContracts[0].id}`}
-                badge="AI"
-              />
-            )}
-
-            {/* AI & Smart Contracts Carousel */}
-            {categorizedProjects.aiSmartContracts.length > 0 && (
-              <section id="ai-smart-contracts" className="carousel-cinema scroll-mt-24">
+            {/* DeFi Projects Carousel */}
+            {categorizedProjects.defi.length > 0 && (
+              <section id="defi" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
                     <ProjectCarousel
-                      projects={categorizedProjects.aiSmartContracts}
-                      categoryTitle="AI & Smart Contracts"
-                      categoryName="ai-smart-contracts"
+                      projects={categorizedProjects.defi}
+                      categoryTitle="DeFi"
+                      categoryName="defi"
                       categoryIcon={<Sparkles className="h-5 w-5" />}
                       autoplay={true}
-                      enableTagFiltering={true}
                     />
                   </Suspense>
                 </LazyOnVisible>
               </section>
+            )}
+
+            {/* DeFi Hero Thread */}
+            {categorizedProjects.defi?.[0] && (
+              <FeedMiniThread
+                title={`Top DeFi Project: ${categorizedProjects.defi[0].title}`}
+                subtitle={`by @${categorizedProjects.defi[0].author?.username || 'Builder'}`}
+                href={`/project/${categorizedProjects.defi[0].id}`}
+                badge="DeFi"
+              />
+            )}
+
+            {/* AI/ML Projects Carousel */}
+            {categorizedProjects.aiMl.length > 0 && (
+              <section id="ai-ml" className="carousel-cinema scroll-mt-24">
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.aiMl}
+                      categoryTitle="AI/ML"
+                      categoryName="ai-ml"
+                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
+              </section>
+            )}
+
+            {/* AI/ML Hero Thread */}
+            {categorizedProjects.aiMl?.[0] && (
+              <FeedMiniThread
+                title={`Top AI Project: ${categorizedProjects.aiMl[0].title}`}
+                subtitle={`Score: ${categorizedProjects.aiMl[0].proofScore?.total || 0} • ${categorizedProjects.aiMl[0].voteCount || 0} votes`}
+                href={`/project/${categorizedProjects.aiMl[0].id}`}
+                badge="AI"
+              />
+            )}
+
+            {/* Gaming Projects Carousel */}
+            {categorizedProjects.gaming.length > 0 && (
+              <section id="gaming" className="carousel-cinema scroll-mt-24">
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.gaming}
+                      categoryTitle="Gaming"
+                      categoryName="gaming"
+                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
+              </section>
+            )}
+
+            {/* Gaming Hero Thread */}
+            {categorizedProjects.gaming?.[0] && (
+              <FeedMiniThread
+                title={`Trending Game: ${categorizedProjects.gaming[0].title}`}
+                subtitle={`${categorizedProjects.gaming[0].voteCount || 0} votes • ${categorizedProjects.gaming[0].viewCount || 0} views`}
+                href={`/project/${categorizedProjects.gaming[0].id}`}
+                badge="Gaming"
+              />
+            )}
+
+            {/* SaaS Projects Carousel */}
+            {categorizedProjects.saas.length > 0 && (
+              <section id="saas" className="carousel-cinema scroll-mt-24">
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <ProjectCarousel
+                      projects={categorizedProjects.saas}
+                      categoryTitle="SaaS"
+                      categoryName="saas"
+                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      autoplay={true}
+                    />
+                  </Suspense>
+                </LazyOnVisible>
+              </section>
+            )}
+
+            {/* SaaS Hero Thread */}
+            {categorizedProjects.saas?.[0] && (
+              <FeedMiniThread
+                title={`Top SaaS: ${categorizedProjects.saas[0].title}`}
+                subtitle={categorizedProjects.saas[0].tagline || 'Innovative SaaS solution'}
+                href={`/project/${categorizedProjects.saas[0].id}`}
+                badge="SaaS"
+              />
             )}
 
             {/* Another mini-thread */}
@@ -453,26 +572,26 @@ export default function Feed() {
                 </div>
               </div>
 
-              {/* Recent Connections */}
+              {/* Recent Connections - NOW USING REAL DATA */}
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-black">Recent Connections</h3>
                 </div>
                 <div className="space-y-3">
-                  {dashboard?.recentIntros?.length ? (
-                    (dashboard.recentIntros as any[]).slice(0,6).map((intro: any) => (
-                      <a key={intro.id} href={`/project/${intro.project?.id}`} className="flex items-center gap-3 hover:opacity-90">
+                  {recentConnectionsData?.data?.length ? (
+                    (recentConnectionsData.data as any[]).slice(0,6).map((conn: any) => (
+                      <a key={conn.id} href={`/project/${conn.project?.id}`} className="flex items-center gap-3 hover:opacity-90">
                         <div className="h-8 w-8 rounded-[10px] bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black">↗</div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate"><span className="font-bold">{intro.investor?.display_name || intro.investor?.username}</span> connected with <span className="font-bold">{intro.builder?.display_name || intro.builder?.username}</span></p>
-                          {intro.project?.title && (
-                            <p className="text-xs text-muted-foreground truncate">on “{intro.project.title}”</p>
+                          <p className="text-sm text-foreground truncate"><span className="font-bold">{conn.investor?.display_name || conn.investor?.username}</span> connected with <span className="font-bold">{conn.builder?.display_name || conn.builder?.username}</span></p>
+                          {conn.project?.title && (
+                            <p className="text-xs text-muted-foreground truncate">on "{conn.project.title}"</p>
                           )}
                         </div>
                       </a>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">No recent connections.</p>
+                    <p className="text-sm text-muted-foreground">No recent connections yet.</p>
                   )}
                 </div>
               </div>
