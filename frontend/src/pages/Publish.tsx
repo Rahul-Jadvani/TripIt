@@ -850,7 +850,7 @@ export default function Publish() {
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe your project in detail (minimum 200 characters recommended)"
+                      placeholder="Describe your project in detail (minimum 50 characters, 200+ recommended)"
                       rows={8}
                       aria-invalid={!!errors.description}
                       className={`text-base ${errors.description ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
@@ -863,9 +863,9 @@ export default function Publish() {
                       </p>
                     )}
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Detailed description helps AI better analyze your project</p>
-                      <span className={`badge ${descLength >= 200 ? 'badge-success' : 'badge-warning'}`}>
-                        {descLength} / 200+
+                      <p className="text-xs text-muted-foreground">Minimum 50 characters (200+ recommended for best scoring)</p>
+                      <span className={`badge ${descLength >= 50 ? 'badge-success' : 'badge-warning'}`}>
+                        {descLength} / 50 min
                       </span>
                     </div>
                   </div>

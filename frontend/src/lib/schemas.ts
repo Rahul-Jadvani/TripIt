@@ -8,7 +8,7 @@ export const publishProjectSchema = z.object({
   
   description: z.string()
     .min(1, 'Description is required')
-    .min(10, 'Description must be at least 10 characters')
+    .min(50, 'Description must be at least 50 characters')
     .max(2000, 'Description must be less than 2000 characters'),
   
   tagline: z.string()

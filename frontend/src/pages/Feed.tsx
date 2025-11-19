@@ -146,13 +146,25 @@ export default function Feed() {
     };
   }, [hotData, topData, newData, mostRequestedData, featuredData, risingStarsData, defiData, aiData, gamingData, saasData]);
 
+  // Merge first-page feed projects once to power stats + tag leader without duplicates
+  const visibleFeedProjects = useMemo(() => {
+    const unique = new Map<string, Project>();
+    const addProjects = (projects?: Project[]) => {
+      if (!projects) return;
+      for (const project of projects) {
+        if (!project?.id || unique.has(project.id)) continue;
+        unique.set(project.id, project);
+      }
+    };
+    addProjects(hotData?.data);
+    addProjects(topData?.data);
+    addProjects(newData?.data);
+    return Array.from(unique.values());
+  }, [hotData?.data, topData?.data, newData?.data]);
+
   // Compute leading tag/category today from all visible datasets
   const leader = useMemo(() => {
-    const all = [
-      ...(hotData?.data || []),
-      ...(topData?.data || []),
-      ...(newData?.data || []),
-    ];
+    const all = visibleFeedProjects;
     const buckets: Record<string, number> = {};
     const push = (key: string) => {
       if (!key) return;
@@ -177,9 +189,19 @@ export default function Feed() {
     }
     const total = Object.values(buckets).reduce((a, b) => a + b, 0) || 1;
     const percent = (count / total) * 100;
-    const iconKey = label.toLowerCase().includes('block') ? 'blockchain' : label.toLowerCase().includes('ai') ? 'ai' : label.toLowerCase().includes('game') ? 'gaming' : label.toLowerCase().includes('fin') ? 'fintech' : label.toLowerCase().includes('saas') ? 'saas' : 'other';
+    const iconKey = label.toLowerCase().includes('block')
+      ? 'blockchain'
+      : label.toLowerCase().includes('ai')
+        ? 'ai'
+        : label.toLowerCase().includes('game')
+          ? 'gaming'
+          : label.toLowerCase().includes('fin')
+            ? 'fintech'
+            : label.toLowerCase().includes('saas')
+              ? 'saas'
+              : 'other';
     return { label, count, percent, icon: iconKey as any };
-  }, [hotData, topData, newData]);
+  }, [visibleFeedProjects]);
 
   // Removed old filter functions - now using real category-based data from backend
 
@@ -265,7 +287,7 @@ export default function Feed() {
             {/* Stats + Illustration */}
             <section className="mt-2">
               <FeedStatCards
-                projectsCount={(hotData?.data?.length || 0) + (topData?.data?.length || 0) + (newData?.data?.length || 0)}
+                projectsCount={visibleFeedProjects.length}
                 buildersCount={(buildersForCount?.length || topBuilders?.length || 0)}
               />
               <div className="relative mt-6">
