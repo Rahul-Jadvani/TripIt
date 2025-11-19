@@ -61,20 +61,34 @@ export default function InvestorDashboard() {
     enabled: !!user,
   });
 
-  // Fetch projects with detailed data (scores, badges, etc.)
-  const { data: projectsData, isLoading: projectsLoading } = useQuery({
-    queryKey: ['projects', filters.sort],
+  // Fetch matched projects from backend (primary source of truth)
+  const { data: matchedProjectsData, isLoading: matchedLoading } = useQuery({
+    queryKey: ['investorMatches', user?.id],
     queryFn: async () => {
-      const response = await projectsService.getAll(filters.sort, 1, true);
-      const payload = response.data || {};
-      const transformedProjects = Array.isArray(payload.data)
-        ? payload.data.map(transformProject)
-        : [];
-      return {
-        ...payload,
-        data: transformedProjects,
-      };
+      try {
+        const response = await projectsService.getInvestorMatches(1, 50, 20);
+        const payload = response.data || {};
+        const transformedProjects = Array.isArray(payload.data)
+          ? payload.data.map(transformProject)
+          : [];
+        return {
+          ...payload,
+          data: transformedProjects,
+        };
+      } catch (error) {
+        // Fallback: if endpoint not available, return empty gracefully
+        console.error('Error fetching investor matches:', error);
+        return {
+          status: 'success',
+          message: 'Fallback: using general feed',
+          data: [],
+          pagination: { total: 0, page: 1, per_page: 50, total_pages: 0 }
+        };
+      }
     },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
   });
 
   // Fetch saved projects
@@ -136,19 +150,16 @@ export default function InvestorDashboard() {
     projectsViewed: 0, // We can add tracking for this later
   };
 
-  // Smart matching: Use intelligent algorithm to match projects to investor profile
+  // Smart matching: Use backend-computed matches (enhanced scoring algorithm)
   const matchedProjects = useMemo(() => {
-    if (!investorProfile || !projectsData?.data) return [];
+    // Backend already returns matched and scored projects
+    if (!matchedProjectsData?.data) return [];
+    
+    // Data is already scored and filtered by backend - just use it as-is
+    return matchedProjectsData.data;
+  }, [matchedProjectsData]);
 
-    // Use the matching algorithm from utils/investorMatching.ts
-    return matchProjectsToInvestor(
-      investorProfile,
-      projectsData.data,
-      20 // Minimum match score of 20% to show a project
-    );
-  }, [investorProfile, projectsData]);
-
-  // Apply manual filters on top of smart matching
+  // Apply manual filters on top of backend-matched projects (search, industry chips)
   const filteredProjects = useMemo(() => {
     let projects = matchedProjects;
 
@@ -385,7 +396,7 @@ export default function InvestorDashboard() {
                     View All
                   </Button>
                 </div>
-                {projectsLoading ? (
+                {matchedLoading ? (
                   <ProjectCardSkeletonGrid count={3} />
                 ) : filteredProjects.length > 0 ? (
                   <div className="space-y-4">
@@ -454,7 +465,7 @@ export default function InvestorDashboard() {
               </div>
 
               {/* Projects List */}
-              {projectsLoading ? (
+              {matchedLoading ? (
                 <ProjectCardSkeletonGrid count={6} />
               ) : filteredProjects.length > 0 ? (
                 <div className="space-y-4">

@@ -127,6 +127,8 @@ export const projectsService = {
   getFeatured: (limit: number = 20) => api.get(`/projects/featured?limit=${limit}`),
   getByCategory: (category: string, limit: number = 20) => api.get(`/projects/by-category/${encodeURIComponent(category)}?limit=${limit}`),
   getRisingStars: (limit: number = 20) => api.get(`/projects/rising-stars?limit=${limit}`),
+  getInvestorMatches: (page: number = 1, perPage: number = 20, minScore: number = 20) => 
+    api.get(`/projects/investor/matches?page=${page}&per_page=${perPage}&min_score=${minScore}`),
 };
 
 // Voting

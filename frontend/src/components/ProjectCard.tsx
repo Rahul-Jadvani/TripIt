@@ -121,17 +121,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
                   {(() => {
                     const scoringStatus = project.scoring_status || project.scoringStatus;
                     const derivedScore = getProjectScore(project);
-                    const hasScore = derivedScore > 0;
                     const formattedScore = formatScore(derivedScore);
                     const isLegacyProject = !scoringStatus; // Old projects don't have scoring_status
 
                     return (
                       <>
                         <span className="text-xl font-bold text-primary">
-                          {hasScore ? formattedScore : Math.max(project.voteCount || 0, 0)}
+                          {formattedScore}
                         </span>
                         <span className="text-[10px] text-muted-foreground font-medium">
-                          {hasScore ? 'Score' : 'Votes'}
+                          Score
                         </span>
                         {/* Only show status badges for NEW projects (not legacy) */}
                         {!isLegacyProject && scoringStatus && scoringStatus !== 'completed' && (

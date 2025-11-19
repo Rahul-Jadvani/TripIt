@@ -3,6 +3,9 @@
  *
  * This utility provides intelligent matching between investor profiles and projects
  * based on multiple criteria including industries, stages, geographic focus, and more.
+ * 
+ * PRIMARY PATH: Backend matching via /api/projects/investor/matches endpoint (enhanced scoring)
+ * FALLBACK: Client-side filtering for local caching and emergency fallback scenarios
  */
 
 export interface InvestorProfile {
@@ -13,6 +16,16 @@ export interface InvestorProfile {
   // Add more fields as needed
 }
 
+export interface MatchBreakdown {
+  industry_match?: { score: number; reasons: string[] };
+  proof_score?: { score: number; value: number };
+  components?: { score: number; breakdown: any };
+  metadata?: { score: number; reasons: string[] };
+  engagement?: { score: number; upvotes: number; comments: number; views: number };
+  stage_location?: { score: number; hints: string[] };
+  total?: number;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -20,11 +33,50 @@ export interface Project {
   stage?: string;
   location?: string;
   team_location?: string;
+  match_score?: number;
+  match_breakdown?: MatchBreakdown;
   // Add more fields as needed
 }
 
 /**
- * Calculate match score between an investor profile and a project
+ * Convert match breakdown to human-readable reasons for display
+ */
+export function getMatchReasons(breakdown: MatchBreakdown): string[] {
+  const reasons: string[] = [];
+
+  if (breakdown.industry_match && breakdown.industry_match.reasons?.length > 0) {
+    reasons.push(`Matches your interest in: ${breakdown.industry_match.reasons.join(', ')}`);
+  }
+
+  if (breakdown.proof_score && breakdown.proof_score.value >= 70) {
+    reasons.push(`High proof score (${breakdown.proof_score.value})`);
+  }
+
+  if (breakdown.metadata?.reasons?.length > 0) {
+    const hasDocs = breakdown.metadata.reasons.includes('demo_url') || 
+                   breakdown.metadata.reasons.includes('github_url');
+    if (hasDocs) {
+      reasons.push('Has demo/GitHub link');
+    }
+    if (breakdown.metadata.reasons.includes('featured')) {
+      reasons.push('Featured project');
+    }
+  }
+
+  if (breakdown.engagement && breakdown.engagement.upvotes >= 10) {
+    reasons.push(`Strong engagement (${breakdown.engagement.upvotes} upvotes)`);
+  }
+
+  if (breakdown.stage_location?.hints?.length > 0) {
+    reasons.push(`Matches stage/region: ${breakdown.stage_location.hints.join(', ')}`);
+  }
+
+  return reasons.length > 0 ? reasons : ['Recommended based on your profile'];
+}
+
+/**
+ * Calculate match score between an investor profile and a project (CLIENT-SIDE FALLBACK)
+ * This is used when backend endpoint is unavailable or for local filtering
  * Returns a score from 0-100
  */
 export function calculateMatchScore(
@@ -82,7 +134,8 @@ export function calculateMatchScore(
 }
 
 /**
- * Filter and sort projects based on match score with investor profile
+ * Filter and sort projects based on match score with investor profile (CLIENT-SIDE FALLBACK)
+ * Used when backend endpoint is unavailable or for emergency filtering
  * @param investor - The investor's profile
  * @param projects - Array of projects to match against
  * @param minScore - Minimum match score (0-100) to include a project
@@ -95,7 +148,7 @@ export function matchProjectsToInvestor(
 ): Array<Project & { matchScore: number }> {
   const projectsWithScores = projects.map((project) => ({
     ...project,
-    matchScore: calculateMatchScore(investor, project),
+    matchScore: project.match_score || calculateMatchScore(investor, project),
   }));
 
   return projectsWithScores
@@ -104,7 +157,7 @@ export function matchProjectsToInvestor(
 }
 
 /**
- * Check if a project matches any of the investor's criteria
+ * Check if a project matches any of the investor's criteria (CLIENT-SIDE FALLBACK)
  * @param investor - The investor's profile
  * @param project - The project to check
  * @returns true if the project matches at least one criterion
@@ -147,12 +200,12 @@ export function doesProjectMatch(
 }
 
 /**
- * Get a human-readable explanation of why a project matches
+ * Get a human-readable explanation of why a project matches (CLIENT-SIDE FALLBACK)
  * @param investor - The investor's profile
  * @param project - The project
  * @returns Array of match reasons
  */
-export function getMatchReasons(
+export function getMatchReasonsLegacy(
   investor: InvestorProfile,
   project: Project
 ): string[] {

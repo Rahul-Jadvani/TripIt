@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 from extensions import db
 from models.project import Project, ProjectScreenshot
 from models.user import User
+from models.investor_request import InvestorRequest
 from schemas.project import ProjectSchema, ProjectCreateSchema, ProjectUpdateSchema
 from utils.decorators import token_required, admin_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
@@ -18,6 +19,7 @@ from utils.helpers import success_response, error_response, paginated_response, 
 # from utils.scores import ProofScoreCalculator
 from tasks.scoring_tasks import score_project_task, check_rate_limit
 from utils.cache import CacheService
+from services.investor_matching import InvestorMatchingService
 
 projects_bp = Blueprint('projects', __name__)
 
@@ -444,6 +446,94 @@ def list_projects(user_id):
         return jsonify(response_data), 200
     except Exception as e:
         return error_response('Error', str(e), 500)
+
+
+@projects_bp.route('/investor/matches', methods=['GET'])
+@optional_auth
+def get_investor_matches(user_id):
+    """
+    Get projects matched to investor's profile and preferences.
+    Uses InvestorMatchingService to intelligently score all projects.
+    Results are cached with 24-hour TTL for performance.
+    Only available for authenticated investors.
+    """
+    try:
+        # Only authenticated users can access investor matches
+        if not user_id:
+            return error_response('Unauthorized', 'You must be logged in to view matched projects', 401)
+
+        # Load investor's approved profile
+        investor_profile = InvestorRequest.query.filter_by(
+            user_id=user_id,
+            status='approved'
+        ).first()
+
+        if not investor_profile:
+            # Return empty list (200 OK) if no approved profile exists
+            # This prevents errors on dashboard during profile creation
+            response_data = {
+                'status': 'success',
+                'message': 'No approved investor profile found',
+                'data': [],
+                'pagination': {
+                    'total': 0,
+                    'page': 1,
+                    'per_page': 20,
+                    'total_pages': 0,
+                }
+            }
+            from flask import jsonify
+            return jsonify(response_data), 200
+
+        # Get pagination and filtering parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        per_page = min(per_page, 100)  # Cap at 100
+        limit = per_page * page  # We need to get all matches up to this page for proper pagination
+        min_score = request.args.get('min_score', 20, type=float)  # Minimum match score to show
+
+        # Get matched projects from service (includes match_score and match_breakdown)
+        # Results are cached with 24-hour TTL
+        matched_projects = InvestorMatchingService.get_matched_projects(
+            investor_profile=investor_profile,
+            limit=limit,
+            min_score=min_score,
+            include_score=True,  # Include score/breakdown in response
+            user_id=user_id  # So projects include user's votes
+        )
+
+        # Paginate results
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_projects = matched_projects[start_idx:end_idx]
+
+        # Total matches (all that meet min_score)
+        total = len(matched_projects)
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 0
+
+        response_data = {
+            'status': 'success',
+            'message': 'Matched projects retrieved (cached)',
+            'data': paginated_projects,
+            'pagination': {
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': total_pages,
+            }
+        }
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        import traceback
+        error_msg = str(e)
+        error_tb = traceback.format_exc()
+        print(f"\n[ERROR] get_investor_matches() failed:")
+        print(f"Error message: {error_msg}")
+        print(f"Full traceback:\n{error_tb}\n")
+        return error_response('Error', f'Failed to fetch matched projects: {error_msg}', 500)
 
 
 @projects_bp.route('/<project_id>', methods=['GET'])
@@ -1250,7 +1340,7 @@ def get_featured_projects(user_id):
         return error_response('Error', str(e), 500)
 
 
-@projects_bp.route('/by-category/<category>', methods=['GET'])
+@projects_bp.route('/by-category/<path:category>', methods=['GET'])
 @optional_auth
 def get_projects_by_category(user_id, category):
     """Get projects by category (public endpoint for feed)"""

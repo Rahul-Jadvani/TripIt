@@ -18,13 +18,23 @@ export function transformProject(backendProject: any) {
     market_comparison: backendProject.market_comparison,
     noveltyFactor: backendProject.novelty_factor,
     novelty_factor: backendProject.novelty_factor,
-    categories: backendProject.categories || [],
+    categories: (backendProject.categories || []).map((c: any) => {
+      if (!c) return '';
+      if (typeof c === 'string') return c;
+      if (typeof c === 'object') return c.name || c.title || c.label || JSON.stringify(c);
+      return String(c);
+    }),
     demoUrl: backendProject.demo_url,
     githubUrl: backendProject.github_url,
     hackathonName: backendProject.hackathon_name || '',
     hackathonDate: backendProject.hackathon_date || '',
     hackathons: backendProject.hackathons || [],
-    techStack: backendProject.tech_stack || [],
+    techStack: (backendProject.tech_stack || []).map((t: any) => {
+      if (!t) return '';
+      if (typeof t === 'string') return t;
+      if (typeof t === 'object') return t.name || t.label || JSON.stringify(t);
+      return String(t);
+    }),
     teamMembers: backendProject.team_members || [],
     team_members: backendProject.team_members || [],
     screenshots: backendProject.screenshots?.map((s: any) => s.url) || [],
@@ -82,7 +92,12 @@ export function transformProject(backendProject: any) {
     lastScoredAt: backendProject.last_scored_at,
     scoring_error: backendProject.scoring_error,
     scoringError: backendProject.scoring_error,
-    badges: backendProject.badges || [],
+    badges: (backendProject.badges || []).map((b: any) => {
+      if (!b) return { type: '' };
+      if (typeof b === 'string') return { type: b };
+      if (typeof b === 'object') return { type: b.type || b.name || b.label || '' , ...b };
+      return { type: String(b) };
+    }),
     // Voting fields - pass through ALL needed fields
     upvotes: backendProject.upvotes || 0,
     downvotes: backendProject.downvotes || 0,
@@ -94,16 +109,21 @@ export function transformProject(backendProject: any) {
     isFeatured: backendProject.is_featured || false,
     chains: backendProject.chains || [],
     chainCount: backendProject.chain_count || 0,
+    // Investor matching fields
+    matchScore: backendProject.match_score || null,
+    match_score: backendProject.match_score || null,
+    matchBreakdown: backendProject.match_breakdown || null,
+    match_breakdown: backendProject.match_breakdown || null,
     createdAt: backendProject.created_at,
     updatedAt: backendProject.updated_at,
   };
 }
 
-export function useProjects(sort: string = 'hot', page: number = 1) {
+export function useProjects(sort: string = 'hot', page: number = 1, includeDetailed: boolean = false) {
   return useQuery({
-    queryKey: ['projects', sort, page],
+    queryKey: ['projects', sort, page, includeDetailed],
     queryFn: async () => {
-      const response = await projectsService.getAll(sort, page);
+      const response = await projectsService.getAll(sort, page, includeDetailed);
 
       // Transform the projects data
       return {

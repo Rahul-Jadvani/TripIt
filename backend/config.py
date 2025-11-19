@@ -121,6 +121,24 @@ class Config:
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@0xship.com')
 
+    # ZeptoMail (supports legacy + new variable names)
+    FRONTEND_APP_URL = os.getenv('FRONTEND_APP_URL', 'https://discoveryplatform.netlify.app')
+
+    ZEPTO_ENDPOINT = os.getenv('ZEPTO_ENDPOINT') or os.getenv('ZEPTOMAIL_API_URL')
+
+    _zepto_token = (
+        os.getenv('ZEPTO_SEND_MAIL_TOKEN')
+        or os.getenv('ZEPTOMAIL_TOKEN')
+        or os.getenv('ZEPTOMAIL_API_KEY')
+    )
+    if _zepto_token and _zepto_token.lower().startswith('zoho-enczapikey'):
+        _zepto_token = _zepto_token.split(' ', 1)[-1].strip()
+    ZEPTO_SEND_MAIL_TOKEN = _zepto_token
+
+    ZEPTO_SENDER_ADDRESS = os.getenv('ZEPTO_SENDER_ADDRESS') or os.getenv('ZEPTOMAIL_FROM_EMAIL')
+    ZEPTO_SENDER_NAME = os.getenv('ZEPTO_SENDER_NAME') or os.getenv('ZEPTOMAIL_FROM_NAME') or 'Team Zer0'
+    ZEPTO_MAIL_AGENT_ALIAS = os.getenv('ZEPTO_MAIL_AGENT_ALIAS') or os.getenv('ZEPTOMAIL_MAIL_AGENT_ALIAS')
+
     # GitHub OAuth
     GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
     GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')

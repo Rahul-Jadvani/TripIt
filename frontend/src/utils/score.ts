@@ -49,6 +49,12 @@ function sumComponentScores(proofScore?: Partial<Record<typeof SCORE_SECTIONS[nu
 }
 
 export function getProjectScore(project?: Partial<Project> & { proof_score?: number; scoreBreakdown?: any }) {
+  // Prefer explicit match score when present (e.g., investor matching results)
+  const matchScore = (project as any)?.matchScore ?? (project as any)?.match_score;
+  if (typeof matchScore === 'number' && Number.isFinite(matchScore) && matchScore > 0) {
+    return matchScore;
+  }
+
   const breakdown = getScoreBreakdown(project);
   const breakdownScore = sumBreakdownScores(breakdown);
 

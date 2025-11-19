@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2 } from 'lucide-react';
+import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2, Image } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Badge } from '@/components/ui/badge';
 import { useNotificationCounts } from '@/hooks/useNotificationCounts';
@@ -98,6 +98,10 @@ export const Navbar = memo(function Navbar() {
                 <span>Investors</span>
               </Link>
             )}
+            <Link to="/gallery/featured" onMouseEnter={() => prefetchRoute('/gallery/featured')} onFocus={() => prefetchRoute('/gallery/featured')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
+              <Image className="h-4 w-4" />
+              <span>Gallery</span>
+            </Link>
             <Link to="/search" onMouseEnter={() => prefetchRoute('/search')} onFocus={() => prefetchRoute('/search')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <Search className="h-4 w-4" />
               <span>Search</span>
@@ -349,6 +353,17 @@ export const Navbar = memo(function Navbar() {
                           <span>Investors</span>
                         </Link>
                       )}
+                      <Link
+                        to="/gallery/featured"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          prefetchRoute('/gallery/featured');
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
+                      >
+                        <Image className="h-4 w-4" />
+                        <span>Gallery</span>
+                      </Link>
                       <Link
                         to="/search"
                         onClick={() => {

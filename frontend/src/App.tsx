@@ -50,6 +50,7 @@ const CreateChainPage = lazy(() => import("./pages/CreateChainPage"));
 const EditChainPage = lazy(() => import("./pages/EditChainPage"));
 const ChainRequestsPage = lazy(() => import("./pages/ChainRequestsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const Gallery = lazy(() => import("./pages/Gallery"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -105,6 +106,7 @@ const App = () => (
               <Route path="/" element={<Feed />} />
               <Route path="/feed" element={<Feed />} />
               <Route path="/gallery/:category" element={<GalleryView />} />
+                            <Route path="/gallery/featured" element={<Gallery />} />
               {/* Helpful redirects */}
               <Route path="/investor" element={<Navigate to="/investor-directory" replace />} />
               <Route path="/login" element={<Login />} />

@@ -1,8 +1,8 @@
 """
 Intro Request Routes
 """
-from flask import Blueprint, request, jsonify
-from sqlalchemy.orm import joinedload
+from flask import Blueprint, request, jsonify, current_app
+from sqlalchemy.orm import joinedload, load_only
 from extensions import db
 from models.intro_request import IntroRequest
 from models.project import Project
@@ -11,6 +11,7 @@ from models.direct_message import DirectMessage
 from utils.decorators import token_required
 from utils.helpers import get_pagination_params, paginated_response
 from utils.cache import CacheService
+from services.email_service import EmailService
 
 
 intro_requests_bp = Blueprint('intro_requests', __name__, url_prefix='/api/intro-requests')
@@ -86,6 +87,33 @@ def send_intro_request(user_id):
         # Invalidate cache for both users
         CacheService.invalidate_intro_requests(user_id)
         CacheService.invalidate_intro_requests(project.user_id)
+
+        # Send ZeptoMail notification to builder (best-effort)
+        builder_user = User.query.options(
+            load_only(
+                User.id,
+                User.email,
+                User.username,
+                User.display_name,
+                User.avatar_url
+            )
+        ).filter_by(id=intro_request.builder_id).first()
+        if not builder_user:
+            builder_user = intro_request.builder or project.creator
+        try:
+            EmailService.send_intro_request_notification(
+                builder=builder_user,
+                investor=current_user,
+                project=project,
+                intro_request=intro_request,
+                custom_message=message,
+            )
+        except Exception as email_error:  # pragma: no cover - logging only
+            current_app.logger.warning(
+                "Intro request email failed for request %s: %s",
+                intro_request.id,
+                email_error,
+            )
 
         return jsonify({
             'status': 'success',
