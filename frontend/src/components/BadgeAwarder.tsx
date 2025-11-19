@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Award, AlertCircle } from 'lucide-react';
+import { Award } from 'lucide-react';
 
 interface BadgeAwarderProps {
   projectId: string;
@@ -62,22 +62,6 @@ export function BadgeAwarder({ projectId }: BadgeAwarderProps) {
   const badges = Array.isArray(badgesResponse?.data?.data) ? badgesResponse.data.data : [];
   const hasBadge = badges.length > 0;
 
-  // If project already has a badge, show info message instead of button
-  if (hasBadge) {
-    const badge = badges[0];
-    return (
-      <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-start gap-2">
-        <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-        <div className="text-xs text-amber-700 dark:text-amber-300">
-          <strong>Badge Already Awarded</strong>
-          <p className="mt-1">
-            This project has a {badge.badgeType} badge. Only one badge per project is allowed.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Show loading state while checking badges
   if (badgesLoading) {
     return (
@@ -89,9 +73,19 @@ export function BadgeAwarder({ projectId }: BadgeAwarderProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen && !hasBadge}
+      onOpenChange={(next) => {
+        if (hasBadge) return;
+        setIsOpen(next);
+      }}
+    >
       <DialogTrigger asChild>
-        <button className="btn-secondary gap-2 inline-flex items-center">
+        <button
+          className="btn-secondary gap-2 inline-flex items-center disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={hasBadge || awardMutation.isPending}
+          title={hasBadge ? 'A badge has already been awarded to this project' : undefined}
+        >
           <Award className="h-4 w-4" />
           Award Badge
         </button>

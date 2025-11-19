@@ -336,61 +336,6 @@ export default function ProjectDetail() {
     );
   };
 
-  const renderOxCertCard = () => {
-    if (!project.author?.has_oxcert) return null;
-
-    return (
-      <div className="card-elevated p-6">
-        <h3 className="font-black text-sm mb-3 text-foreground flex items-center gap-2">
-          <Shield className="h-4 w-4 text-primary" />
-          0xCert Verification
-        </h3>
-
-        {project.author?.oxcert_metadata?.image && (
-          <div className="relative w-full aspect-square mb-3 rounded-lg overflow-hidden border-2 border-primary/30">
-            <img
-              src={project.author.oxcert_metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/')}
-              alt={project.author.oxcert_metadata.name || '0xCert NFT'}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                if (fallback) fallback.classList.remove('hidden');
-              }}
-            />
-            <div className="hidden absolute inset-0 flex items-center justify-center bg-secondary/50">
-              <ImageIcon className="h-12 w-12 text-muted-foreground" />
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-2 text-sm text-foreground">
-          {project.author?.oxcert_metadata?.name && (
-            <div>
-              <p className="text-xs text-muted-foreground">Name</p>
-              <p className="font-semibold">{project.author.oxcert_metadata.name}</p>
-            </div>
-          )}
-          {project.author?.oxcert_token_id && (
-            <div>
-              <p className="text-xs text-muted-foreground">Token ID</p>
-              <p className="font-mono">#{project.author.oxcert_token_id}</p>
-            </div>
-          )}
-          {project.author?.wallet_address && (
-            <div>
-              <p className="text-xs text-muted-foreground">Wallet</p>
-              <p className="font-mono break-all">{project.author.wallet_address}</p>
-            </div>
-          )}
-          <div className="flex items-center gap-2 p-2 bg-primary rounded border border-primary text-black font-bold">
-            Verified on-chain
-            <span className="ml-auto text-xs">+10 pts</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const renderCategoriesCard = () => {
     if (!project.categories || project.categories.length === 0) return null;
@@ -429,6 +374,137 @@ export default function ProjectDetail() {
           {project.chains.map((chain: any) => (
             <ChainBadge key={chain.id} chain={chain} size="sm" showPin={chain.is_pinned} />
           ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTechStackCard = () => {
+    if (!project.techStack || project.techStack.length === 0) return null;
+
+    return (
+      <div className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Code className="h-4 w-4 text-primary" />
+          Tech Stack
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {project.techStack.map((tech: string) => (
+            <span key={tech} className="label-chip">
+              {tech}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTeamCard = () => {
+    if (!project.team_members || project.team_members.length === 0) return null;
+
+    return (
+      <div className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          Team & Crew
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {project.team_members.map((member: any, index: number) => {
+            const MemberCard = (
+              <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
+                <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/20 border-2 border-primary/30 flex-shrink-0">
+                  <span className="text-xs font-bold text-primary">
+                    {member.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm text-foreground truncate">{member.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{member.role || 'Team Member'}</p>
+                </div>
+              </div>
+            );
+
+            return member.user_id && member.username ? (
+              <Link key={index} to={`/u/${member.username}`} className="hover:opacity-80 transition-opacity">
+                {MemberCard}
+              </Link>
+            ) : (
+              <div key={index}>{MemberCard}</div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderHackathonCard = () => {
+    if (
+      !(
+        (project.hackathons && project.hackathons.length > 0) ||
+        project.hackathonName ||
+        project.hackathonDate
+      )
+    ) {
+      return null;
+    }
+
+    return (
+      <div className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Award className="h-4 w-4 text-primary" />
+          Hackathon Details
+        </h2>
+        <div className="space-y-4">
+          {project.hackathons && project.hackathons.length > 0 ? (
+            project.hackathons.map((hackathon: any, index: number) => (
+              <div key={index} className="p-4 bg-secondary/20 rounded-lg border-2 border-border">
+                <div className="space-y-2">
+                  {hackathon.name && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
+                      <span className="text-sm text-foreground">{hackathon.name}</span>
+                    </div>
+                  )}
+                  {hackathon.result && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Result:</span>
+                      <span className="text-sm text-foreground">{hackathon.result}</span>
+                    </div>
+                  )}
+                  {hackathon.date && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
+                      <span className="text-sm text-foreground">
+                        {new Date(hackathon.date).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                  {hackathon.details && (
+                    <div className="text-sm text-muted-foreground">
+                      {hackathon.details}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-4 bg-secondary/20 rounded-lg border-2 border-border space-y-2 text-sm text-foreground">
+              {project.hackathonName && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
+                  <span className="text-sm text-foreground">{project.hackathonName}</span>
+                </div>
+              )}
+              {project.hackathonDate && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
+                  <span className="text-sm text-foreground">
+                    {new Date(project.hackathonDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -512,15 +588,36 @@ export default function ProjectDetail() {
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2 mt-4">
               {project.demoUrl && (
-                <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm">
+                <a
+                  href={project.demoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
+                >
                   <ExternalLink className="h-4 w-4" />
                   Demo
                 </a>
               )}
               {project.githubUrl && (
-                <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
+                <a
+                  href={project.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
+                >
                   <Github className="h-4 w-4" />
                   Code
+                </a>
+              )}
+              {project.pitch_deck_url && (
+                <a
+                  href={project.pitch_deck_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <FileText className="h-4 w-4" />
+                  Pitch Deck
                 </a>
               )}
               <BadgeAwarder projectId={project.id} />
@@ -559,93 +656,6 @@ export default function ProjectDetail() {
                 </div>
               )}
 
-              {project.pitch_deck_url && (
-                <div className="card-elevated p-6">
-                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    Pitch Deck
-                  </h2>
-                  <a
-                    href={project.pitch_deck_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary inline-flex items-center gap-2"
-                  >
-                    <ExternalLink className="h-5 w-5" />
-                    View Pitch Deck
-                  </a>
-                </div>
-              )}
-
-              {((project.hackathons && project.hackathons.length > 0) ||
-                project.hackathonName ||
-                project.hackathonDate) && (
-                <div className="card-elevated p-6">
-                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                    <Award className="h-4 w-4 text-primary" />
-                    Hackathon Details
-                  </h2>
-                  <div className="space-y-4">
-                    {project.hackathons && project.hackathons.length > 0 ? (
-                      project.hackathons.map((hackathon: any, index: number) => (
-                        <div key={index} className="p-4 bg-secondary/20 rounded-lg border-2 border-border">
-                          <div className="space-y-2">
-                            {hackathon.name && (
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
-                                <span className="text-sm text-foreground font-medium">{hackathon.name}</span>
-                              </div>
-                            )}
-                            {hackathon.date && (
-                              <div className="flex items-center gap-3">
-                                <Calendar className="h-4 w-4 text-primary" />
-                                <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
-                                <span className="text-sm text-foreground">
-                                  {new Date(hackathon.date).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                  })}
-                                </span>
-                              </div>
-                            )}
-                            {hackathon.prize && (
-                              <div className="flex items-center gap-3">
-                                <Trophy className="h-4 w-4 text-primary" />
-                                <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Prize:</span>
-                                <span className="text-sm text-foreground font-medium">{hackathon.prize}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="space-y-3">
-                        {project.hackathonName && (
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Event:</span>
-                            <span className="text-sm text-foreground font-medium">{project.hackathonName}</span>
-                          </div>
-                        )}
-                        {project.hackathonDate && (
-                          <div className="flex items-center gap-3">
-                            <Calendar className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-bold text-muted-foreground min-w-[100px]">Date:</span>
-                            <span className="text-sm text-foreground">
-                              {new Date(project.hackathonDate).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {project.screenshots && project.screenshots.length > 0 && (
                 <div className="card-elevated p-6">
                   <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
@@ -673,60 +683,6 @@ export default function ProjectDetail() {
                 </div>
               )}
 
-              {project.techStack && project.techStack.length > 0 && (
-                <div className="card-elevated p-6">
-                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                    <Code className="h-4 w-4 text-primary" />
-                    Tech Stack
-                  </h2>
-                  <div className="flex flex-wrap gap-2">
-                    {project.techStack.map((tech: string) => (
-                      <span key={tech} className="label-chip">
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {project.team_members && project.team_members.length > 0 && (
-                <div className="card-elevated p-6">
-                  <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" />
-                    Team & Crew
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {project.team_members.map((member: any, index: number) => {
-                      const MemberCard = (
-                        <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
-                          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/20 border-2 border-primary/30 flex-shrink-0">
-                            <span className="text-xs font-bold text-primary">
-                              {member.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-sm text-foreground truncate">{member.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{member.role || 'Team Member'}</p>
-                          </div>
-                        </div>
-                      );
-
-                      return member.user_id && member.username ? (
-                        <Link
-                          key={index}
-                          to={`/u/${member.username}`}
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          {MemberCard}
-                        </Link>
-                      ) : (
-                        <div key={index}>{MemberCard}</div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               <div id="comments" className="card-elevated p-6 scroll-mt-20">
                 <h2 className="text-lg font-black mb-4 text-foreground">Comments & Discussion</h2>
                 <CommentSection projectId={id || String(project.id)} altProjectId={String(project.id)} />
@@ -735,11 +691,13 @@ export default function ProjectDetail() {
 
             <div className="space-y-6">
               {renderCreatorCard()}
+              {renderTeamCard()}
               <AIScoringBreakdownCard project={project} />
               <ProjectBadges projectId={project.id} />
-              {renderOxCertCard()}
               {renderCategoriesCard()}
               {renderChainsCard()}
+              {renderTechStackCard()}
+              {renderHackathonCard()}
             </div>
           </div>
         </div>

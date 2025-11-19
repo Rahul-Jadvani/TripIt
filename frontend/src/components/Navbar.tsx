@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2 } from 'lucide-react';
-import { ConnectWallet } from '@/components/ConnectWallet';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Badge } from '@/components/ui/badge';
 import { useNotificationCounts } from '@/hooks/useNotificationCounts';
@@ -109,11 +108,6 @@ export const Navbar = memo(function Navbar() {
           <div className="flex items-center gap-2 ml-auto">
             {user ? (
               <>
-                {/* Wallet Connection */}
-                <div className="hidden lg:flex">
-                  <ConnectWallet />
-                </div>
-
                 {/* Publish Button */}
                 <Link
                   to="/publish"
@@ -293,16 +287,10 @@ export const Navbar = memo(function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link to="/profile" className="cursor-pointer flex items-center gap-2 font-medium">
                         <Settings className="h-4 w-4" />
-                        <span>Edit Profile & Verify Wallet</span>
+                        <span>Edit Profile</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="my-2" />
-                    {/* Wallet Connection in Mobile/Tablet */}
-                    <DropdownMenuItem asChild>
-                      <div className="lg:hidden cursor-pointer px-2 py-2">
-                        <ConnectWallet />
-                      </div>
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive flex items-center gap-2 font-medium">
                       <LogOut className="h-4 w-4" />
                       <span>Logout</span>

@@ -231,7 +231,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
             </div>
             <p className="text-[10px] text-muted-foreground">
               {isLegacyProject
-                ? 'Email verified, 0xCert connected, GitHub connected'
+                ? 'Email verified, GitHub connected'
                 : 'GitHub contributions, repo history, and reputation signals'}
             </p>
 
