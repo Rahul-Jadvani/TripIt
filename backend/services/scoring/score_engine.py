@@ -84,8 +84,9 @@ class ScoringEngine:
                 validation_score = validation_result.get('score', 0)  # Already 0-30
                 validation_result['mode'] = 'ai_only'
 
-            # 4. COMMUNITY SCORE (existing logic)
-            community_score = self._calculate_community_score(project)
+            # 4. COMMUNITY SCORE (relative scoring)
+            community_result = self._calculate_community_score(project)
+            community_score = community_result.get('score', 0)
 
             # 5. CALCULATE FINAL SCORE
             # Component scores are already weighted to their max ranges:
@@ -137,7 +138,12 @@ class ScoringEngine:
                     'score': community_score,
                     'upvotes': project.upvotes,
                     'downvotes': project.downvotes,
-                    'comments': project.comment_count
+                    'comments': project.comment_count,
+                    'upvote_score': community_result.get('upvote_score', 0),
+                    'comment_score': community_result.get('comment_score', 0),
+                    'max_upvotes': community_result.get('max_upvotes', 0),
+                    'max_comments': community_result.get('max_comments', 0),
+                    'calculation': f"({project.upvotes}/{community_result.get('max_upvotes', 0)})×20 + ({project.comment_count}/{community_result.get('max_comments', 0)})×10"
                 },
                 'weights_used': weights,
                 'version': '2.0'
@@ -278,26 +284,66 @@ class ScoringEngine:
 
     def _calculate_community_score(self, project):
         """
-        Calculate community engagement score
+        Calculate community engagement score using relative scoring
+
+        New Formula:
+        - Upvote Score: (project_upvotes / max_upvotes_in_any_project) × 20
+        - Comment Score: (project_comments / max_comments_in_any_project) × 10
+        - Total: max 30 points
 
         Returns:
-            Score (0-30)
+            Dict with score and details
         """
-        # Upvote ratio (max 20 points)
-        total_votes = project.upvotes + project.downvotes
-        if total_votes > 0:
-            upvote_ratio = project.upvotes / total_votes
-            upvote_score = upvote_ratio * 20
-        else:
-            upvote_score = 0
+        try:
+            # Import here to avoid circular imports
+            from models.project import Project
+            from extensions import db
 
-        # Comment engagement (max 10 points)
-        comment_score = min(project.comment_count * 0.5, 10)
+            # Get max upvotes and max comments across all projects
+            max_stats = db.session.query(
+                db.func.max(Project.upvotes).label('max_upvotes'),
+                db.func.max(Project.comment_count).label('max_comments')
+            ).filter(
+                Project.is_deleted == False
+            ).first()
 
-        # Total community score (max 30)
-        community_score = upvote_score + comment_score
+            max_upvotes = max_stats.max_upvotes or 0
+            max_comments = max_stats.max_comments or 0
 
-        return round(min(community_score, 30), 2)
+            # Calculate upvote score (max 20 points)
+            if max_upvotes > 0:
+                upvote_score = (project.upvotes / max_upvotes) * 20
+            else:
+                upvote_score = 0
+
+            # Calculate comment score (max 10 points)
+            if max_comments > 0:
+                comment_score = (project.comment_count / max_comments) * 10
+            else:
+                comment_score = 0
+
+            # Total community score (max 30)
+            community_score = upvote_score + comment_score
+
+            return {
+                'score': round(min(community_score, 30), 2),
+                'upvote_score': round(upvote_score, 2),
+                'comment_score': round(comment_score, 2),
+                'max_upvotes': max_upvotes,
+                'max_comments': max_comments
+            }
+
+        except Exception as e:
+            # Fallback to 0 if query fails
+            print(f"Error calculating community score: {e}")
+            return {
+                'score': 0.0,
+                'upvote_score': 0.0,
+                'comment_score': 0.0,
+                'max_upvotes': 0,
+                'max_comments': 0,
+                'error': str(e)
+            }
 
     def _get_validator_badges(self, project):
         """

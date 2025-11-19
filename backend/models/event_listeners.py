@@ -8,33 +8,64 @@ from extensions import db
 
 def update_project_community_score(project):
     """
-    Recalculate and update community score for a project
+    Recalculate and update community score for a project using relative scoring
+
+    New Formula:
+    - Upvote Score: (project_upvotes / max_upvotes_in_any_project) × 20
+    - Comment Score: (project_comments / max_comments_in_any_project) × 10
+    - Total: max 30 points
 
     Args:
         project: Project instance to update
     """
-    # Calculate upvote ratio (max 20 points)
-    total_votes = project.upvotes + project.downvotes
-    if total_votes > 0:
-        upvote_ratio = project.upvotes / total_votes
-        upvote_score = upvote_ratio * 20
-    else:
-        upvote_score = 0
+    try:
+        from models.project import Project
+        from sqlalchemy import func
 
-    # Comment engagement (max 10 points)
-    comment_score = min(project.comment_count * 0.5, 10)
+        # Get max upvotes and max comments across all non-deleted projects
+        max_stats = db.session.query(
+            func.max(Project.upvotes).label('max_upvotes'),
+            func.max(Project.comment_count).label('max_comments')
+        ).filter(
+            Project.is_deleted == False
+        ).first()
 
-    # Total community score (max 30)
-    community_score = upvote_score + comment_score
-    project.community_score = round(min(community_score, 30), 2)
+        max_upvotes = max_stats.max_upvotes or 0
+        max_comments = max_stats.max_comments or 0
 
-    # Recalculate total proof score
-    project.proof_score = (
-        project.quality_score +
-        project.verification_score +
-        project.validation_score +
-        project.community_score
-    )
+        # Calculate upvote score (max 20 points)
+        if max_upvotes > 0:
+            upvote_score = (project.upvotes / max_upvotes) * 20
+        else:
+            upvote_score = 0
+
+        # Calculate comment score (max 10 points)
+        if max_comments > 0:
+            comment_score = (project.comment_count / max_comments) * 10
+        else:
+            comment_score = 0
+
+        # Total community score (max 30)
+        community_score = upvote_score + comment_score
+        project.community_score = round(min(community_score, 30), 2)
+
+        # Recalculate total proof score
+        project.proof_score = (
+            project.quality_score +
+            project.verification_score +
+            project.validation_score +
+            project.community_score
+        )
+
+    except Exception as e:
+        print(f"Error updating community score: {e}")
+        # Fallback to 0 if calculation fails
+        project.community_score = 0
+        project.proof_score = (
+            project.quality_score +
+            project.verification_score +
+            project.validation_score
+        )
 
 
 def setup_vote_listeners():

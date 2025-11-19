@@ -107,14 +107,16 @@ export function ProjectBadges({ projectId }: ProjectBadgesProps) {
                     </span>
                   </div>
 
-                  {badge.validator && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <span>Awarded by</span>
-                      <span className="font-bold text-foreground">
-                        {badge.validator.displayName || badge.validator.email}
-                      </span>
-                    </div>
-                  )}
+                  {(() => {
+                    const awardedBy = badge.validator?.displayName || badge.validator?.email;
+                    if (!awardedBy) return null;
+                    return (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <span>Awarded by</span>
+                        <span className="font-bold text-foreground">{awardedBy}</span>
+                      </div>
+                    );
+                  })()}
 
                   {badge.createdAt && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -136,11 +138,6 @@ export function ProjectBadges({ projectId }: ProjectBadgesProps) {
         })}
       </div>
 
-      <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/30">
-        <p className="text-xs text-foreground">
-          <strong className="text-primary">1 Project = 1 Badge Rule:</strong> This project can only receive one validation badge. Additional badges cannot be awarded.
-        </p>
-      </div>
     </div>
   );
 }

@@ -46,11 +46,11 @@ class Project(db.Model):
     team_members = db.Column(db.JSON, default=[])
 
     # Proof Score Components
-    proof_score = db.Column(db.Integer, default=0, index=True)
-    verification_score = db.Column(db.Integer, default=0)
-    community_score = db.Column(db.Integer, default=0)
-    validation_score = db.Column(db.Integer, default=0)
-    quality_score = db.Column(db.Integer, default=0)
+    proof_score = db.Column(db.Float, default=0.0, index=True)
+    verification_score = db.Column(db.Float, default=0.0)
+    community_score = db.Column(db.Float, default=0.0)
+    validation_score = db.Column(db.Float, default=0.0)
+    quality_score = db.Column(db.Float, default=0.0)
     trending_score = db.Column(db.Float, default=0.0, index=True)  # Reddit-style hot score
 
     # AI Scoring Metadata

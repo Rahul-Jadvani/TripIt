@@ -56,12 +56,12 @@ def score_project_task(self, project_id):
         result = engine.score_project(project)
 
         if result.get('success'):
-            # Update project with scores
-            project.proof_score = int(result['proof_score'])
-            project.quality_score = int(result['quality_score'])
-            project.verification_score = int(result['verification_score'])
-            project.validation_score = int(result['validation_score'])
-            project.community_score = int(result['community_score'])
+            # Update project with scores (preserve float precision)
+            project.proof_score = result['proof_score']
+            project.quality_score = result['quality_score']
+            project.verification_score = result['verification_score']
+            project.validation_score = result['validation_score']
+            project.community_score = result['community_score']
             project.score_breakdown = result['breakdown']
             project.scoring_status = 'completed'
             project.last_scored_at = datetime.utcnow()

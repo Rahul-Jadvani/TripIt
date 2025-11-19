@@ -2,11 +2,30 @@ import { Brain, Github, Users, Trophy, Heart, Loader2, AlertCircle, CheckCircle2
 import { Project } from '@/types';
 import { useRescoreProject } from '@/hooks/useProjects';
 import { useAuth } from '@/context/AuthContext';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface AIScoringBreakdownCardProps {
   project: Project;
   className?: string;
+}
+
+function parseReasoningSections(reasoning?: string) {
+  if (!reasoning) return [];
+
+  return reasoning
+    .split('|')
+    .map((section) => section.trim())
+    .filter(Boolean)
+    .map((section) => {
+      const [rawTitle, ...rest] = section.split(':');
+      if (!rest.length) {
+        return { title: undefined, content: rawTitle.trim() };
+      }
+      return {
+        title: rawTitle.trim(),
+        content: rest.join(':').trim(),
+      };
+    });
 }
 
 export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBreakdownCardProps) {
@@ -19,26 +38,42 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
   const [reasoningExpanded, setReasoningExpanded] = useState(false);
   const [qualityExpanded, setQualityExpanded] = useState(false);
   const [verificationExpanded, setVerificationExpanded] = useState(false);
-  const [communityExpanded, setCommunityExpanded] = useState(false);
 
   // Legacy projects (created before AI system) - don't have scoring_status
   // Show simple score breakdown without AI analysis indicators
   const isLegacyProject = !scoringStatus;
+  const reasoningSections = useMemo(
+    () => parseReasoningSections(scoreBreakdown?.validation?.reasoning),
+    [scoreBreakdown?.validation?.reasoning]
+  );
+  const badgePoints = useMemo(() => {
+    if (!scoreBreakdown?.validation?.badges) return 0;
+    return scoreBreakdown.validation.badges.reduce((sum: number, badge: { points?: number }) => {
+      return sum + (badge?.points || 0);
+    }, 0);
+  }, [scoreBreakdown?.validation?.badges]);
+  const expertScore = useMemo(() => {
+    const humanScore = scoreBreakdown?.validation?.human_validator_score;
+    if (typeof humanScore === 'number' && !Number.isNaN(humanScore)) {
+      return humanScore;
+    }
+    return badgePoints;
+  }, [scoreBreakdown?.validation?.human_validator_score, badgePoints]);
 
   const statusConfig = {
     pending: {
       icon: Clock,
       iconClass: 'text-yellow-500 animate-pulse',
       bgClass: 'bg-yellow-500/10 border-yellow-500/30',
-      title: 'AI Analysis Pending',
-      message: 'Your project is queued for AI analysis (~30-60 seconds)',
+      title: 'Analysis Pending',
+      message: 'Your project is queued for automated scoring (~30-60 seconds)',
     },
     processing: {
       icon: Loader2,
       iconClass: 'text-blue-500 animate-spin',
       bgClass: 'bg-blue-500/10 border-blue-500/30',
-      title: 'AI Analyzing',
-      message: 'GitHub API and GPT-4 are analyzing your project...',
+      title: 'Analyzing Project',
+      message: 'GitHub, validator, and signal pipelines are reviewing your project...',
     },
     retrying: {
       icon: Loader2,
@@ -58,8 +93,8 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
       icon: CheckCircle2,
       iconClass: 'text-primary',
       bgClass: 'bg-primary/10 border-primary/30',
-      title: 'AI Analysis Complete',
-      message: 'Your project has been analyzed by our AI system',
+      title: 'Analysis Complete',
+      message: 'Your project has been scored by our review system',
     },
   };
 
@@ -70,7 +105,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
     <div className={`card-elevated p-5 ${className}`}>
       <h3 className="font-black text-sm mb-3 text-foreground flex items-center gap-2">
         <Brain className="h-4 w-4 text-primary" />
-        {isLegacyProject ? 'Score Breakdown' : 'AI Scoring Breakdown'}
+        Scoring Breakdown
       </h3>
 
       {/* Status Banner - Only for new projects with AI scoring */}
@@ -108,7 +143,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 <span className="text-xs font-bold text-foreground">Code Quality</span>
               </div>
               <span className="text-sm font-black text-primary">
-                {(project.proofScore?.quality || 0).toFixed(1)}/20
+                {(scoreBreakdown?.quality?.score || project.proofScore?.quality || 0).toFixed(1)}/20
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground">
@@ -124,10 +159,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                   onClick={() => setQualityExpanded(!qualityExpanded)}
                   className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Github className="h-3 w-3" />
-                    GitHub Analysis Details
-                  </span>
+                  <span className="text-left">GitHub Analysis Details</span>
                   {qualityExpanded ? (
                     <ChevronUp className="h-3.5 w-3.5" />
                   ) : (
@@ -194,7 +226,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 </span>
               </div>
               <span className="text-sm font-black text-primary">
-                {(project.proofScore?.verification || 0).toFixed(1)}/20
+                {(scoreBreakdown?.verification?.score || project.proofScore?.verification || 0).toFixed(1)}/20
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground">
@@ -210,10 +242,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                   onClick={() => setVerificationExpanded(!verificationExpanded)}
                   className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Users className="h-3 w-3" />
-                    Author Analysis Details
-                  </span>
+                  <span className="text-left">Author Analysis Details</span>
                   {verificationExpanded ? (
                     <ChevronUp className="h-3.5 w-3.5" />
                   ) : (
@@ -306,7 +335,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                     ? 'Validation'
                     : scoreBreakdown?.validation?.mode === 'hybrid'
                       ? 'Expert + AI Validation'
-                      : 'AI Validation'}
+                      : 'Automated Validation'}
                 </span>
                 {/* Info tooltip for hybrid mode */}
                 {!isLegacyProject && scoreBreakdown?.validation?.mode === 'hybrid' && (
@@ -335,7 +364,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 )}
               </div>
               <span className="text-sm font-black text-primary">
-                {(project.proofScore?.validation || 0).toFixed(1)}/30
+                {(scoreBreakdown?.validation?.score || project.proofScore?.validation || 0).toFixed(1)}/30
               </span>
             </div>
 
@@ -345,9 +374,8 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 {/* Badge info */}
                 {scoreBreakdown.validation.badges.map((badge: any, idx: number) => (
                   <div key={idx} className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded border border-yellow-500/30">
-                    <Award className="h-3.5 w-3.5 text-yellow-500" />
                     <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase">
-                      {badge.type} Badge
+                      Expert ({badge.type})
                     </span>
                     <span className="text-[10px] text-yellow-700 dark:text-yellow-300 ml-auto">
                       +{badge.points} pts
@@ -357,7 +385,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 {/* Score split */}
                 <div className="flex items-center gap-2 text-[10px] text-foreground mt-2">
                   <span className="font-semibold text-yellow-600 dark:text-yellow-400">
-                    Expert: {scoreBreakdown.validation.human_validator_score || 0}/20
+                    Expert: {expertScore % 1 === 0 ? expertScore : expertScore.toFixed(1)}/20
                   </span>
                   <span className="text-muted-foreground">+</span>
                   <span className="font-semibold text-blue-500">
@@ -365,7 +393,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                   </span>
                   <span className="text-muted-foreground">=</span>
                   <span className="font-black text-primary">
-                    {(project.proofScore?.validation || 0).toFixed(1)}/30
+                    {(scoreBreakdown?.validation?.score || project.proofScore?.validation || 0).toFixed(1)}/30
                   </span>
                 </div>
               </div>
@@ -386,10 +414,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                   onClick={() => setReasoningExpanded(!reasoningExpanded)}
                   className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Brain className="h-3 w-3" />
-                    AI Analysis Details
-                  </span>
+                  <span className="text-left">Validation Insights</span>
                   {reasoningExpanded ? (
                     <ChevronUp className="h-3.5 w-3.5" />
                   ) : (
@@ -397,8 +422,19 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                   )}
                 </button>
                 {reasoningExpanded && (
-                  <div className="mt-2 p-3 bg-secondary/50 rounded border border-border text-[10px] text-foreground leading-relaxed">
-                    {scoreBreakdown.validation.reasoning}
+                  <div className="mt-2 p-3 bg-secondary/50 rounded border border-border text-[10px] text-foreground leading-relaxed space-y-2">
+                    {reasoningSections.length > 0 ? (
+                      reasoningSections.map((section, idx) => (
+                        <div key={idx}>
+                          {section.title && (
+                            <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">{section.title}</p>
+                          )}
+                          <p className="mt-1 text-foreground text-[10px] leading-relaxed">{section.content}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p>{scoreBreakdown.validation.reasoning}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -413,85 +449,13 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 <span className="text-xs font-bold text-foreground">Community Score</span>
               </div>
               <span className="text-sm font-black text-primary">
-                {(project.proofScore?.community || 0).toFixed(1)}/30
+                {(scoreBreakdown?.community?.score || project.proofScore?.community || 0).toFixed(1)}/30
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground">
-              {isLegacyProject
-                ? 'Upvote ratio and comment engagement'
-                : `Upvotes: ${project.upvotes || 0} · Comments: ${project.commentCount || project.comment_count || 0}`}
+              Upvote ratio and comment engagement
             </p>
 
-            {/* Collapsible Community Score Details */}
-            {!isLegacyProject && (
-              <div className="mt-2">
-                <button
-                  onClick={() => setCommunityExpanded(!communityExpanded)}
-                  className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Heart className="h-3 w-3" />
-                    Score Calculation
-                  </span>
-                  {communityExpanded ? (
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                </button>
-                {communityExpanded && (
-                  <div className="mt-2 p-3 bg-secondary/50 rounded border border-border space-y-2">
-                    {/* Voting stats - USE LIVE PROJECT DATA */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-muted-foreground">Upvotes</span>
-                        <span className="font-bold text-green-500">+{project.upvotes || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-muted-foreground">Downvotes</span>
-                        <span className="font-bold text-red-500">-{project.downvotes || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-muted-foreground">Comments</span>
-                        <span className="font-bold text-blue-500">{project.commentCount || project.comment_count || 0}</span>
-                      </div>
-                    </div>
-
-                    {/* Calculation breakdown - USE LIVE PROJECT DATA */}
-                    <div className="pt-2 border-t border-border space-y-1.5 text-[10px]">
-                      <div className="font-bold text-foreground mb-1">Calculation:</div>
-                      {(() => {
-                        const upvotes = project.upvotes || 0;
-                        const downvotes = project.downvotes || 0;
-                        const comments = project.commentCount || project.comment_count || 0;
-                        const totalVotes = upvotes + downvotes;
-                        const upvoteRatio = totalVotes > 0 ? (upvotes / totalVotes) : 0;
-                        const upvoteScore = upvoteRatio * 20;
-                        const commentScore = Math.min(comments * 0.5, 10);
-
-                        return (
-                          <>
-                            <div className="text-muted-foreground">
-                              <strong className="text-foreground">Upvote Score:</strong> ({upvotes} / {totalVotes}) × 20 = <span className="text-primary font-bold">{upvoteScore.toFixed(1)}/20</span>
-                            </div>
-                            <div className="text-muted-foreground">
-                              <strong className="text-foreground">Comment Score:</strong> {comments} × 0.5 (max 10) = <span className="text-primary font-bold">{commentScore.toFixed(1)}/10</span>
-                            </div>
-                            <div className="pt-1.5 mt-1.5 border-t border-border text-foreground font-bold">
-                              Total: {upvoteScore.toFixed(1)} + {commentScore.toFixed(1)} = <span className="text-primary">{(upvoteScore + commentScore).toFixed(1)}/30</span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    <div className="pt-2 border-t border-border text-[9px] text-muted-foreground italic">
-                      Community engagement is calculated from upvote ratio (max 20 pts) + comment activity (max 10 pts)
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Total Score Summary */}
@@ -500,11 +464,17 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
               <div className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-primary" />
                 <span className="text-sm font-black text-foreground">
-                  {isLegacyProject ? 'Total Score' : 'Total AI Score'}
+                  Total Score
                 </span>
               </div>
               <span className="text-2xl font-black text-primary">
-                {(project.proofScore?.total || 0).toFixed(1)}<span className="text-sm text-muted-foreground">/100</span>
+                {(
+                  (scoreBreakdown?.quality?.score || 0) +
+                  (scoreBreakdown?.verification?.score || 0) +
+                  (scoreBreakdown?.validation?.score || 0) +
+                  (scoreBreakdown?.community?.score || 0) ||
+                  project.proofScore?.total || 0
+                ).toFixed(1)}<span className="text-sm text-muted-foreground">/100</span>
               </span>
             </div>
           </div>
