@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { adminService, projectsService, introsService, savedProjectsService } from '@/services/api';
+import { transformProject } from '@/hooks/useProjects';
 import { matchProjectsToInvestor } from '@/utils/investorMatching';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
@@ -65,7 +66,14 @@ export default function InvestorDashboard() {
     queryKey: ['projects', filters.sort],
     queryFn: async () => {
       const response = await projectsService.getAll(filters.sort, 1, true);
-      return response.data;
+      const payload = response.data || {};
+      const transformedProjects = Array.isArray(payload.data)
+        ? payload.data.map(transformProject)
+        : [];
+      return {
+        ...payload,
+        data: transformedProjects,
+      };
     },
   });
 
@@ -74,7 +82,10 @@ export default function InvestorDashboard() {
     queryKey: ['savedProjects'],
     queryFn: async () => {
       const response = await savedProjectsService.getMySavedProjects(1, 50);
-      return response.data.data;
+      const payload = response.data || {};
+      return Array.isArray(payload.data)
+        ? payload.data.map(transformProject)
+        : [];
     },
     enabled: !!user,
   });
@@ -359,37 +370,6 @@ export default function InvestorDashboard() {
                   </div>
                 </div>
               )}
-
-              {/* Recent Activity */}
-              <div className="card-elevated p-6">
-                <h3 className="text-xl font-black text-foreground mb-4">Recent Activity</h3>
-                <div className="space-y-4">
-                  {sentIntros && sentIntros.length > 0 ? (
-                    sentIntros.slice(0, 5).map((intro: any) => (
-                      <div key={intro.id} className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
-                        <div>
-                          <p className="font-bold text-foreground">
-                            Intro request to {intro.builder_username}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(intro.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge variant={
-                          intro.status === 'accepted' ? 'default' :
-                          intro.status === 'pending' ? 'secondary' : 'outline'
-                        }>
-                          {intro.status}
-                        </Badge>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">
-                      No recent activity. Start discovering projects!
-                    </p>
-                  )}
-                </div>
-              </div>
 
               {/* Matching Projects */}
               <div className="card-elevated p-6">

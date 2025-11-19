@@ -22,9 +22,8 @@ export const publishProjectSchema = z.object({
     .or(z.literal('')),
   
   githubUrl: z.string()
-    .url('Invalid URL format')
-    .optional()
-    .or(z.literal('')),
+    .min(1, 'GitHub URL is required')
+    .url('Invalid URL format'),
   
   hackathonName: z.string()
     .max(200, 'Hackathon name must be less than 200 characters')

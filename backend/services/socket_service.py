@@ -309,22 +309,3 @@ class SocketService:
             print(f"[Socket.IO] Emitted badge:removed - Project {project_id}, Badge {badge_id}")
         except Exception as e:
             print(f"[Socket.IO] Error emitting badge:removed: {e}")
-
-
-# Socket.IO event handlers (optional - for connection tracking)
-@socketio.on('connect')
-def handle_connect():
-    """Handle client connection"""
-    print(f"[Socket.IO] Client connected")
-
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Handle client disconnection"""
-    print(f"[Socket.IO] Client disconnected")
-
-
-@socketio.on('ping')
-def handle_ping():
-    """Handle ping from client (for connection testing)"""
-    socketio.emit('pong', {'message': 'pong'})

@@ -437,12 +437,6 @@ export default function UserProfile() {
               >
                 Following ({followingChainsData?.chains?.length || 0})
               </TabsTrigger>
-              <TabsTrigger
-                value="activity"
-                className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
-              >
-                Activity
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="projects">
@@ -603,15 +597,6 @@ export default function UserProfile() {
                   </div>
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="activity">
-              <div className="card-elevated p-12 text-center">
-                <div className="space-y-3">
-                  <p className="text-lg font-bold text-foreground">No recent activity</p>
-                  <p className="text-sm text-muted-foreground">Stay tuned for updates from this builder</p>
-                </div>
-              </div>
             </TabsContent>
           </Tabs>
         </div>

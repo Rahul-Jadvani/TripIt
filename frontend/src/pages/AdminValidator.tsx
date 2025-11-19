@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AlertCircle, Award, Loader2, Shield, ExternalLink, Github, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CoffeeLoader from '@/components/CoffeeLoader';
+import { formatScore, getProjectScore } from '@/utils/score';
 
 const ADMIN_PASSWORD = 'Admin';
 
@@ -429,7 +430,7 @@ export default function AdminValidator() {
                           </div>
                         </div>
                         <div className="badge-primary flex flex-col items-center justify-center px-4 py-2 rounded-lg">
-                          <div className="text-2xl font-black">{project.proof_score || 0}</div>
+                          <div className="text-2xl font-black">{formatScore(getProjectScore(project))}</div>
                           <div className="text-xs font-bold">Score</div>
                         </div>
                       </div>

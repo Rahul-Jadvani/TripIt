@@ -1040,24 +1040,34 @@ def track_view(user_id, project_id):
 
         # Only count as new view if not already viewed
         if not existing_view:
-            # Create new view record
-            new_view = ProjectView(
-                project_id=project_id,
-                user_id=user_id,
-                session_id=session_id,
-                ip_address=ip_address,
-                user_agent=user_agent
-            )
-            db.session.add(new_view)
+            try:
+                # Create new view record
+                new_view = ProjectView(
+                    project_id=project_id,
+                    user_id=user_id,
+                    session_id=session_id,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                db.session.add(new_view)
 
-            # Increment unique view count
-            project.view_count += 1
-            db.session.commit()
+                # Increment unique view count
+                project.view_count += 1
+                db.session.commit()
 
-            return success_response({
-                'view_count': project.view_count,
-                'is_new_view': True
-            }, 'View tracked', 200)
+                return success_response({
+                    'view_count': project.view_count,
+                    'is_new_view': True
+                }, 'View tracked', 200)
+            except Exception as e:
+                # Handle race condition - duplicate view created by concurrent request
+                db.session.rollback()
+                # Re-fetch project to get current view count
+                project = Project.query.get(project_id)
+                return success_response({
+                    'view_count': project.view_count,
+                    'is_new_view': False
+                }, 'Already viewed (race condition)', 200)
         else:
             # Already viewed - don't increment
             return success_response({

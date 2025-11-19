@@ -151,10 +151,10 @@ export default function Publish() {
   // Guarded next for per-step validation
   const handleNext = async () => {
     if (currentStep === 1) {
-      const ok = await trigger(['title', 'description']);
+      const ok = await trigger(['title', 'description', 'githubUrl']);
       if (!ok) {
         setShowErrorSummary(true);
-        const firstInvalid = ['title', 'description'].find((f) => (errors as any)?.[f]);
+        const firstInvalid = ['title', 'description', 'githubUrl'].find((f) => (errors as any)?.[f]);
         if (firstInvalid) {
           document.getElementById(firstInvalid)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -179,10 +179,29 @@ export default function Publish() {
   };
 
   const handleAddTech = () => {
-    if (techInput.trim() && !techStack.includes(techInput.trim())) {
-      setTechStack([...techStack, techInput.trim()]);
+    if (!techInput.trim()) return;
+
+    const entries = techInput
+      .split(',')
+      .map((tech) => tech.trim())
+      .filter((tech) => tech.length > 0);
+
+    if (entries.length === 0) {
       setTechInput('');
+      return;
     }
+
+    setTechStack((prev) => {
+      const updated = [...prev];
+      entries.forEach((tech) => {
+        if (!updated.includes(tech)) {
+          updated.push(tech);
+        }
+      });
+      return updated;
+    });
+
+    setTechInput('');
   };
 
   const handleRemoveTech = (tech: string) => {
@@ -246,57 +265,68 @@ export default function Publish() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Check screenshot limit
     if (screenshotUrls.length >= 5) {
       toast.error('Maximum 5 screenshots allowed');
       e.target.value = '';
       return;
     }
 
-    const file = files[0];
+    const remainingSlots = 5 - screenshotUrls.length;
+    if (files.length > remainingSlots) {
+      toast.info(`You can add ${remainingSlots} more screenshot${remainingSlots === 1 ? '' : 's'}`);
+    }
 
-    // Validate file type
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Please upload an image file (PNG, JPG, GIF, or WebP)');
-      return;
-    }
-
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size must be less than 10MB');
-      return;
-    }
 
     setUploadingScreenshot(true);
+    const uploadedUrls: string[] = [];
+    const uploadedFiles: File[] = [];
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      for (const file of filesToProcess) {
+        if (!allowedTypes.includes(file.type)) {
+          toast.error(`${file.name}: Unsupported file type`);
+          continue;
+        }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name}: File size must be less than 10MB`);
+          continue;
+        }
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+
+          const data = await response.json();
+          uploadedUrls.push(data.data.url);
+          uploadedFiles.push(file);
+        } catch (uploadError) {
+          console.error('Screenshot upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}`);
+        }
       }
 
-      const data = await response.json();
-      const ipfsUrl = data.data.url;
-
-      setScreenshotUrls([...screenshotUrls, ipfsUrl]);
-      setScreenshotFiles([...screenshotFiles, file]);
-      toast.success('Screenshot uploaded successfully!');
-    } catch (error: any) {
-      console.error('Screenshot upload error:', error);
-      toast.error('Failed to upload screenshot');
+      if (uploadedUrls.length > 0) {
+        setScreenshotUrls((prev) => [...prev, ...uploadedUrls]);
+        setScreenshotFiles((prev) => [...prev, ...uploadedFiles]);
+        toast.success(`Uploaded ${uploadedUrls.length} screenshot${uploadedUrls.length === 1 ? '' : 's'}!`);
+      }
     } finally {
       setUploadingScreenshot(false);
-      // Reset file input
       e.target.value = '';
     }
   };
@@ -1226,12 +1256,18 @@ export default function Publish() {
                       type="url"
                       placeholder="https://github.com/username/repo"
                       aria-invalid={!!errors.githubUrl}
+                      disabled={!user?.github_connected}
                       className={`${errors.githubUrl ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('githubUrl', {
                         onChange: (e) => validateGithubUrl(e.target.value),
                         onBlur: (e) => validateGithubUrl(e.target.value)
                       })}
                     />
+                    {!user?.github_connected && (
+                      <p className="text-xs text-muted-foreground">
+                        Connect GitHub to enable this field so we can analyze your repository.
+                      </p>
+                    )}
                     {errors.githubUrl && (
                       <p className="text-sm text-destructive">{errors.githubUrl.message}</p>
                     )}
@@ -1350,13 +1386,15 @@ export default function Publish() {
                         Search and select registered users from the platform. Their profiles will be linked and discoverable.
                       </p>
 
-                      <div className="space-y-2">
-                        <Label className="font-bold">Search for Team Member</Label>
-                        <UserSearchSelect
-                          onSelect={(user) => setSelectedUser(user)}
-                          placeholder="Search users by name, username, or email..."
-                        />
-                      </div>
+                      {!selectedUser && (
+                        <div className="space-y-2">
+                          <Label className="font-bold">Search for Team Member</Label>
+                          <UserSearchSelect
+                            onSelect={(user) => setSelectedUser(user)}
+                            placeholder="Search users by name, username, or email..."
+                          />
+                        </div>
+                      )}
 
                       {/* Show selected user */}
                       {selectedUser && (
@@ -1540,7 +1578,7 @@ export default function Publish() {
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                           </svg>
-                          Upload Screenshot ({screenshotUrls.length}/5)
+                          Upload Screenshots ({screenshotUrls.length}/5)
                         </>
                       )}
                     </label>
@@ -1548,12 +1586,13 @@ export default function Publish() {
                       id="screenshot-upload"
                       type="file"
                       accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                      multiple
                       onChange={handleScreenshotUpload}
                       disabled={uploadingScreenshot || screenshotUrls.length >= 5}
                       className="hidden"
                     />
                     <p className="text-xs text-muted-foreground mt-2">
-                      Supported: PNG, JPG, GIF, WebP • Max size: 10MB • Max 5 screenshots
+                      Supported: PNG, JPG, GIF, WebP • Max size: 10MB • Max 5 screenshots total. You can select multiple files at once.
                     </p>
                   </div>
 

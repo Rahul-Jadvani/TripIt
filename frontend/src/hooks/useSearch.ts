@@ -37,6 +37,8 @@ function transformProject(backendProject: any) {
       validation: backendProject.validation_score || 0,
       quality: backendProject.quality_score || 0,
     },
+    score_breakdown: backendProject.score_breakdown,
+    scoreBreakdown: backendProject.score_breakdown,
     badges: backendProject.badges || [],
     voteCount: (backendProject.upvotes || 0) - (backendProject.downvotes || 0),
     commentCount: backendProject.comment_count || 0,

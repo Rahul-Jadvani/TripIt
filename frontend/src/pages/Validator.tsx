@@ -12,6 +12,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import CoffeeLoader from '@/components/CoffeeLoader';
+import { formatScore, getProjectScore } from '@/utils/score';
 
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -510,7 +511,7 @@ export default function Validator() {
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary">
-                        {project.proof_score || 0}
+                        {formatScore(getProjectScore(project))}
                       </div>
                       <div className="text-xs text-muted-foreground">Proof Score</div>
                     </div>

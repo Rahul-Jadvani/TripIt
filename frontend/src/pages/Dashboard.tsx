@@ -153,53 +153,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Recent Activity */}
-              <div className="card-elevated p-4 sm:p-6">
-                <h2 className="text-xl sm:text-2xl font-black mb-4 text-foreground border-b-4 border-primary pb-3">
-                  Recent Projects
-                </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">Your latest published projects</p>
-
-                {stats.projects && stats.projects.length > 0 ? (
-                  <div className="space-y-6">
-                    {stats.projects.slice(0, 3).map((project: any) => (
-                      <Link
-                        key={project.id}
-                        to={`/project/${project.id}`}
-                        className="flex items-start gap-4 group hover:opacity-80 transition-smooth"
-                      >
-                        <div className="h-3 w-3 rounded-full bg-primary flex-shrink-0 mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-foreground group-hover:text-primary transition-smooth">
-                            {project.title}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {project.upvotes || 0} upvotes
-                            </span>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground">
-                              {project.comment_count || 0} comments
-                            </span>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(project.created_at), { addSuffix: true })}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground mb-4">No projects yet</p>
-                    <Link to="/publish" className="btn-primary inline-flex items-center gap-2">
-                      <Plus className="h-4 w-4" />
-                      Publish Your First Project
-                    </Link>
-                  </div>
-                )}
-              </div>
             </div>
           )}
 

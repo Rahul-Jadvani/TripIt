@@ -2,8 +2,8 @@ import { useVote } from '@/hooks/useVotes';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 interface VoteButtonsProps {
   projectId: string;
@@ -25,17 +25,8 @@ export function VoteButtons({
   const voteMutation = useVote(projectId);
   const isOwnProject = Boolean(projectOwnerId && user?.id === projectOwnerId);
 
-  const normalizedVoteCount = typeof voteCount === 'number' ? voteCount : 0;
-  const [currentVote, setCurrentVote] = useState<'up' | 'down' | null>(userVote);
-  const [currentCount, setCurrentCount] = useState<number>(normalizedVoteCount);
-
-  useEffect(() => {
-    setCurrentVote(userVote);
-  }, [userVote]);
-
-  useEffect(() => {
-    setCurrentCount(normalizedVoteCount);
-  }, [normalizedVoteCount]);
+  // Track which button is animating
+  const [animatingButton, setAnimatingButton] = useState<'up' | 'down' | null>(null);
 
   const handleVote = (voteType: 'up' | 'down') => {
     if (!user) {
@@ -48,59 +39,37 @@ export function VoteButtons({
       return;
     }
 
-    const previousVote = currentVote;
-    const previousCount = currentCount;
-    const baseCount = Number.isFinite(previousCount) ? (previousCount as number) : 0;
+    // Start animation
+    setAnimatingButton(voteType);
 
-    let nextVote: 'up' | 'down' | null = voteType;
-    let nextCount = baseCount;
-
-    if (currentVote === voteType) {
-      // Toggle off the same vote
-      nextVote = null;
-      nextCount += voteType === 'up' ? -1 : 1;
-    } else if (currentVote && currentVote !== voteType) {
-      // Switching directions alters the count by 2
-      nextVote = voteType;
-      nextCount += voteType === 'up' ? 2 : -2;
-    } else {
-      // Fresh vote
-      nextCount += voteType === 'up' ? 1 : -1;
-    }
-
-    setCurrentVote(nextVote);
-    setCurrentCount(nextCount);
-
-    voteMutation.mutate(voteType, {
-      onError: () => {
-        setCurrentVote(previousVote);
-        setCurrentCount(previousCount);
-      },
-      onSuccess: (response) => {
-        const data = response?.data?.data;
-        if (data) {
-          const upvotes = Number(data.upvotes) || 0;
-          const downvotes = Number(data.downvotes) || 0;
-          setCurrentCount(upvotes - downvotes);
-          setCurrentVote(data.user_vote || null);
-        }
-        onVoteChange?.();
-      },
-    });
+    // Trigger vote mutation after animation
+    setTimeout(() => {
+      voteMutation.mutate(voteType, {
+        onSuccess: () => {
+          onVoteChange?.();
+        },
+        onSettled: () => {
+          // End animation after vote completes
+          setAnimatingButton(null);
+        },
+      });
+    }, 150); // Slight delay for scale-up animation
   };
 
-  const disableVoting = isOwnProject || voteMutation.isPending;
+  // Disable for own projects OR during animation
+  const isVoting = voteMutation.isPending || animatingButton !== null;
+  const disableVoting = isOwnProject || isVoting;
   const upTitle = isOwnProject
     ? "You can't vote on your own project"
-    : voteMutation.isPending
-    ? 'Syncing vote...'
     : 'Like project';
   const downTitle = isOwnProject
     ? "You can't vote on your own project"
-    : voteMutation.isPending
-    ? 'Syncing vote...'
     : 'Dislike project';
-  const displayCount = Number.isFinite(currentCount) ? currentCount : 0;
+
+  // Use props directly - parent will re-render when cache updates
+  const normalizedCount = typeof voteCount === 'number' ? voteCount : 0;
+  const finalDisplayCount = Number.isFinite(normalizedCount) ? normalizedCount : 0;
+  const currentVote = userVote;
 
   return (
     <div
@@ -115,20 +84,34 @@ export function VoteButtons({
         }}
         disabled={disableVoting}
         type="button"
-        className={`h-8 w-8 rounded-md flex items-center justify-center transition-all active:scale-95 border ${
-          disableVoting
+        className={`h-8 w-8 rounded-md flex items-center justify-center transition-transform duration-150 border ${
+          animatingButton === 'up'
+            ? 'scale-125'
+            : disableVoting
             ? 'bg-secondary/50 border-border text-muted-foreground cursor-not-allowed opacity-50'
             : currentVote === 'up'
             ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90 active:scale-95'
             : 'bg-secondary hover:bg-secondary/80 border-border text-muted-foreground hover:text-foreground active:scale-95'
         }`}
+        style={{
+          backgroundColor: animatingButton === 'up'
+            ? currentVote === 'up'
+              ? 'var(--primary)'
+              : 'var(--secondary)'
+            : undefined,
+          borderColor: animatingButton === 'up'
+            ? currentVote === 'up'
+              ? 'var(--primary)'
+              : 'var(--border)'
+            : undefined,
+        }}
         title={upTitle}
       >
         <ThumbsUp className="h-4 w-4" />
       </button>
 
       <span className="min-w-[3rem] text-center font-semibold tabular-nums">
-        {displayCount}
+        {finalDisplayCount}
       </span>
 
       <button
@@ -139,13 +122,27 @@ export function VoteButtons({
         }}
         disabled={disableVoting}
         type="button"
-        className={`h-8 w-8 rounded-md flex items-center justify-center transition-all active:scale-95 border ${
-          disableVoting
+        className={`h-8 w-8 rounded-md flex items-center justify-center transition-transform duration-150 border ${
+          animatingButton === 'down'
+            ? 'scale-125'
+            : disableVoting
             ? 'bg-secondary/50 border-border text-muted-foreground cursor-not-allowed opacity-50'
             : currentVote === 'down'
             ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90 active:scale-95'
             : 'bg-secondary hover:bg-secondary/80 border-border text-muted-foreground hover:text-foreground active:scale-95'
         }`}
+        style={{
+          backgroundColor: animatingButton === 'down'
+            ? currentVote === 'down'
+              ? 'var(--primary)'
+              : 'var(--secondary)'
+            : undefined,
+          borderColor: animatingButton === 'down'
+            ? currentVote === 'down'
+              ? 'var(--primary)'
+              : 'var(--border)'
+            : undefined,
+        }}
         title={downTitle}
       >
         <ThumbsDown className="h-4 w-4" />

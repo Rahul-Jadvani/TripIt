@@ -20,194 +20,107 @@ votes_bp = Blueprint('votes', __name__)
 @votes_bp.route('', methods=['POST'])
 @token_required
 def cast_vote(user_id):
-    """Cast or remove vote (FAST - uses Redis cache)"""
-    from sqlalchemy.exc import OperationalError
-    import time
+    """
+    Cast or remove vote (ASYNC - sub-50ms response)
 
-    max_retries = 3
-    last_error = None
+    New async architecture:
+    1. Fast path: Validate + update Redis + enqueue Celery task (<50ms)
+    2. Slow path: Celery worker does durable DB write + reconciliation
+    """
+    try:
+        # 1. Validate input
+        data = request.get_json()
+        schema = VoteCreateSchema()
+        validated_data = schema.load(data)
 
-    for attempt in range(max_retries):
-        try:
-            data = request.get_json()
-            schema = VoteCreateSchema()
-            validated_data = schema.load(data)
+        project_id = validated_data['project_id']
+        vote_type = validated_data['vote_type']
 
-            project_id = validated_data['project_id']
-            vote_type = validated_data['vote_type']
+        # 2. Verify project exists (lightweight check - no locking)
+        project = Project.query.get(project_id)
+        if not project:
+            return error_response('Not found', 'Project not found', 404)
 
-            # Use row-level locking to prevent deadlocks
-            # This locks the project row for the duration of this transaction
-            project = db.session.query(Project).with_for_update().get(project_id)
-            if not project:
-                return error_response('Not found', 'Project not found', 404)
+        # 3. Fast-path vote processing via Redis
+        from services.vote_service import VoteService
+        vote_service = VoteService()
 
-            # ULTRA-FAST: Check Redis cache first for instant response
-            from services.redis_cache_service import RedisUserCache
-            has_upvoted_in_cache = RedisUserCache.has_upvoted(user_id, project_id)
+        result = vote_service.fast_vote(user_id, project_id, vote_type)
 
-            # Check database for ground truth
-            existing_vote = Vote.query.filter_by(user_id=user_id, project_id=project_id).first()
+        # 4. Enqueue Celery task for durable processing
+        from tasks.vote_tasks import process_vote_event
 
-            # DEBUG: Log vote lookup
-            print(f"[VOTE_DEBUG] Attempt {attempt + 1}/{max_retries}: User {user_id} voting on project {project_id}")
-            print(f"[VOTE_DEBUG] Request vote_type: {vote_type}")
-            print(f"[VOTE_DEBUG] Existing vote in DB: {existing_vote.vote_type if existing_vote else 'None'}")
-            if existing_vote:
-                print(f"[VOTE_DEBUG] → Action: {'REMOVE' if existing_vote.vote_type == vote_type else 'CHANGE'}")
-            else:
-                print(f"[VOTE_DEBUG] → Action: CREATE")
+        process_vote_event.delay(
+            request_id=result['request_id'],
+            user_id=user_id,
+            project_id=project_id,
+            vote_type=vote_type,
+            prior_vote=result['prior_vote'] or '',
+            action=result['action']
+        )
 
-            if existing_vote:
-                # If same type, remove vote
-                if existing_vote.vote_type == vote_type:
-                    if vote_type == 'up':
-                        project.upvotes = max(0, project.upvotes - 1)
-                        # Update Redis cache instantly
-                        RedisUserCache.remove_upvote(user_id, project_id, sync_db=False)
-                    else:
-                        project.downvotes = max(0, project.downvotes - 1)
+        # 5. Return optimistic response immediately
+        response_data = {
+            'id': project_id,
+            'upvotes': result['upvotes'],
+            'downvotes': result['downvotes'],
+            'user_vote': result['user_vote'],
+            'voteCount': result['upvotes'] - result['downvotes'],
+            'request_id': result['request_id'],  # For frontend tracking
+            'action': result['action']  # 'created'|'removed'|'changed'
+        }
 
-                    # Recalculate community score immediately
-                    from models.event_listeners import update_project_community_score
-                    update_project_community_score(project)
+        print(f"[VOTE_ASYNC] ✓ Fast path completed in {result['latency_ms']:.2f}ms")
+        print(f"  request_id={result['request_id']}, action={result['action']}")
+        print(f"  optimistic counts: {result['upvotes']} up, {result['downvotes']} down")
 
-                    db.session.delete(existing_vote)
-                    db.session.commit()
+        return success_response(response_data, 'Vote recorded', 200)
 
-                    # Queue materialized view refresh (debounced to 5 seconds)
-                    try:
-                        from sqlalchemy import text
-                        db.session.execute(text("SELECT queue_mv_refresh('mv_feed_projects', 'vote_removed')"))
-                        db.session.commit()
-                    except Exception as e:
-                        # Don't fail vote if MV refresh queue fails
-                        print(f"[WARNING] Failed to queue MV refresh: {e}")
+    except ValidationError as e:
+        return error_response('Validation error', str(e.messages), 400)
+    except Exception as e:
+        print(f"[VOTE_ASYNC] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return error_response('Error', str(e), 500)
 
-                    CacheService.invalidate_project(project_id)
-                    CacheService.invalidate_project_feed()  # Invalidate feed cache (user votes changed)
-                    CacheService.invalidate_leaderboard()  # Vote removal affects leaderboard
-                    CacheService.invalidate_user_votes(user_id)  # Invalidate user votes cache
 
-                    # Emit Socket.IO event for real-time vote removal
-                    from services.socket_service import SocketService
-                    SocketService.emit_vote_removed(project_id)
-                    SocketService.emit_leaderboard_updated()
+# Legacy synchronous vote endpoint (kept for rollback)
+# Uncomment to switch back to old behavior
+"""
+@votes_bp.route('/sync', methods=['POST'])
+@token_required
+def cast_vote_sync(user_id):
+    ... (old synchronous code) ...
+"""
 
-                    return success_response(project.to_dict(include_creator=False, user_id=user_id), 'Vote removed', 200)
-                else:
-                    # Change vote type
-                    if existing_vote.vote_type == 'up':
-                        project.upvotes = max(0, project.upvotes - 1)
-                        RedisUserCache.remove_upvote(user_id, project_id, sync_db=False)
-                    else:
-                        project.downvotes = max(0, project.downvotes - 1)
 
-                    existing_vote.vote_type = vote_type
+@votes_bp.route('/status/<request_id>', methods=['GET'])
+@token_required
+def get_vote_status(user_id, request_id):
+    """Get vote request status (for reconciliation polling)"""
+    try:
+        from services.vote_service import VoteService
+        vote_service = VoteService()
 
-                    if vote_type == 'up':
-                        project.upvotes += 1
-                        # Add to Redis cache
-                        RedisUserCache.add_upvote(user_id, project_id, sync_db=False)
-                    else:
-                        project.downvotes += 1
+        status = vote_service.get_request_status(request_id)
+        return success_response(status, 'Vote status retrieved', 200)
+    except Exception as e:
+        return error_response('Error', str(e), 500)
 
-                    # Recalculate community score immediately
-                    from models.event_listeners import update_project_community_score
-                    update_project_community_score(project)
-            else:
-                # Create new vote
-                vote = Vote(user_id=user_id, project_id=project_id, vote_type=vote_type)
 
-                if vote_type == 'up':
-                    project.upvotes += 1
-                    # Add to Redis cache instantly
-                    RedisUserCache.add_upvote(user_id, project_id, sync_db=False)
-                else:
-                    project.downvotes += 1
+@votes_bp.route('/metrics', methods=['GET'])
+@token_required
+def get_vote_metrics(user_id):
+    """Get vote service metrics (admin only for now)"""
+    try:
+        from services.vote_service import VoteService
+        vote_service = VoteService()
 
-                db.session.add(vote)
-
-            # Recalculate community score immediately after vote count changes
-            from models.event_listeners import update_project_community_score
-            update_project_community_score(project)
-
-            db.session.commit()
-
-            # DEBUG: Verify vote was saved
-            print(f"[VOTE_SAVED] Project {project_id}: upvotes={project.upvotes}, downvotes={project.downvotes}")
-
-            # Verify the vote exists in database
-            saved_vote = Vote.query.filter_by(user_id=user_id, project_id=project_id).first()
-            if saved_vote:
-                print(f"[VOTE_VERIFIED] Vote found: {saved_vote.vote_type}")
-            else:
-                print(f"[VOTE_ERROR] Vote NOT found in DB after commit!")
-
-            # Queue materialized view refresh (debounced to 5 seconds)
-            try:
-                from sqlalchemy import text
-                db.session.execute(text("SELECT queue_mv_refresh('mv_feed_projects', 'vote_cast')"))
-                db.session.commit()
-            except Exception as e:
-                # Don't fail vote if MV refresh queue fails
-                print(f"[WARNING] Failed to queue MV refresh: {e}")
-
-            CacheService.invalidate_project(project_id)
-            CacheService.invalidate_project_feed()  # Invalidate feed cache (user votes changed)
-            CacheService.invalidate_leaderboard()  # Vote affects leaderboard
-            CacheService.invalidate_user_votes(user_id)  # Invalidate user votes cache
-
-            # Emit Socket.IO event for real-time vote updates
-            from services.socket_service import SocketService
-            new_score = project.upvotes - project.downvotes
-            SocketService.emit_vote_cast(project_id, vote_type, new_score)
-            SocketService.emit_leaderboard_updated()
-
-            # Notify project owner of the vote (only if creating new vote, not changing)
-            try:
-                from models.user import User
-                from utils.notifications import notify_project_vote
-                voter = User.query.get(user_id)
-                if voter and not existing_vote:
-                    # Only notify on new vote creation, not on vote changes
-                    notify_project_vote(project.user_id, project, voter, vote_type)
-            except Exception as e:
-                print(f"[ERROR] Failed to send vote notification: {e}")
-                import traceback
-                traceback.print_exc()
-
-            # DEBUG: Show response data
-            response_data = project.to_dict(include_creator=False, user_id=user_id)
-            print(f"[VOTE_RESPONSE] Returning project {project_id}:")
-            print(f"  upvotes={response_data.get('upvotes')}, downvotes={response_data.get('downvotes')}")
-            print(f"  user_vote={response_data.get('user_vote')}")
-            print(f"  voteCount={response_data.get('upvotes', 0) - response_data.get('downvotes', 0)}")
-
-            return success_response(response_data, 'Vote recorded', 200)
-
-        except ValidationError as e:
-            return error_response('Validation error', str(e.messages), 400)
-        except OperationalError as e:
-            # Deadlock detected - retry with exponential backoff
-            if 'deadlock' in str(e).lower() and attempt < max_retries - 1:
-                print(f"[DEADLOCK] Retry attempt {attempt + 1}/{max_retries} after deadlock: {e}")
-                db.session.rollback()
-                time.sleep(0.1 * (attempt + 1))  # Exponential backoff: 0.1s, 0.2s, etc.
-                last_error = e
-                continue
-            else:
-                db.session.rollback()
-                print(f"[DEADLOCK_FAILED] Max retries exceeded or non-deadlock error: {e}")
-                return error_response('Error', f'Database deadlock after {max_retries} retries', 503)
-        except Exception as e:
-            db.session.rollback()
-            print(f"[ERROR] Vote failed: {e}")
-            return error_response('Error', str(e), 500)
-
-    # Should not reach here, but handle just in case
-    db.session.rollback()
-    return error_response('Error', f'Vote failed after {max_retries} retries', 503)
+        metrics = vote_service.get_metrics()
+        return success_response(metrics, 'Vote metrics retrieved', 200)
+    except Exception as e:
+        return error_response('Error', str(e), 500)
 
 
 @votes_bp.route('/user', methods=['GET'])

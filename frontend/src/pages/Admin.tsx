@@ -13,6 +13,7 @@ import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loa
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { adminService } from '@/services/api';
+import { formatScore, getProjectScore } from '@/utils/score';
 import {
   useAdminStats,
   useAdminUsers,
@@ -1648,7 +1649,7 @@ export default function Admin() {
                                         {project.description?.substring(0, 100)}...
                                       </p>
                                       <p className="text-xs text-muted-foreground mt-1">
-                                        Score: {project.proof_score} • By {project.creator?.username || 'Unknown'}
+                                        Score: {formatScore(getProjectScore(project))}
                                       </p>
                                     </div>
                                   </label>
@@ -1813,7 +1814,7 @@ export default function Admin() {
                         {project.is_featured && <Badge>Featured</Badge>}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        By {project.creator?.username || 'Unknown'} • Score: {project.proof_score}
+                        By {project.creator?.username || 'Unknown'} • Score: {formatScore(getProjectScore(project))}
                       </p>
                       <button
                         onClick={() => copyToClipboard(project.id, 'Project ID')}

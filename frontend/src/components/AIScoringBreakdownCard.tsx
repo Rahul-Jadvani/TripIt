@@ -3,6 +3,7 @@ import { Project } from '@/types';
 import { useRescoreProject } from '@/hooks/useProjects';
 import { useAuth } from '@/context/AuthContext';
 import { useMemo, useState } from 'react';
+import { formatScore, getProjectScore } from '@/utils/score';
 
 interface AIScoringBreakdownCardProps {
   project: Project;
@@ -468,13 +469,8 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 </span>
               </div>
               <span className="text-2xl font-black text-primary">
-                {(
-                  (scoreBreakdown?.quality?.score || 0) +
-                  (scoreBreakdown?.verification?.score || 0) +
-                  (scoreBreakdown?.validation?.score || 0) +
-                  (scoreBreakdown?.community?.score || 0) ||
-                  project.proofScore?.total || 0
-                ).toFixed(1)}<span className="text-sm text-muted-foreground">/100</span>
+                {formatScore(getProjectScore(project))}
+                <span className="text-sm text-muted-foreground">/100</span>
               </span>
             </div>
           </div>

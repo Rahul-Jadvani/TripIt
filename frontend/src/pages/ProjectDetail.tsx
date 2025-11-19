@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProjectById } from '@/hooks/useProjects';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { formatScore, getProjectScore } from '@/utils/score';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,9 @@ export default function ProjectDetail() {
   const [showPostUpdate, setShowPostUpdate] = useState(false);
   const [showProfileChecklist, setShowProfileChecklist] = useState(false);
   const queryClient = useQueryClient();
+
+  // Track which projects have been viewed to prevent duplicate API calls
+  const viewTrackedRef = useRef<Set<string>>(new Set());
 
   // Manage sticker positions (persist in localStorage)
   const [stickerPositions, setStickerPositions] = useState<Record<string, { x: number; y: number }>>(() => {
@@ -112,6 +116,14 @@ export default function ProjectDetail() {
   // Track unique project view on page load and handle comment anchors
   useEffect(() => {
     if (id && !isLoading && !error) {
+      // Check if we've already tracked this view in this session
+      if (viewTrackedRef.current.has(id)) {
+        return; // Already tracked, skip
+      }
+
+      // Mark as tracked immediately to prevent duplicate calls
+      viewTrackedRef.current.add(id);
+
       // Get or create anonymous session ID for unique tracking
       let sessionId = localStorage.getItem('viewer_session_id');
       if (!sessionId) {
@@ -177,6 +189,7 @@ export default function ProjectDetail() {
   }
 
   const project = data.data;
+  const displayScore = getProjectScore(project);
 
   const insightCards = [
     project.project_story && (
@@ -579,7 +592,7 @@ export default function ProjectDetail() {
                   </button>
                 </div>
                 <div className="badge-primary flex flex-col items-center justify-center px-6 py-3 rounded-[15px] whitespace-nowrap min-w-[110px]">
-                  <div className="text-2xl font-black text-black">{project.proofScore?.total || 0}</div>
+                  <div className="text-2xl font-black text-black">{formatScore(displayScore)}</div>
                   <div className="text-xs font-bold text-black mt-1">Score</div>
                 </div>
               </div>

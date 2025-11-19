@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatScore, getProjectScore } from '@/utils/score';
 
 interface AddProjectToChainDialogProps {
   open: boolean;
@@ -161,7 +162,7 @@ export function AddProjectToChainDialog({
                           </p>
                         )}
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                          <span>Score: {project.proofScore.total}</span>
+                          <span>Score: {formatScore(getProjectScore(project))}</span>
                           <span>{project.voteCount} votes</span>
                           <span>{project.commentCount} comments</span>
                         </div>

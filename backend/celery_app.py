@@ -19,7 +19,7 @@ def make_celery(app=None):
         app.import_name,
         broker=app.config["CELERY_BROKER_URL"],
         backend=app.config["CELERY_RESULT_BACKEND"],
-        include=["tasks.scoring_tasks"]
+        include=["tasks.scoring_tasks", "tasks.vote_tasks"]
     )
     
     celery.conf.update(

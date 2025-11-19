@@ -11,4 +11,5 @@ from flask_socketio import SocketIO
 db = SQLAlchemy()
 jwt = JWTManager()
 migrate = Migrate()
-socketio = SocketIO(cors_allowed_origins="*", async_mode='threading')
+# Initialize SocketIO without app - will be configured in app.py
+socketio = SocketIO(async_mode='threading')

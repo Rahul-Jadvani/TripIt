@@ -25,6 +25,9 @@ class ProjectView(db.Model):
     __table_args__ = (
         db.Index('idx_project_user_view', 'project_id', 'user_id'),
         db.Index('idx_project_session_view', 'project_id', 'session_id'),
+        # Unique constraints to prevent duplicate views (race condition protection)
+        db.UniqueConstraint('project_id', 'user_id', name='uq_project_user_view'),
+        db.UniqueConstraint('project_id', 'session_id', name='uq_project_session_view'),
     )
 
     def to_dict(self):

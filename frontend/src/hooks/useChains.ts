@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chainApi, CreateChainData } from '@/services/chainApi';
 import type { ChainFilters } from '@/types';
+import { transformProject } from '@/hooks/useProjects';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -78,7 +79,19 @@ export function useChainProjects(slug: string, filters?: any) {
   return useQuery({
     queryKey: ['chainProjects', slug, filters],
     queryFn: () => chainApi.getChainProjects(slug, filters),
-    select: (response) => response.data,
+    select: (response) => {
+      const data = response.data || {};
+      const projects = Array.isArray(data.projects) ? data.projects.map(transformProject) : [];
+      const pagination = data.pagination || {};
+      const totalPages = pagination.pages ?? data.total_pages ?? pagination.total_pages ?? 1;
+
+      return {
+        ...data,
+        projects,
+        pagination,
+        total_pages: totalPages,
+      };
+    },
     enabled: !!slug,
   });
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, CheckCircle, Shield, Loader2 } from 'lucide-react';
+import { Search, CheckCircle, Shield, Loader2, Sparkles } from 'lucide-react';
 import axios from 'axios';
 
 interface User {
@@ -149,7 +149,7 @@ export function UserSearchSelect({ onSelect, placeholder = 'Search users by name
         {results.length > 0 && (
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] bg-white dark:bg-gray-900 border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-80 overflow-y-auto"
+            className="fixed z-[9999] bg-gray-950 text-white border-2 border-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-80 overflow-y-auto"
             style={{
               top: `${position.top + 8}px`,
               left: `${position.left}px`,
@@ -161,32 +161,32 @@ export function UserSearchSelect({ onSelect, placeholder = 'Search users by name
                 key={user.id}
                 type="button"
                 onClick={() => handleSelect(user)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-yellow-100 dark:hover:bg-gray-800 transition-colors border-b-2 border-black last:border-b-0 text-left"
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-primary/30 transition-colors border-b-2 border-primary/40 last:border-b-0 text-left text-white"
               >
-                <Avatar className="h-10 w-10 border-2 border-black">
+                <Avatar className="h-10 w-10 border-2 border-primary">
                   <AvatarImage src={user.avatar_url} alt={user.username} />
-                  <AvatarFallback className="bg-primary text-white font-bold">
+                  <AvatarFallback className="bg-primary text-black font-bold">
                     {user.display_name?.[0] || user.username?.[0] || '?'}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-foreground truncate">
+                    <span className="font-bold text-white truncate">
                       {user.display_name || user.username}
                     </span>
                     {user.has_oxcert && (
                       <Shield className="h-4 w-4 text-primary flex-shrink-0" title="Has 0xCert" />
                     )}
                     {user.is_verified && (
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" title="Verified email" />
+                      <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" title="Verified email" />
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground truncate">
+                  <div className="text-sm text-gray-300 truncate">
                     @{user.username}
                   </div>
                   {user.email && (
-                    <div className="text-xs text-muted-foreground truncate">
+                    <div className="text-xs text-gray-400 truncate">
                       {user.email}
                     </div>
                   )}
@@ -200,7 +200,7 @@ export function UserSearchSelect({ onSelect, placeholder = 'Search users by name
         {!isSearching && query.length >= 2 && results.length === 0 && !error && (
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] bg-white dark:bg-gray-900 border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 text-center text-sm text-gray-600 dark:text-gray-400"
+            className="fixed z-[9999] bg-gray-950 text-gray-200 border-2 border-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 text-center text-sm"
             style={{
               top: `${position.top + 8}px`,
               left: `${position.left}px`,
@@ -215,7 +215,7 @@ export function UserSearchSelect({ onSelect, placeholder = 'Search users by name
         {error && (
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] bg-red-50 dark:bg-red-950 border-2 border-red-500 rounded-lg shadow-[4px_4px_0px_0px_rgba(239,68,68,1)] p-4 text-center text-sm text-red-700 dark:text-red-400"
+            className="fixed z-[9999] bg-red-900 text-red-100 border-2 border-red-500 rounded-lg shadow-[4px_4px_0px_0px_rgba(239,68,68,1)] p-4 text-center text-sm"
             style={{
               top: `${position.top + 8}px`,
               left: `${position.left}px`,
@@ -231,10 +231,12 @@ export function UserSearchSelect({ onSelect, placeholder = 'Search users by name
     return createPortal(dropdown, document.body);
   };
 
+  const inputClasses = 'pl-10 pr-12 py-3 text-sm font-semibold bg-gray-950/90 text-white border-2 border-primary rounded-2xl shadow-[0_4px_0_#000] focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:border-primary transition-all placeholder:text-gray-500';
+
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-primary" />
         <Input
           type="text"
           placeholder={placeholder}
@@ -243,10 +245,12 @@ export function UserSearchSelect({ onSelect, placeholder = 'Search users by name
           onFocus={() => {
             if (results.length > 0) setIsOpen(true);
           }}
-          className="pl-10 pr-10"
+          className={inputClasses}
         />
-        {isSearching && (
-          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+        {isSearching ? (
+          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
+        ) : (
+          <Sparkles className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-primary/60" />
         )}
       </div>
 

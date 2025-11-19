@@ -74,15 +74,23 @@ export function useRealTimeUpdates() {
       // Get auth token from localStorage
       const token = localStorage.getItem('token');
 
-      socket = io(BACKEND_URL, {
-        transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
+      // Build socket configuration
+      const socketConfig: any = {
+        transports: ['polling', 'websocket'], // Start with polling, then upgrade to WebSocket
         reconnection: true,
         reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-        auth: {
-          token: token || '',
-        },
-      });
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 10,
+        timeout: 20000,
+        autoConnect: true,
+      };
+
+      // Only add auth if token exists
+      if (token) {
+        socketConfig.auth = { token };
+      }
+
+      socket = io(BACKEND_URL, socketConfig);
       // Connection event handlers (dev-only logs)
       if (import.meta.env.DEV) {
         // light diagnostics during development
@@ -134,6 +142,19 @@ export function useRealTimeUpdates() {
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
         queryClient.invalidateQueries({ queryKey: ['projects'] });
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      });
+      socket.on('vote:reconciled', (data) => {
+        console.log('[VoteReconciled] Backend reconciled vote counts:', data);
+
+        // Show toast notification
+        toast.info('Vote counts updated', {
+          description: 'Your vote has been synchronized',
+          duration: 3000,
+        });
+
+        // Force refetch to get authoritative counts
+        queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
       });
       socket.on('comment:added', (data) => {
         // Only invalidate project cache for comment count update
@@ -411,6 +432,7 @@ export function useRealTimeUpdates() {
         socket.off('project:deleted');
         socket.off('vote:cast');
         socket.off('vote:removed');
+        socket.off('vote:reconciled');
         socket.off('comment:added');
         socket.off('comment:updated');
         socket.off('comment:deleted');

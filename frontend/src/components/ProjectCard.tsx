@@ -13,6 +13,7 @@ import { IntroRequest } from '@/components/IntroRequest';
 import { InteractiveScrollBackground } from '@/components/InteractiveScrollBackground';
 import { ShareDialog } from '@/components/ShareDialog';
 import { ChainBadge } from '@/components/ChainBadge';
+import { formatScore, getProjectScore } from '@/utils/score';
 
 interface ProjectCardProps {
   project: Project;
@@ -119,16 +120,18 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 <div className="flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 px-3 py-2 min-w-[70px]">
                   {(() => {
                     const scoringStatus = project.scoring_status || project.scoringStatus;
-                    const hasScore = project.proofScore?.total && project.proofScore.total > 0;
+                    const derivedScore = getProjectScore(project);
+                    const hasScore = derivedScore > 0;
+                    const formattedScore = formatScore(derivedScore);
                     const isLegacyProject = !scoringStatus; // Old projects don't have scoring_status
 
                     return (
                       <>
                         <span className="text-xl font-bold text-primary">
-                          {hasScore ? project.proofScore.total : Math.max(project.voteCount || 0, 0)}
+                          {hasScore ? formattedScore : Math.max(project.voteCount || 0, 0)}
                         </span>
                         <span className="text-[10px] text-muted-foreground font-medium">
-                          {hasScore ? (isLegacyProject ? 'Score' : 'AI Score') : 'Votes'}
+                          {hasScore ? 'Score' : 'Votes'}
                         </span>
                         {/* Only show status badges for NEW projects (not legacy) */}
                         {!isLegacyProject && scoringStatus && scoringStatus !== 'completed' && (

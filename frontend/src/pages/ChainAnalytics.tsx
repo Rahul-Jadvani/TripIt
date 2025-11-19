@@ -23,6 +23,7 @@ import {
   Award,
   AlertCircle,
 } from 'lucide-react';
+import { formatScore, getProjectScore } from '@/utils/score';
 
 export default function ChainAnalytics() {
   const { slug } = useParams<{ slug: string }>();
@@ -154,7 +155,7 @@ export default function ChainAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{analytics.overview.average_project_score}</div>
+            <div className="text-3xl font-bold">{formatScore(analytics.overview.average_project_score)}</div>
             <p className="text-xs text-muted-foreground mt-1">Per project</p>
           </CardContent>
         </Card>
@@ -283,7 +284,7 @@ export default function ChainAnalytics() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Award className="h-3 w-3" />
-                      Score: {project.proof_score}
+                      Score: {formatScore(getProjectScore(project))}
                     </span>
                     <span className="flex items-center gap-1">
                       <ThumbsUp className="h-3 w-3" />

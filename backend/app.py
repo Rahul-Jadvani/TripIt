@@ -45,7 +45,17 @@ def create_app(config_name=None):
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    socketio.init_app(app, cors_allowed_origins=app.config['CORS_ORIGINS'])
+
+    # Initialize Socket.IO with proper CORS and configuration
+    socketio.init_app(
+        app,
+        cors_allowed_origins=app.config['CORS_ORIGINS'],
+        async_mode='threading',
+        logger=False,
+        engineio_logger=False,
+        ping_timeout=60,
+        ping_interval=25
+    )
 
     # Enable compression for all responses
     Compress(app)
@@ -210,9 +220,11 @@ def create_app(config_name=None):
             # Get token from auth
             token = auth.get('token') if auth else None
 
-            if not token:
-                print(f"[Socket.IO] Connection failed - no token provided")
-                return False
+            # Allow connection even without token (for public events)
+            # But only join user rooms if authenticated
+            if not token or token == '':
+                print(f"[Socket.IO] Guest connected (no token)")
+                return True
 
             try:
                 # Decode JWT token
@@ -222,8 +234,8 @@ def create_app(config_name=None):
                 # Verify user exists
                 user = User.query.get(user_id)
                 if not user:
-                    print(f"[Socket.IO] Connection failed - user not found: {user_id}")
-                    return False
+                    print(f"[Socket.IO] Connection warning - user not found: {user_id}, allowing as guest")
+                    return True
 
                 # Join user to a room with their user_id (for targeted messaging)
                 from flask_socketio import join_room
@@ -233,12 +245,12 @@ def create_app(config_name=None):
                 return True
 
             except Exception as e:
-                print(f"[Socket.IO] Token decode error: {e}")
-                return False
+                print(f"[Socket.IO] Token decode error: {e}, allowing as guest")
+                return True
 
         except Exception as e:
             print(f"[Socket.IO] Connection error: {e}")
-            return False
+            return True
 
     @socketio.on('disconnect')
     def handle_disconnect():
