@@ -34,6 +34,7 @@ const Publish = lazy(() => import("./pages/Publish"));
 const EditProject = lazy(() => import("./pages/EditProject"));
 const Intros = lazy(() => import("./pages/Intros"));
 const Admin = lazy(() => import("./pages/Admin"));
+const AdminRescore = lazy(() => import("./pages/AdminRescore"));
 const AdminValidator = lazy(() => import("./pages/AdminValidator"));
 const Validator = lazy(() => import("./pages/Validator"));
 const InvestorPlans = lazy(() => import("./pages/InvestorPlans"));
@@ -144,6 +145,7 @@ const App = () => (
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+              <Route path="/admin/rescore" element={<AdminRoute><AdminRescore /></AdminRoute>} />
 
               {/* Validator Route (JWT Protected) */}
               <Route path="/validator" element={<ValidatorRoute><Validator /></ValidatorRoute>} />

@@ -68,6 +68,10 @@ def cast_vote(user_id):
                     else:
                         project.downvotes = max(0, project.downvotes - 1)
 
+                    # Recalculate community score immediately
+                    from models.event_listeners import update_project_community_score
+                    update_project_community_score(project)
+
                     db.session.delete(existing_vote)
                     db.session.commit()
 
@@ -107,6 +111,10 @@ def cast_vote(user_id):
                         RedisUserCache.add_upvote(user_id, project_id, sync_db=False)
                     else:
                         project.downvotes += 1
+
+                    # Recalculate community score immediately
+                    from models.event_listeners import update_project_community_score
+                    update_project_community_score(project)
             else:
                 # Create new vote
                 vote = Vote(user_id=user_id, project_id=project_id, vote_type=vote_type)
@@ -120,8 +128,9 @@ def cast_vote(user_id):
 
                 db.session.add(vote)
 
-            # Community score will be updated by periodic AI rescoring
-            # or trigger immediate rescore for high-priority projects if needed
+            # Recalculate community score immediately after vote count changes
+            from models.event_listeners import update_project_community_score
+            update_project_community_score(project)
 
             db.session.commit()
 

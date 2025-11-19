@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight, Github } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PublishLoader, PublishSuccess } from '@/components/PublishLoader';
 import { toast } from 'sonner';
@@ -18,10 +18,11 @@ import { UserSearchSelect } from '@/components/UserSearchSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { ChainSelector } from '@/components/ChainSelector';
+import { authService } from '@/services/api';
 
 export default function Publish() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   // Multistep state
   const [currentStep, setCurrentStep] = useState<number>(1);
   const stepDefs: { index: number; label: string; anchors: string[] }[] = [
@@ -76,6 +77,7 @@ export default function Publish() {
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [githubUrlWarning, setGithubUrlWarning] = useState<string>('');
+  const [githubActionLoading, setGithubActionLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{ user_id?: string; name: string; role: string; username?: string; avatar_url?: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<{ id: string; username: string; display_name: string; email: string; avatar_url?: string } | null>(null);
   const [memberRole, setMemberRole] = useState('');
@@ -88,6 +90,22 @@ export default function Publish() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishState, setPublishState] = useState<'loading' | 'success'>('loading');
   const [publishedId, setPublishedId] = useState<string | undefined>();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const githubSuccess = params.get('github_success');
+    const githubUsername = params.get('github_username');
+    const githubError = params.get('github_error');
+
+    if (githubSuccess === 'true' && githubUsername) {
+      toast.success(`GitHub connected! Welcome @${githubUsername}`);
+      if (refreshUser) refreshUser();
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (githubError) {
+      toast.error(`GitHub connection failed: ${githubError}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [refreshUser]);
 
   // Hackathons state
   const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
@@ -381,6 +399,40 @@ export default function Publish() {
     } catch {
       setGithubUrlWarning('⚠️ Invalid URL format. Please enter a complete URL starting with https://');
       return false;
+    }
+  };
+
+  const handleGithubConnect = async () => {
+    setGithubActionLoading(true);
+    try {
+      const response = await authService.githubConnect();
+      const authUrl = response.data?.data?.auth_url;
+      if (!authUrl) {
+        toast.error('Failed to start GitHub connection');
+        setGithubActionLoading(false);
+        return;
+      }
+      window.location.href = authUrl;
+    } catch (error: any) {
+      console.error('GitHub connect error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to connect GitHub';
+      toast.error(message);
+      setGithubActionLoading(false);
+    }
+  };
+
+  const handleGithubDisconnect = async () => {
+    setGithubActionLoading(true);
+    try {
+      await authService.githubDisconnect();
+      toast.success('GitHub account disconnected');
+      if (refreshUser) await refreshUser();
+    } catch (error: any) {
+      console.error('GitHub disconnect error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to disconnect GitHub';
+      toast.error(message);
+    } finally {
+      setGithubActionLoading(false);
     }
   };
 
@@ -1129,9 +1181,46 @@ export default function Publish() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="githubUrl">
-                      GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
-                    </Label>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Label htmlFor="githubUrl">
+                        GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {user?.github_connected ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleGithubDisconnect}
+                              disabled={githubActionLoading}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              {githubActionLoading ? 'Working...' : 'Disconnect'}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleGithubConnect}
+                              disabled={githubActionLoading}
+                            >
+                              <Github className="h-3.5 w-3.5" />
+                              Reconnect
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleGithubConnect}
+                            disabled={githubActionLoading}
+                          >
+                            <Github className="h-3.5 w-3.5" />
+                            {githubActionLoading ? 'Opening...' : 'Connect GitHub'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     <Input
                       id="githubUrl"
                       type="url"
@@ -1160,10 +1249,13 @@ export default function Publish() {
                         <p className={`text-xs font-semibold text-black`}>{githubUrlWarning}</p>
                       </div>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      GitHub repo required for AI to analyze code quality and team credentials
+                    <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
+                      <span>GitHub repo required for AI to analyze code quality and team credentials.</span>
                       {user?.github_connected && (
-                        <span className="text-primary font-medium"> (Connected as @{user.github_username})</span>
+                        <span className="text-primary font-medium inline-flex items-center gap-1">
+                          <Github className="h-3 w-3" />
+                          Connected as @{user.github_username}
+                        </span>
                       )}
                     </p>
                   </div>

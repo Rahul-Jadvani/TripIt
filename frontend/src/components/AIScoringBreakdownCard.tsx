@@ -17,6 +17,9 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
   const retryCount = project.scoring_retry_count || project.scoringRetryCount || 0;
   const scoringError = project.scoring_error || project.scoringError;
   const [reasoningExpanded, setReasoningExpanded] = useState(false);
+  const [qualityExpanded, setQualityExpanded] = useState(false);
+  const [verificationExpanded, setVerificationExpanded] = useState(false);
+  const [communityExpanded, setCommunityExpanded] = useState(false);
 
   // Legacy projects (created before AI system) - don't have scoring_status
   // Show simple score breakdown without AI analysis indicators
@@ -105,7 +108,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 <span className="text-xs font-bold text-foreground">Code Quality</span>
               </div>
               <span className="text-sm font-black text-primary">
-                {project.proofScore?.quality || 0}/20
+                {(project.proofScore?.quality || 0).toFixed(1)}/20
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground">
@@ -113,6 +116,72 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 ? 'Demo URL, GitHub URL, screenshots, description quality'
                 : 'Repository structure, README, file organization, code patterns'}
             </p>
+
+            {/* Collapsible GitHub Analysis Details */}
+            {!isLegacyProject && scoreBreakdown?.quality && (
+              <div className="mt-2">
+                <button
+                  onClick={() => setQualityExpanded(!qualityExpanded)}
+                  className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Github className="h-3 w-3" />
+                    GitHub Analysis Details
+                  </span>
+                  {qualityExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                {qualityExpanded && (
+                  <div className="mt-2 p-3 bg-secondary/50 rounded border border-border space-y-2">
+                    {/* Quality metrics breakdown */}
+                    {scoreBreakdown.quality.repo_structure !== undefined && (
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">Repository Structure</span>
+                        <span className="font-bold text-foreground">{scoreBreakdown.quality.repo_structure}/100</span>
+                      </div>
+                    )}
+                    {scoreBreakdown.quality.readme_quality !== undefined && (
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">README Quality</span>
+                        <span className="font-bold text-foreground">{scoreBreakdown.quality.readme_quality}/100</span>
+                      </div>
+                    )}
+                    {scoreBreakdown.quality.file_organization !== undefined && (
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">File Organization</span>
+                        <span className="font-bold text-foreground">{scoreBreakdown.quality.file_organization}/100</span>
+                      </div>
+                    )}
+                    {scoreBreakdown.quality.code_patterns !== undefined && (
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">Code Patterns</span>
+                        <span className="font-bold text-foreground">{scoreBreakdown.quality.code_patterns}/100</span>
+                      </div>
+                    )}
+                    {/* Repository stats */}
+                    {(scoreBreakdown.quality.stars !== undefined || scoreBreakdown.quality.forks !== undefined) && (
+                      <div className="mt-2 pt-2 border-t border-border space-y-1">
+                        {scoreBreakdown.quality.stars !== undefined && (
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-muted-foreground">GitHub Stars</span>
+                            <span className="font-bold text-yellow-500">{scoreBreakdown.quality.stars}</span>
+                          </div>
+                        )}
+                        {scoreBreakdown.quality.forks !== undefined && (
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-muted-foreground">Forks</span>
+                            <span className="font-bold text-blue-500">{scoreBreakdown.quality.forks}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Team Verification */}
@@ -125,14 +194,102 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 </span>
               </div>
               <span className="text-sm font-black text-primary">
-                {project.proofScore?.verification || 0}/20
+                {(project.proofScore?.verification || 0).toFixed(1)}/20
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground">
               {isLegacyProject
                 ? 'Email verified, 0xCert connected, GitHub connected'
-                : 'GitHub history, past projects, contribution quality'}
+                : 'GitHub contributions, repo history, and reputation signals'}
             </p>
+
+            {/* Collapsible Author Analysis Details */}
+            {!isLegacyProject && scoreBreakdown?.verification && (
+              <div className="mt-2">
+                <button
+                  onClick={() => setVerificationExpanded(!verificationExpanded)}
+                  className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Users className="h-3 w-3" />
+                    Author Analysis Details
+                  </span>
+                  {verificationExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                {verificationExpanded && (
+                  <div className="mt-2 p-3 bg-secondary/50 rounded border border-border text-[10px] text-foreground leading-relaxed space-y-2">
+                    {scoreBreakdown.verification.author_username && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">GitHub Username</span>
+                        <a
+                          href={`https://github.com/${scoreBreakdown.verification.author_username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-primary hover:underline"
+                        >
+                          @{scoreBreakdown.verification.author_username}
+                        </a>
+                      </div>
+                    )}
+                    {scoreBreakdown.verification.public_repos !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Public Repositories</span>
+                        <span className="font-bold text-foreground">{scoreBreakdown.verification.public_repos}</span>
+                      </div>
+                    )}
+                    {scoreBreakdown.verification.followers !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Followers</span>
+                        <span className="font-bold text-foreground">{scoreBreakdown.verification.followers}</span>
+                      </div>
+                    )}
+                    {scoreBreakdown.verification.contributions_last_year !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Contributions (last 12 months)</span>
+                        <span className="font-bold text-foreground">
+                          {scoreBreakdown.verification.contributions_last_year}
+                        </span>
+                      </div>
+                    )}
+                    {scoreBreakdown.verification.contributions_lifetime !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Lifetime Contributions</span>
+                        <span className="font-bold text-foreground">
+                          {scoreBreakdown.verification.contributions_lifetime}
+                        </span>
+                      </div>
+                    )}
+                    {scoreBreakdown.verification.contributions_error && (
+                      <div className="pt-2 border-t border-border text-[9px] text-destructive">
+                        Contribution data unavailable: {scoreBreakdown.verification.contributions_error}
+                      </div>
+                    )}
+                    {scoreBreakdown.verification.account_age_days !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Account Age</span>
+                        <span className="font-bold text-foreground">
+                          {Math.floor(scoreBreakdown.verification.account_age_days / 365)} years {Math.floor((scoreBreakdown.verification.account_age_days % 365) / 30)} months
+                        </span>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-muted-foreground">
+                        <strong className="text-foreground">Analysis Method:</strong> Repository owner's GitHub profile reputation, public repositories, followers, account maturity, and profile completeness.
+                      </p>
+                    </div>
+                    {scoreBreakdown.verification.error && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-red-500 text-[9px]">{scoreBreakdown.verification.error}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* AI Validation / Validator Badges */}
@@ -178,7 +335,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 )}
               </div>
               <span className="text-sm font-black text-primary">
-                {project.proofScore?.validation || 0}/30
+                {(project.proofScore?.validation || 0).toFixed(1)}/30
               </span>
             </div>
 
@@ -256,14 +413,85 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 <span className="text-xs font-bold text-foreground">Community Score</span>
               </div>
               <span className="text-sm font-black text-primary">
-                {project.proofScore?.community || 0}/30
+                {(project.proofScore?.community || 0).toFixed(1)}/30
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground">
               {isLegacyProject
                 ? 'Upvote ratio and comment engagement'
-                : `Upvotes: ${scoreBreakdown?.community?.upvotes || 0} · Comments: ${scoreBreakdown?.community?.comments || 0}`}
+                : `Upvotes: ${project.upvotes || 0} · Comments: ${project.commentCount || project.comment_count || 0}`}
             </p>
+
+            {/* Collapsible Community Score Details */}
+            {!isLegacyProject && (
+              <div className="mt-2">
+                <button
+                  onClick={() => setCommunityExpanded(!communityExpanded)}
+                  className="w-full flex items-center justify-between p-2 bg-primary/10 hover:bg-primary/20 rounded text-[10px] font-bold text-primary transition-smooth"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Heart className="h-3 w-3" />
+                    Score Calculation
+                  </span>
+                  {communityExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                {communityExpanded && (
+                  <div className="mt-2 p-3 bg-secondary/50 rounded border border-border space-y-2">
+                    {/* Voting stats - USE LIVE PROJECT DATA */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">Upvotes</span>
+                        <span className="font-bold text-green-500">+{project.upvotes || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">Downvotes</span>
+                        <span className="font-bold text-red-500">-{project.downvotes || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">Comments</span>
+                        <span className="font-bold text-blue-500">{project.commentCount || project.comment_count || 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Calculation breakdown - USE LIVE PROJECT DATA */}
+                    <div className="pt-2 border-t border-border space-y-1.5 text-[10px]">
+                      <div className="font-bold text-foreground mb-1">Calculation:</div>
+                      {(() => {
+                        const upvotes = project.upvotes || 0;
+                        const downvotes = project.downvotes || 0;
+                        const comments = project.commentCount || project.comment_count || 0;
+                        const totalVotes = upvotes + downvotes;
+                        const upvoteRatio = totalVotes > 0 ? (upvotes / totalVotes) : 0;
+                        const upvoteScore = upvoteRatio * 20;
+                        const commentScore = Math.min(comments * 0.5, 10);
+
+                        return (
+                          <>
+                            <div className="text-muted-foreground">
+                              <strong className="text-foreground">Upvote Score:</strong> ({upvotes} / {totalVotes}) × 20 = <span className="text-primary font-bold">{upvoteScore.toFixed(1)}/20</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              <strong className="text-foreground">Comment Score:</strong> {comments} × 0.5 (max 10) = <span className="text-primary font-bold">{commentScore.toFixed(1)}/10</span>
+                            </div>
+                            <div className="pt-1.5 mt-1.5 border-t border-border text-foreground font-bold">
+                              Total: {upvoteScore.toFixed(1)} + {commentScore.toFixed(1)} = <span className="text-primary">{(upvoteScore + commentScore).toFixed(1)}/30</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    <div className="pt-2 border-t border-border text-[9px] text-muted-foreground italic">
+                      Community engagement is calculated from upvote ratio (max 20 pts) + comment activity (max 10 pts)
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Total Score Summary */}
@@ -276,7 +504,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 </span>
               </div>
               <span className="text-2xl font-black text-primary">
-                {project.proofScore?.total || 0}<span className="text-sm text-muted-foreground">/100</span>
+                {(project.proofScore?.total || 0).toFixed(1)}<span className="text-sm text-muted-foreground">/100</span>
               </span>
             </div>
           </div>

@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List, Edit2, Settings, MessageSquare, Layers, Star, Clock, Eye, Calendar } from 'lucide-react';
+import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loader2, Ban, Trash2, Upload, Copy, ExternalLink, List, Edit2, Settings, MessageSquare, Layers, Star, Clock, Eye, Calendar, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { adminService } from '@/services/api';
@@ -1215,6 +1215,26 @@ export default function Admin() {
         </div>
         <p className="text-muted-foreground">Manage users, validators, projects, and platform settings</p>
       </div>
+
+      <Card className="mb-6 border-dashed border-primary/40 bg-secondary/10">
+        <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-primary" />
+              Need to rescore projects?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Open the dedicated rescore console to queue a single project or bulk batch with filters.
+            </p>
+          </div>
+          <Button asChild className="w-full sm:w-auto">
+            <Link to="/admin/rescore">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Project Rescore Console
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-8">

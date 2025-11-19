@@ -36,7 +36,8 @@
       "Bash(if not exist \"tasks\" mkdir \"tasks\")",
       "Bash(\"services\\scoring\\__init__.py\")",
       "Bash(\"tasks\\__init__.py\")",
-      "Bash(timeout /t 2)"
+      "Bash(timeout /t 2)",
+      "Bash(powershell -Command \"Get-Process python | Stop-Process -Force\")"
     ],
     "deny": [],
     "ask": []

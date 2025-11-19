@@ -2,6 +2,8 @@
 Main Scoring Engine
 Orchestrates GitHub analysis, LLM analysis, and community scoring
 """
+import os
+
 from .github_analyzer import GitHubAnalyzer
 from .llm_analyzer import LLMAnalyzer
 from .normalizer import normalize_score, combine_subscores
@@ -19,7 +21,10 @@ class ScoringEngine:
             github_token: GitHub access token
             openai_api_key: OpenAI API key
         """
-        self.github_analyzer = GitHubAnalyzer(access_token=github_token)
+        self.github_token = github_token or os.getenv('GITHUB_ACCESS_TOKEN')
+        # Always use a service-level token for GraphQL (fallback to same token if none configured)
+        self.graphql_service_token = os.getenv('GITHUB_GRAPHQL_TOKEN') or os.getenv('GITHUB_ACCESS_TOKEN') or self.github_token
+        self.github_analyzer = GitHubAnalyzer(access_token=self.github_token, graphql_token=self.graphql_service_token)
         self.llm_analyzer = LLMAnalyzer(api_key=openai_api_key)
         self.config = config_manager
 
@@ -46,32 +51,37 @@ class ScoringEngine:
             verification_score = verification_result.get('score', 0)
 
             # 3. LLM COMPREHENSIVE ANALYSIS + HUMAN VALIDATOR BADGES
-            # IMPORTANT: Check badges FIRST before running LLM analysis
+            # HYBRID SCORING: Different normalization based on badge presence
             validator_badges = self._get_validator_badges(project)
             has_badges = len(validator_badges) > 0
 
+            # Run AI analysis ONCE (returns raw 0-100 score)
+            validation_result = self._analyze_with_llm(project)
+
             if has_badges:
-                # HYBRID MODE: Human (0-20) + AI (0-10)
+                # HYBRID MODE: Human (0-20) + AI re-normalized (0-10) = 30
+                # Get human validator score
                 human_score = self._calculate_validator_score(validator_badges)  # 0-20
 
-                # Run LLM analysis
-                validation_result = self._analyze_with_llm(project)
-                ai_validation_score = validation_result.get('score', 0)
+                # Get RAW AI score (0-100) from the analysis
+                # Note: _analyze_with_llm returns already normalized to 30, so we need to get raw score
+                ai_raw_score = validation_result.get('raw_score', 0)  # 0-100 raw
 
-                # Normalize AI score to 0-10 range
-                ai_score_normalized = normalize_score(ai_validation_score, 0, 100, 10)
+                # Re-normalize AI score to 0-10 range (not re-analyze, just re-normalize)
+                ai_score_normalized = normalize_score(ai_raw_score, 0, 100, 10)
 
-                # Combine scores
+                # Total validation score
                 validation_score = human_score + ai_score_normalized
-                validation_result['human_validator_score'] = human_score
+
+                validation_result['human_score'] = human_score
                 validation_result['ai_score_normalized'] = ai_score_normalized
+                validation_result['ai_raw_score'] = ai_raw_score
                 validation_result['mode'] = 'hybrid'
                 validation_result['badges'] = validator_badges
             else:
                 # AI ONLY MODE: AI (0-30)
-                validation_result = self._analyze_with_llm(project)
-                # _analyze_with_llm already returns normalized 0-30 score
-                validation_score = validation_result.get('score', 0)
+                # Use the already normalized score
+                validation_score = validation_result.get('score', 0)  # Already 0-30
                 validation_result['mode'] = 'ai_only'
 
             # 4. COMMUNITY SCORE (existing logic)
@@ -113,8 +123,9 @@ class ScoringEngine:
                 'validation': {
                     'score': validation_score,
                     'mode': validation_result.get('mode', 'ai_only'),
-                    'human_validator_score': validation_result.get('human_validator_score', 0),
+                    'human_score': validation_result.get('human_score', 0),
                     'ai_score_normalized': validation_result.get('ai_score_normalized', 0),
+                    'ai_raw_score': validation_result.get('ai_raw_score', validation_result.get('raw_score', 0)),
                     'badges': validation_result.get('badges', []),
                     'competitive': validation_result.get('competitive', {}),
                     'market_fit': validation_result.get('market_fit', {}),
@@ -187,7 +198,7 @@ class ScoringEngine:
 
     def _analyze_github_team(self, project):
         """
-        Analyze GitHub team experience
+        Analyze project author's GitHub profile (repository owner)
 
         Returns:
             Dict with score and details
@@ -196,15 +207,18 @@ class ScoringEngine:
             return {'score': 0, 'details': {'error': 'No GitHub URL provided'}}
 
         try:
-            # Get team members from project
-            team_members = project.team_members or []
+            # Extract owner/repo from GitHub URL
+            owner_repo = self.github_analyzer._extract_owner_repo(project.github_url)
+            if not owner_repo:
+                return {'score': 0, 'details': {'error': 'Invalid GitHub URL'}}
 
-            result = self.github_analyzer.analyze_team(
-                team_members,
-                self.github_analyzer._extract_owner_repo(project.github_url)
-            )
+            # Get the repository owner (author)
+            owner_username = owner_repo.split('/')[0]
 
-            # Extract score from team analysis
+            # Analyze the repository owner's profile
+            result = self.github_analyzer.analyze_author(owner_username)
+
+            # Extract score from author analysis
             score = result.get('score', 0)
 
             # Normalize to 0-20 range (max verification_score weight)
@@ -223,7 +237,7 @@ class ScoringEngine:
         Analyze project with LLM
 
         Returns:
-            Dict with score and details
+            Dict with score (normalized to 30), raw_score (0-100), and details
         """
         try:
             # Prepare project data for LLM
@@ -239,23 +253,25 @@ class ScoringEngine:
 
             result = self.llm_analyzer.analyze(project_data)
 
-            # Extract score (already 0-100)
-            score = result.get('score', 0)
+            # Extract raw score (0-100)
+            raw_score = result.get('score', 0)
 
-            # Normalize to 0-30 range (max validation_score weight)
-            normalized_score = normalize_score(score, 0, 100, 30)
+            # Normalize to 0-30 range (max validation_score weight for ai-only mode)
+            normalized_score = normalize_score(raw_score, 0, 100, 30)
 
-            # Remove raw score from result to avoid overwriting normalized score
+            # Remove raw score from result to avoid overwriting
             result_without_score = {k: v for k, v in result.items() if k != 'score'}
 
             return {
-                'score': normalized_score,
+                'score': normalized_score,      # Normalized 0-30 (for ai-only mode)
+                'raw_score': raw_score,          # Raw 0-100 (for hybrid mode re-normalization)
                 **result_without_score
             }
 
         except Exception as e:
             return {
                 'score': 0,
+                'raw_score': 0,
                 'error': str(e),
                 'reasoning': f'LLM analysis failed: {str(e)}'
             }

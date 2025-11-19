@@ -88,6 +88,10 @@ def create_comment(user_id):
 
         project.comment_count += 1
 
+        # Recalculate community score immediately
+        from models.event_listeners import update_project_community_score
+        update_project_community_score(project)
+
         db.session.add(comment)
         db.session.commit()
 
@@ -186,6 +190,15 @@ def delete_comment(user_id, comment_id):
 
         if comment.user_id != user_id:
             return error_response('Forbidden', 'You can only delete your own comments', 403)
+
+        # Get the project to update comment count
+        project = Project.query.get(comment.project_id)
+        if project:
+            project.comment_count = max(0, project.comment_count - 1)
+
+            # Recalculate community score immediately
+            from models.event_listeners import update_project_community_score
+            update_project_community_score(project)
 
         comment.is_deleted = True
         db.session.commit()

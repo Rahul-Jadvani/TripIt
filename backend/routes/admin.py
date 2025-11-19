@@ -1669,6 +1669,96 @@ def rescore_project(user_id, project_id):
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@admin_bp.route('/projects/rescore/bulk', methods=['POST'])
+@admin_required
+def rescore_projects_bulk(user_id):
+    """
+    Bulk rescore projects with optional filtering
+
+    Request Body:
+        {
+            "filter": "all" | "failed" | "completed" | "pending",
+            "project_ids": ["uuid1", "uuid2", ...],  # Optional: specific projects
+            "force": true/false  # Optional: force rescore even if processing
+        }
+
+    Returns:
+        Count of projects queued for rescoring
+    """
+    try:
+        data = request.get_json() or {}
+        filter_type = data.get('filter', 'all')
+        project_ids = data.get('project_ids', [])
+        force = data.get('force', False)
+
+        # Build query
+        query = Project.query
+
+        # Apply filters
+        if project_ids:
+            # Specific projects
+            query = query.filter(Project.id.in_(project_ids))
+        elif filter_type == 'failed':
+            query = query.filter_by(scoring_status='failed')
+        elif filter_type == 'completed':
+            query = query.filter_by(scoring_status='completed')
+        elif filter_type == 'pending':
+            query = query.filter_by(scoring_status='pending')
+        elif filter_type != 'all':
+            return jsonify({
+                'status': 'error',
+                'message': f'Invalid filter type: {filter_type}'
+            }), 400
+
+        # Exclude processing projects unless force is True
+        if not force:
+            query = query.filter(Project.scoring_status != 'processing')
+
+        projects = query.all()
+
+        if not projects:
+            return jsonify({
+                'status': 'success',
+                'message': 'No projects match the criteria',
+                'data': {
+                    'queued_count': 0,
+                    'filter_applied': filter_type
+                }
+            }), 200
+
+        # Queue all projects for rescoring
+        queued_count = 0
+        task_ids = []
+
+        for project in projects:
+            # Reset scoring status
+            project.scoring_status = 'pending'
+            project.scoring_error = None
+            project.scoring_retry_count = 0
+
+            # Queue task
+            task = score_project_task.delay(project.id)
+            task_ids.append(task.id)
+            queued_count += 1
+
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Successfully queued {queued_count} projects for rescoring',
+            'data': {
+                'queued_count': queued_count,
+                'filter_applied': filter_type,
+                'task_ids': task_ids[:10],  # Return first 10 task IDs
+                'total_tasks': len(task_ids)
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @admin_bp.route('/scoring/stats', methods=['GET'])
 @admin_required
 def get_scoring_stats(user_id):

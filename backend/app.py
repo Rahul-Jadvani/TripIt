@@ -65,6 +65,11 @@ def create_app(config_name=None):
     # Import models BEFORE creating tables
     import_models()
 
+    # NOTE: Event listeners disabled - using direct function calls in routes instead
+    # This prevents double-counting when routes manually update denormalized fields
+    # from models.event_listeners import setup_all_listeners
+    # setup_all_listeners()
+
     # Create database tables
     with app.app_context():
         # Create all tables
