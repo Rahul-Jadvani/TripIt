@@ -79,5 +79,3 @@ build/
 .cache/
 .pytest_cache/
 
-
-backend/celerybeat-schedule.dat
