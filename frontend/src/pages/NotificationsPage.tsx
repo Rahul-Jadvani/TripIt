@@ -60,7 +60,7 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-4xl font-bold">Notifications</h1>
           <p className="text-muted-foreground mt-2">
-            Stay updated with your chains and projects
+            Stay updated with your layerz and projects
           </p>
         </div>
         {unreadCount > 0 && (
@@ -109,7 +109,7 @@ export default function NotificationsPage() {
                 <p className="text-sm text-muted-foreground mt-2">
                   {filter === 'unread'
                     ? "You're all caught up!"
-                    : "You'll be notified about activity on your chains and projects"}
+                    : "You'll be notified about activity on your layerz and projects"}
                 </p>
                 {filter === 'unread' && data && (
                   <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">

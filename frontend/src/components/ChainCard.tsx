@@ -31,7 +31,7 @@ export function ChainCard({ chain }: ChainCardProps) {
   };
 
   return (
-    <Link to={`/chains/${chain.slug}`} onMouseEnter={handleMouseEnter}>
+    <Link to={`/layerz/${chain.slug}`} onMouseEnter={handleMouseEnter}>
       <Card className="card-interactive overflow-hidden relative h-full transition-all duration-300 hover:shadow-lg">
         {/* Banner */}
         {chain.banner_url && (

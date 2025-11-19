@@ -137,6 +137,7 @@ export default function InvestorPlans() {
 
   // Form data
   const [formData, setFormData] = useState({
+    plan_type: 'free',
     // Basic Info
     investor_type: 'individual',
     name: '',
@@ -206,9 +207,10 @@ export default function InvestorPlans() {
             // Auto-select their current plan to skip plan selection screen
             setSelectedPlan(data.data.plan_type || 'free');
             // Pre-fill form with existing data
-            setFormData({
-              plan_type: data.data.plan_type || 'free',
-              investor_type: data.data.investor_type || '',
+            setFormData((prev) => ({
+              ...prev,
+              plan_type: data.data.plan_type || prev.plan_type,
+              investor_type: data.data.investor_type || prev.investor_type,
               name: data.data.name || '',
               location: data.data.location || '',
               linkedin_url: data.data.linkedin_url || '',
@@ -216,14 +218,23 @@ export default function InvestorPlans() {
               website_url: data.data.website_url || '',
               twitter_url: data.data.twitter_url || '',
               bio: data.data.bio || '',
-              investment_thesis: data.data.investment_thesis || '',
               investment_stages: data.data.investment_stages || [],
               industries: data.data.industries || [],
               geographic_focus: data.data.geographic_focus || [],
               num_investments: data.data.num_investments || '',
               reason: data.data.reason || '',
-              is_public: data.data.is_public !== undefined ? data.data.is_public : true,
-            });
+              is_public: data.data.is_public !== undefined ? data.data.is_public : prev.is_public,
+              value_adds: data.data.value_adds || [],
+              expertise_areas: data.data.expertise_areas || '',
+              notable_investments: data.data.notable_investments || [],
+              portfolio_highlights: data.data.portfolio_highlights || '',
+              investment_thesis: data.data.investment_thesis || '',
+              ticket_size_min: data.data.ticket_size_min?.toString() || '',
+              ticket_size_max: data.data.ticket_size_max?.toString() || '',
+              years_experience: data.data.years_experience || '',
+              open_to_requests: data.data.open_to_requests ?? prev.open_to_requests,
+              calendar_link: data.data.calendar_link || '',
+            }));
             return;
           }
         }
@@ -334,7 +345,8 @@ export default function InvestorPlans() {
         if (data.data.status === 'pending') {
           // Allow editing of pending request
           // Pre-fill form with existing data
-          setFormData({
+          setFormData((prev) => ({
+            ...prev,
             investor_type: data.data.investor_type || 'individual',
             name: data.data.name || '',
             company_name: data.data.company_name || '',
@@ -356,19 +368,20 @@ export default function InvestorPlans() {
             portfolio_highlights: data.data.portfolio_highlights || '',
             value_adds: data.data.value_adds || [],
             expertise_areas: data.data.expertise_areas || '',
-            is_public: data.data.is_public || false,
-            open_to_requests: data.data.open_to_requests || false,
+            is_public: data.data.is_public ?? prev.is_public,
+            open_to_requests: data.data.open_to_requests ?? prev.open_to_requests,
             twitter_url: data.data.twitter_url || '',
             calendar_link: data.data.calendar_link || '',
             fund_size: data.data.fund_size || '',
-          });
+          }));
           setSelectedPlan(data.data.plan_type || planId);
           setIsEditingPending(true);
           return;
         } else if (data.data.status === 'approved') {
           // Allow approved investors to edit their profile
           toast.success('You are already an approved investor! You can update your profile here.');
-          setFormData({
+          setFormData((prev) => ({
+            ...prev,
             plan_type: data.data.plan_type || planId,
             investor_type: data.data.investor_type || '',
             name: data.data.name || '',
@@ -390,12 +403,12 @@ export default function InvestorPlans() {
             portfolio_highlights: data.data.portfolio_highlights || '',
             value_adds: data.data.value_adds || [],
             expertise_areas: data.data.expertise_areas || '',
-            is_public: data.data.is_public !== undefined ? data.data.is_public : true,
-            open_to_requests: data.data.open_to_requests || false,
+            is_public: data.data.is_public !== undefined ? data.data.is_public : prev.is_public,
+            open_to_requests: data.data.open_to_requests ?? prev.open_to_requests,
             twitter_url: data.data.twitter_url || '',
             calendar_link: data.data.calendar_link || '',
             fund_size: data.data.fund_size || '',
-          });
+          }));
           setSelectedPlan(data.data.plan_type || planId);
           setIsEditingPending(true);
           return;

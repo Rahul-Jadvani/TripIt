@@ -185,10 +185,10 @@ export default function AdminChains() {
         <div className="mb-8">
           <h1 className="text-4xl font-black text-foreground flex items-center gap-3 mb-2">
             <Shield className="h-10 w-10 text-primary" />
-            Chain Moderation
+            layerz Moderation
           </h1>
           <p className="text-muted-foreground text-lg">
-            Manage and moderate chains across the platform
+            Manage and moderate layerz across the platform
           </p>
         </div>
 
@@ -196,7 +196,7 @@ export default function AdminChains() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Chains</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total layerz</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{chainStats.total || 0}</div>
@@ -242,7 +242,7 @@ export default function AdminChains() {
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="chains" className="gap-2">
               <Layers className="h-4 w-4" />
-              All Chains ({totalChains})
+              All layerz ({totalChains})
             </TabsTrigger>
             <TabsTrigger value="logs" className="gap-2">
               <Shield className="h-4 w-4" />
@@ -262,7 +262,7 @@ export default function AdminChains() {
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search chains by name or description..."
+                      placeholder="Search layerz by name or description..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10"
@@ -291,7 +291,7 @@ export default function AdminChains() {
             ) : chains.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  No chains found
+                  No layerz found
                 </CardContent>
               </Card>
             ) : (
@@ -303,7 +303,7 @@ export default function AdminChains() {
                         <div className="flex-1 space-y-3">
                           <div className="flex items-center gap-3 flex-wrap">
                             <Link
-                              to={`/chains/${chain.slug}`}
+                              to={`/layerz/${chain.slug}`}
                               className="text-xl font-bold text-foreground hover:text-primary transition-colors"
                             >
                               {chain.name}
@@ -447,7 +447,7 @@ export default function AdminChains() {
                           </div>
                           {log.chain && (
                             <Link
-                              to={`/chains/${log.chain.slug}`}
+                              to={`/layerz/${log.chain.slug}`}
                               className="text-lg font-semibold text-foreground hover:text-primary"
                             >
                               {log.chain.name}

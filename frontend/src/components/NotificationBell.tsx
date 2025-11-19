@@ -206,7 +206,7 @@ export function NotificationBell() {
               <div>
                 <p className="text-sm font-semibold text-foreground">You're all caught up</p>
                 <p className="text-xs text-muted-foreground">
-                  Activity about your projects, chains, intros, and messages will appear here.
+                  Activity about your projects, layerz, intros, and messages will appear here.
                 </p>
               </div>
             </div>

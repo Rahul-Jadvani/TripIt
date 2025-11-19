@@ -32,11 +32,11 @@ export default function EditChainPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="p-8 text-center">
-          <p className="text-destructive">Chain not found or failed to load</p>
+          <p className="text-destructive">layerz not found or failed to load</p>
           <Button asChild className="mt-4" variant="outline">
-            <Link to="/chains">
+            <Link to="/layerz">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Chains
+              Back to layerz
             </Link>
           </Button>
         </Card>
@@ -49,10 +49,10 @@ export default function EditChainPage() {
       <div className="container mx-auto px-4 py-8">
         <Card className="p-8 text-center">
           <p className="text-muted-foreground mb-4">
-            You don't have permission to edit this chain
+            You don't have permission to edit this layerz
           </p>
           <Button asChild>
-            <Link to={`/chains/${slug}`}>View Chain</Link>
+            <Link to={`/layerz/${slug}`}>View layerz</Link>
           </Button>
         </Card>
       </div>
@@ -62,11 +62,11 @@ export default function EditChainPage() {
   const handleSubmit = async (data: ChainFormData) => {
     try {
       await updateChainMutation.mutateAsync({ slug: slug!, data });
-      toast.success('Chain updated successfully!');
-      navigate(`/chains/${slug}`);
+      toast.success('layerz updated successfully!');
+      navigate(`/layerz/${slug}`);
     } catch (error: any) {
-      console.error('Update chain error:', error);
-      toast.error(error.response?.data?.error || 'Failed to update chain');
+      console.error('Update layerz error:', error);
+      toast.error(error.response?.data?.error || 'Failed to update layerz');
     }
   };
 
@@ -75,16 +75,16 @@ export default function EditChainPage() {
       {/* Header */}
       <div className="space-y-4">
         <Button asChild variant="ghost" size="sm">
-          <Link to={`/chains/${slug}`}>
+          <Link to={`/layerz/${slug}`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Chain
+            Back to layerz
           </Link>
         </Button>
 
         <div>
-          <h1 className="text-4xl font-bold">Edit Chain</h1>
+          <h1 className="text-4xl font-bold">Edit layerz</h1>
           <p className="text-muted-foreground mt-2">
-            Update your chain's information and settings
+            Update your layerz's information and settings
           </p>
         </div>
       </div>

@@ -381,7 +381,7 @@ export default function ProjectDetail() {
       <div className="card-elevated p-5">
         <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
           <Link2 className="h-4 w-4 text-primary" />
-          Chains ({project.chains.length})
+          layerz ({project.chains.length})
         </h3>
         <div className="flex flex-wrap gap-2">
           {project.chains.map((chain: any) => (

@@ -101,7 +101,7 @@ export const Footer = memo(function Footer() {
               </li>
               <li>
                 <Link to="/gallery/hackathon" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>Gallery</span>
+                  <span>Explore</span>
                 </Link>
               </li>
             </ul>

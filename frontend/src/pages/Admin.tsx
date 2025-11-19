@@ -547,7 +547,7 @@ function ChainsModerationSection() {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           <Input
-            placeholder="Search chains..."
+            placeholder="Search layerz..."
             value={chainSearch}
             onChange={(e) => setChainSearch(e.target.value)}
           />
@@ -573,7 +573,7 @@ function ChainsModerationSection() {
       ) : chains.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No chains found
+            No layerz found
           </CardContent>
         </Card>
       ) : (
@@ -585,7 +585,7 @@ function ChainsModerationSection() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3 flex-wrap">
                       <Link
-                        to={`/chains/${chain.slug}`}
+                        to={`/layerz/${chain.slug}`}
                         className="text-lg font-bold hover:text-primary transition-colors flex items-center gap-1"
                       >
                         {chain.name}
@@ -730,7 +730,7 @@ function ChainsModerationSection() {
       {/* Stats */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Total Chains: {totalChains}</CardTitle>
+          <CardTitle className="text-sm">Total layerz: {totalChains}</CardTitle>
         </CardHeader>
       </Card>
     </div>
@@ -1257,7 +1257,7 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger value="chains">
             <Layers className="h-4 w-4 mr-2" />
-            Chains
+            layerz
           </TabsTrigger>
           <TabsTrigger value="badges">
             <Award className="h-4 w-4 mr-2" />

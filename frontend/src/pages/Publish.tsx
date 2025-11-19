@@ -702,7 +702,7 @@ export default function Publish() {
             <div className="mt-4 flex flex-wrap gap-2">
               {[
                 { id: 'basicsSection', label: 'Basics' },
-                { id: 'categoriesSection', label: 'Categories & Chains' },
+                { id: 'categoriesSection', label: 'Categories & layerz' },
                 { id: 'linksSection', label: 'Links' },
                 { id: 'techStackSection', label: 'Tech Stack' },
                 { id: 'teamSection', label: 'Team' },
@@ -876,7 +876,7 @@ export default function Publish() {
                 {currentStep === 2 && (
                   <>
                     <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                      Categories & Chains
+                      Categories & layerz
                     </h2>
                   <div className="space-y-3" id="categoriesSection">
                     <Label className="text-base font-bold">

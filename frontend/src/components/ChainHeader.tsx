@@ -143,14 +143,14 @@ export function ChainHeader({ chain, stats }: ChainHeaderProps) {
           {isOwner && (
             <>
               <Button asChild variant="outline" className="gap-2">
-                <Link to={`/chains/${chain.slug}/edit`}>
+                <Link to={`/layerz/${chain.slug}/edit`}>
                   <Settings className="h-4 w-4" />
                   Settings
                 </Link>
               </Button>
               {chain.requires_approval && (
                 <Button asChild variant="outline">
-                  <Link to={`/chains/${chain.slug}/requests`}>
+                  <Link to={`/layerz/${chain.slug}/requests`}>
                     Requests
                   </Link>
                 </Button>

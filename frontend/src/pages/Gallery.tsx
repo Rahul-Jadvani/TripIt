@@ -64,7 +64,78 @@ const CATEGORIES = [
   'Energy',
 ];
 
-const BADGE_TYPES = ['silver', 'gold', 'platinum', 'featured'];
+const normalizeBadgeValue = (value: unknown): string => {
+  if (value === undefined || value === null) return '';
+  return String(value).trim().toLowerCase();
+};
+
+const formatBadgeLabel = (raw: string): string => {
+  if (!raw) return '';
+  return raw
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+};
+
+const extractBadgeValue = (badge: any): string => {
+  if (!badge) return '';
+  if (typeof badge === 'string') return badge;
+  return (
+    badge.type ??
+    badge.badgeType ??
+    badge.badge_type ??
+    badge.name ??
+    badge.label ??
+    badge.value ??
+    badge.code ??
+    ''
+  );
+};
+
+const getProjectBadgeEntries = (project: any): any[] => {
+  const entries: any[] = [];
+
+  const collect = (source: any) => {
+    if (!source) return;
+
+    if (Array.isArray(source)) {
+      entries.push(...source);
+      return;
+    }
+
+    if (Array.isArray(source.badges)) {
+      entries.push(...source.badges);
+    }
+  };
+
+  collect(project.badges);
+  collect(project.validation_badges);
+  collect(project.validationBadges);
+  collect(project.badge_stats);
+  collect(project.badgeStats);
+  collect(project.validationStatus);
+  collect(project.validation_status);
+  collect(project.scoreBreakdown?.validation);
+  collect(project.score_breakdown?.validation);
+  collect(project.scoreBreakdown);
+  collect(project.score_breakdown);
+
+  return entries;
+};
+
+const projectHasBadge = (project: any, badgeFilter: string): boolean => {
+  const normalizedFilter = normalizeBadgeValue(badgeFilter);
+  if (!normalizedFilter) return false;
+
+  const projectBadges = getProjectBadgeEntries(project);
+  return projectBadges.some(
+    (badge: any) =>
+      normalizeBadgeValue(extractBadgeValue(badge)) === normalizedFilter
+  );
+};
 
 // Derive available categories and badges from loaded projects so filters reflect actual data
 // This helps avoid showing category filters that match no projects
@@ -141,15 +212,24 @@ export default function Gallery() {
   }, [projects]);
 
   const availableBadges = useMemo(() => {
-    const set = new Set<string>();
+    const badgeMap = new Map<string, string>();
+
     projects.forEach((p: any) => {
-      (p.badges || []).forEach((b: any) => {
-        const t = (b && (b.type || b.name || b.label)) || '';
-        if (t) set.add(String(t));
+      getProjectBadgeEntries(p).forEach((badge: any) => {
+        const rawValue = extractBadgeValue(badge);
+        const normalized = normalizeBadgeValue(rawValue);
+        if (!normalized) return;
+
+        if (!badgeMap.has(normalized)) {
+          const labelSource = rawValue || normalized;
+          badgeMap.set(normalized, formatBadgeLabel(labelSource));
+        }
       });
-      if (p.isFeatured) set.add('featured');
     });
-    return Array.from(set).sort();
+
+    return Array.from(badgeMap.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [projects]);
 
   const [filters, setFilters] = useState<FilterState>({
@@ -192,13 +272,16 @@ export default function Gallery() {
 
   const toggleFilter = useCallback(
     (filterType: string, value: string) => {
+      const normalizedValue =
+        filterType === 'badges' ? normalizeBadgeValue(value) : value;
+
       setFilters((prev) => {
         const current = prev[filterType as keyof FilterState] as string[];
         return {
           ...prev,
-          [filterType]: current.includes(value)
-            ? current.filter((v) => v !== value)
-            : [...current, value],
+          [filterType]: current.includes(normalizedValue)
+            ? current.filter((v) => v !== normalizedValue)
+            : [...current, normalizedValue],
         };
       });
     },
@@ -258,14 +341,9 @@ export default function Gallery() {
 
     // Badges
     if (filters.badges.length > 0) {
-      result = result.filter((p: any) => {
-        const projectBadges = p.badges || [];
-        return filters.badges.some((badge) =>
-          badge === 'featured'
-            ? p.isFeatured
-            : projectBadges.some((b: any) => b.type === badge)
-        );
-      });
+      result = result.filter((p: any) =>
+        filters.badges.some((badge) => projectHasBadge(p, badge))
+      );
     }
 
     // Quality (Proof Score)
@@ -371,6 +449,7 @@ export default function Gallery() {
       (filters.minScore > 0 ? 1 : 0) +
       (filters.hasDemo ? 1 : 0) +
       (filters.hasGithub ? 1 : 0) +
+      (filters.featured ? 1 : 0) +
       (filters.minTeamSize > 0 ? 1 : 0) +
       (filters.minVotes > 0 ? 1 : 0) +
       (filters.minComments > 0 ? 1 : 0) +
@@ -386,7 +465,7 @@ export default function Gallery() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ fontFamily: '"Comic Relief", system-ui' }}>
-            Gallery
+            Explore
           </h1>
           <p className="text-muted-foreground text-lg">
             Featured projects from the ecosystem
@@ -496,13 +575,13 @@ export default function Gallery() {
               <div className="space-y-2">
                 {availableBadges.length > 0 ? (
                   availableBadges.map((badge) => (
-                    <label key={badge} className="flex items-center gap-3 cursor-pointer hover:bg-secondary/30 p-2 rounded transition-colors">
+                    <label key={badge.value} className="flex items-center gap-3 cursor-pointer hover:bg-secondary/30 p-2 rounded transition-colors">
                       <Checkbox
-                        checked={filters.badges.includes(badge)}
-                        onCheckedChange={() => toggleFilter('badges', badge)}
+                        checked={filters.badges.includes(badge.value)}
+                        onCheckedChange={() => toggleFilter('badges', badge.value)}
                       />
                       <Award className="h-4 w-4" />
-                      <span className="text-sm font-medium capitalize">{badge}</span>
+                      <span className="text-sm font-medium">{badge.label}</span>
                     </label>
                   ))
                 ) : (
@@ -549,6 +628,16 @@ export default function Gallery() {
                     }
                   />
                   <span className="text-sm font-medium">Has GitHub</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer hover:bg-secondary/30 p-2 rounded transition-colors">
+                  <Checkbox
+                    checked={filters.featured}
+                    onCheckedChange={(checked) =>
+                      setFilters((prev) => ({ ...prev, featured: Boolean(checked) }))
+                    }
+                  />
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm font-medium">Only Featured Projects</span>
                 </label>
               </div>
             </FilterSection>

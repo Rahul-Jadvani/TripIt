@@ -106,7 +106,8 @@ const App = () => (
               <Route path="/" element={<Feed />} />
               <Route path="/feed" element={<Feed />} />
               <Route path="/gallery/:category" element={<GalleryView />} />
-                            <Route path="/gallery/featured" element={<Gallery />} />
+              <Route path="/explore" element={<Gallery />} />
+              <Route path="/gallery/featured" element={<Navigate to="/explore" replace />} />
               {/* Helpful redirects */}
               <Route path="/investor" element={<Navigate to="/investor-directory" replace />} />
               <Route path="/login" element={<Login />} />
@@ -121,9 +122,9 @@ const App = () => (
               <Route path="/investor-plans" element={<InvestorPlans />} />
               <Route path="/investors" element={<InvestorsGateway />} />
 
-              {/* Chains Routes */}
-              <Route path="/chains" element={<ChainsListPage />} />
-              <Route path="/chains/:slug" element={<ChainDetailPage />} />
+              {/* Layerz Routes */}
+              <Route path="/layerz" element={<ChainsListPage />} />
+              <Route path="/layerz/:slug" element={<ChainDetailPage />} />
 
               {/* Protected Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -136,10 +137,10 @@ const App = () => (
               <Route path="/investor-dashboard" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
               <Route path="/investor-directory" element={<ProtectedRoute><InvestorDirectory /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
-              <Route path="/chains/create" element={<ProtectedRoute><CreateChainPage /></ProtectedRoute>} />
-              <Route path="/chains/:slug/edit" element={<ProtectedRoute><EditChainPage /></ProtectedRoute>} />
-              <Route path="/chains/:slug/requests" element={<ProtectedRoute><ChainRequestsPage /></ProtectedRoute>} />
-              <Route path="/chains/:slug/analytics" element={<ProtectedRoute><ChainAnalytics /></ProtectedRoute>} />
+              <Route path="/layerz/create" element={<ProtectedRoute><CreateChainPage /></ProtectedRoute>} />
+              <Route path="/layerz/:slug/edit" element={<ProtectedRoute><EditChainPage /></ProtectedRoute>} />
+              <Route path="/layerz/:slug/requests" element={<ProtectedRoute><ChainRequestsPage /></ProtectedRoute>} />
+              <Route path="/layerz/:slug/analytics" element={<ProtectedRoute><ChainAnalytics /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
               {/* Admin Routes */}
