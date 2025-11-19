@@ -131,18 +131,8 @@ export const projectsService = {
 
 // Voting
 export const votesService = {
-  vote: (projectId: string, voteType: 'up' | 'down') => {
-    console.log('🌐 API CALL: POST /votes', { projectId, voteType });
-    return api.post('/votes', { project_id: projectId, vote_type: voteType })
-      .then(response => {
-        console.log('📡 API RESPONSE /votes:', response.data);
-        return response;
-      })
-      .catch(error => {
-        console.error('🔴 API ERROR /votes:', error.response?.data || error.message);
-        throw error;
-      });
-  },
+  vote: (projectId: string, voteType: 'up' | 'down') =>
+    api.post('/votes', { project_id: projectId, vote_type: voteType }),
   getUserVotes: () => api.get('/votes/user'),
 };
 

@@ -29,10 +29,14 @@ class VoteService:
     KEY_VOTE_METRICS = "vote:metrics"                   # Hash: observability
     KEY_USER_UPVOTES = "user:{user_id}:upvotes"         # Set: project IDs user upvoted
     KEY_USER_DOWNVOTES = "user:{user_id}:downvotes"     # Set: project IDs user downvoted
+    KEY_RATE_LIMIT = "rate:{user_id}:{project_id}"      # String: rate limit counter
+    KEY_CHANGED_POSTS = "changed_posts"                 # Set: project IDs with pending DB updates
 
     # Request TTLs
     REQUEST_TTL = 3600  # 1 hour - keep request metadata for debugging
     STATE_TTL = 86400   # 24 hours - cache vote counts for fast reads
+    RATE_LIMIT_WINDOW = 10  # 10 seconds rate limit window
+    RATE_LIMIT_MAX = 5      # Max 5 votes per window
 
     def __init__(self, redis_client=None):
         """Initialize vote service with Redis client"""
@@ -43,6 +47,35 @@ class VoteService:
             redis_client = redis.from_url(redis_url, decode_responses=True)
 
         self.redis = redis_client
+
+    def check_rate_limit(self, user_id: str, project_id: str) -> bool:
+        """
+        Check if user is within rate limit for voting on this project
+
+        Args:
+            user_id: User UUID
+            project_id: Project UUID
+
+        Returns:
+            True if within rate limit, False if exceeded
+        """
+        try:
+            key = self.KEY_RATE_LIMIT.format(user_id=user_id, project_id=project_id)
+
+            # Increment counter
+            count = self.redis.incr(key)
+
+            # Set expiry on first request
+            if count == 1:
+                self.redis.expire(key, self.RATE_LIMIT_WINDOW)
+
+            # Check if exceeded
+            return count <= self.RATE_LIMIT_MAX
+
+        except Exception as e:
+            print(f"[VoteService] Rate limit check error: {e}")
+            # On error, allow the vote (fail open)
+            return True
 
     def fast_vote(
         self,
@@ -112,7 +145,10 @@ class VoteService:
                 request_id, user_id, project_id, vote_type, action
             )
 
-            # 8. Update metrics
+            # 8. Mark post as changed (for periodic DB sync)
+            self._mark_post_changed(project_id)
+
+            # 9. Update metrics
             latency_ms = (time.time() - start_time) * 1000
             self._update_metrics('fast_vote', latency_ms)
 
@@ -127,13 +163,8 @@ class VoteService:
             }
 
         except Exception as e:
-            print(f"[VoteService] Fast vote error: {e}")
-            import traceback
-            traceback.print_exc()
-
             # Update failure metrics
             self._update_metrics('fast_vote_error')
-
             raise
 
     def _get_user_vote(self, user_id: str, project_id: str) -> Optional[str]:
@@ -170,8 +201,7 @@ class VoteService:
             return None
 
         except Exception as e:
-            print(f"[VoteService] Error getting user vote: {e}")
-            # Fallback to DB
+            # Fallback to DB on error
             vote = Vote.query.filter_by(
                 user_id=user_id,
                 project_id=project_id
@@ -253,28 +283,33 @@ class VoteService:
         """
         key = self.KEY_VOTE_STATE.format(project_id=project_id)
 
-        pipe = self.redis.pipeline()
+        # Check if key exists
+        exists = self.redis.exists(key)
 
         # Initialize from DB if not cached
-        if not self.redis.exists(key):
-            project = Project.query.get(project_id)
-            if project:
-                pipe.hset(key, mapping={
-                    'upvotes': project.upvotes or 0,
-                    'downvotes': project.downvotes or 0
-                })
+        if not exists:
+            # FIXED: Count from votes table (source of truth) instead of projects table
+            from sqlalchemy import func
+            upvotes_count = db.session.query(func.count(Vote.id))\
+                .filter(Vote.project_id == project_id, Vote.vote_type == 'up').scalar() or 0
+            downvotes_count = db.session.query(func.count(Vote.id))\
+                .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
+
+            # Set initial values from votes table
+            self.redis.hset(key, mapping={
+                'upvotes': upvotes_count,
+                'downvotes': downvotes_count
+            })
+            self.redis.expire(key, self.STATE_TTL)
 
         # Apply deltas
         if upvote_delta != 0:
-            pipe.hincrby(key, 'upvotes', upvote_delta)
+            self.redis.hincrby(key, 'upvotes', upvote_delta)
         if downvote_delta != 0:
-            pipe.hincrby(key, 'downvotes', downvote_delta)
+            self.redis.hincrby(key, 'downvotes', downvote_delta)
 
-        # Set TTL
-        pipe.expire(key, self.STATE_TTL)
-
-        # Execute pipeline
-        pipe.execute()
+        # Refresh TTL
+        self.redis.expire(key, self.STATE_TTL)
 
         # Get final values
         state = self.redis.hgetall(key)
@@ -283,14 +318,12 @@ class VoteService:
 
         # Ensure non-negative
         if upvotes < 0 or downvotes < 0:
-            pipe = self.redis.pipeline()
             if upvotes < 0:
-                pipe.hset(key, 'upvotes', 0)
+                self.redis.hset(key, 'upvotes', 0)
+                upvotes = 0
             if downvotes < 0:
-                pipe.hset(key, 'downvotes', 0)
-            pipe.execute()
-            upvotes = max(0, upvotes)
-            downvotes = max(0, downvotes)
+                self.redis.hset(key, 'downvotes', 0)
+                downvotes = 0
 
         return (upvotes, downvotes)
 
@@ -389,8 +422,8 @@ class VoteService:
                 approximate=True
             )
         except Exception as e:
-            print(f"[VoteService] Error adding to event stream: {e}")
             # Non-critical - don't fail the vote
+            pass
 
     def _update_metrics(self, metric_name: str, value: float = 1):
         """Update vote metrics for observability"""
@@ -407,8 +440,8 @@ class VoteService:
 
             pipe.execute()
         except Exception as e:
-            print(f"[VoteService] Error updating metrics: {e}")
             # Non-critical
+            pass
 
     def get_request_status(self, request_id: str) -> Dict:
         """Get vote request status (for frontend polling/reconciliation)"""
@@ -484,3 +517,73 @@ class VoteService:
         downvote_key = self.KEY_USER_DOWNVOTES.format(user_id=user_id)
         self.redis.delete(upvote_key)
         self.redis.delete(downvote_key)
+
+    def _mark_post_changed(self, project_id: str):
+        """Mark project as having pending DB updates"""
+        try:
+            self.redis.sadd(self.KEY_CHANGED_POSTS, project_id)
+        except Exception as e:
+            # Non-critical
+            pass
+
+    def get_changed_posts(self) -> set:
+        """Get all projects with pending DB updates"""
+        try:
+            return self.redis.smembers(self.KEY_CHANGED_POSTS) or set()
+        except Exception as e:
+            return set()
+
+    def get_vote_counts(self, project_id: str) -> Optional[Dict]:
+        """
+        Get fresh vote counts from Redis (always up-to-date)
+
+        Args:
+            project_id: Project UUID
+
+        Returns:
+            Dict with upvotes, downvotes, or None if not cached
+        """
+        try:
+            key = self.KEY_VOTE_STATE.format(project_id=project_id)
+            state = self.redis.hgetall(key)
+
+            if not state:
+                # Not in Redis - initialize from votes table
+                from sqlalchemy import func
+                upvotes_count = db.session.query(func.count(Vote.id))\
+                    .filter(Vote.project_id == project_id, Vote.vote_type == 'up').scalar() or 0
+                downvotes_count = db.session.query(func.count(Vote.id))\
+                    .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
+
+                # Cache for future requests
+                self.redis.hset(key, mapping={
+                    'upvotes': upvotes_count,
+                    'downvotes': downvotes_count
+                })
+                self.redis.expire(key, self.STATE_TTL)
+
+                return {
+                    'upvotes': upvotes_count,
+                    'downvotes': downvotes_count,
+                    'voteCount': upvotes_count - downvotes_count
+                }
+
+            upvotes = int(state.get('upvotes', 0))
+            downvotes = int(state.get('downvotes', 0))
+
+            return {
+                'upvotes': upvotes,
+                'downvotes': downvotes,
+                'voteCount': upvotes - downvotes
+            }
+        except Exception as e:
+            print(f"[VoteService] Error getting vote counts: {e}")
+            return None
+
+    def clear_changed_posts(self, project_ids: list):
+        """Clear projects from changed set after DB sync"""
+        try:
+            if project_ids:
+                self.redis.srem(self.KEY_CHANGED_POSTS, *project_ids)
+        except Exception as e:
+            pass

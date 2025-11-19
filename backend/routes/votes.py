@@ -36,14 +36,19 @@ def cast_vote(user_id):
         project_id = validated_data['project_id']
         vote_type = validated_data['vote_type']
 
-        # 2. Verify project exists (lightweight check - no locking)
+        # 2. Redis rate limiting (5 votes per user per post per 10 seconds)
+        from services.vote_service import VoteService
+        vote_service = VoteService()
+
+        if not vote_service.check_rate_limit(user_id, project_id):
+            return error_response('Rate limit', 'Too many vote attempts. Please wait a moment.', 429)
+
+        # 3. Verify project exists (lightweight check - no locking)
         project = Project.query.get(project_id)
         if not project:
             return error_response('Not found', 'Project not found', 404)
 
-        # 3. Fast-path vote processing via Redis
-        from services.vote_service import VoteService
-        vote_service = VoteService()
+        # 4. Fast-path vote processing via Redis
 
         result = vote_service.fast_vote(user_id, project_id, vote_type)
 
@@ -69,10 +74,6 @@ def cast_vote(user_id):
             'request_id': result['request_id'],  # For frontend tracking
             'action': result['action']  # 'created'|'removed'|'changed'
         }
-
-        print(f"[VOTE_ASYNC] ✓ Fast path completed in {result['latency_ms']:.2f}ms")
-        print(f"  request_id={result['request_id']}, action={result['action']}")
-        print(f"  optimistic counts: {result['upvotes']} up, {result['downvotes']} down")
 
         return success_response(response_data, 'Vote recorded', 200)
 

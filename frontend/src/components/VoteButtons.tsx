@@ -3,7 +3,8 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface VoteButtonsProps {
   projectId: string;
@@ -22,13 +23,89 @@ export function VoteButtons({
 }: VoteButtonsProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const voteMutation = useVote(projectId);
   const isOwnProject = Boolean(projectOwnerId && user?.id === projectOwnerId);
 
   // Track which button is animating
   const [animatingButton, setAnimatingButton] = useState<'up' | 'down' | null>(null);
 
-  const handleVote = (voteType: 'up' | 'down') => {
+  // Read live vote data from cache (updates when cache changes)
+  const [liveVoteCount, setLiveVoteCount] = useState(voteCount);
+  const [liveUserVote, setLiveUserVote] = useState<'up' | 'down' | null>(userVote);
+
+  // Subscribe to cache changes for THIS project
+  useEffect(() => {
+    console.log('[VoteButtons] Setting up cache subscription for project:', projectId);
+
+    // Initial read
+    const projectData = queryClient.getQueryData(['project', projectId]) as any;
+    if (projectData?.data) {
+      const data = projectData.data;
+      const newCount = (data.upvotes || 0) - (data.downvotes || 0);
+      const newVote = data.user_vote || data.userVote || null;
+      console.log('[VoteButtons] Initial cache read:', { upvotes: data.upvotes, downvotes: data.downvotes, newCount, newVote });
+      setLiveVoteCount(newCount);
+      setLiveUserVote(newVote);
+    }
+
+    // Subscribe to ALL cache updates (both ['project', id] and ['projects', ...])
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      const queryKey = event?.query?.queryKey;
+      if (!queryKey) return;
+
+      let shouldUpdate = false;
+
+      // Check if this is a single project update
+      if (queryKey[0] === 'project' && queryKey[1] === projectId) {
+        console.log('[VoteButtons] Cache updated for project detail:', projectId, event.type);
+        shouldUpdate = true;
+      }
+
+      // Check if this is a projects list update (contains our project)
+      if (queryKey[0] === 'projects') {
+        console.log('[VoteButtons] Cache updated for projects list, checking for project:', projectId);
+        const projectsData = queryClient.getQueryData(queryKey as any) as any;
+        if (projectsData?.data) {
+          const projects = Array.isArray(projectsData.data) ? projectsData.data : [];
+          const ourProject = projects.find((p: any) => p.id === projectId);
+          if (ourProject) {
+            console.log('[VoteButtons] Found our project in list, updating:', ourProject);
+            const newCount = (ourProject.upvotes || 0) - (ourProject.downvotes || 0);
+            const newVote = ourProject.user_vote || ourProject.userVote || null;
+            console.log('[VoteButtons] Updating from projects list:', { upvotes: ourProject.upvotes, downvotes: ourProject.downvotes, newCount, newVote });
+            setLiveVoteCount(newCount);
+            setLiveUserVote(newVote);
+            return; // Early return, we found it in the list
+          }
+        }
+      }
+
+      // If this was a project detail update, read from that cache
+      if (shouldUpdate) {
+        const projectData = queryClient.getQueryData(['project', projectId]) as any;
+        if (projectData?.data) {
+          const data = projectData.data;
+          const newCount = (data.upvotes || 0) - (data.downvotes || 0);
+          const newVote = data.user_vote || data.userVote || null;
+          console.log('[VoteButtons] Updating from project detail:', { upvotes: data.upvotes, downvotes: data.downvotes, newCount, newVote });
+          setLiveVoteCount(newCount);
+          setLiveUserVote(newVote);
+        }
+      }
+    });
+
+    return () => {
+      console.log('[VoteButtons] Cleaning up cache subscription');
+      unsubscribe();
+    };
+  }, [queryClient, projectId]);
+
+  // Rate limiting (prevent spam)
+  const lastVoteTimeRef = useRef<number>(0);
+  const MIN_VOTE_INTERVAL = 300; // Minimum 300ms between votes
+
+  const handleVote = useCallback((voteType: 'up' | 'down') => {
     if (!user) {
       navigate('/login');
       return;
@@ -39,22 +116,30 @@ export function VoteButtons({
       return;
     }
 
-    // Start animation
+    // Check minimum interval between votes (prevent spam)
+    const now = Date.now();
+    const timeSinceLastVote = now - lastVoteTimeRef.current;
+
+    if (timeSinceLastVote < MIN_VOTE_INTERVAL) {
+      return;
+    }
+
+    lastVoteTimeRef.current = now;
+
+    console.log('[VoteButtons] Triggering vote mutation:', voteType, 'for project:', projectId);
+
+    // Start animation immediately
     setAnimatingButton(voteType);
 
-    // Trigger vote mutation after animation
-    setTimeout(() => {
-      voteMutation.mutate(voteType, {
-        onSuccess: () => {
-          onVoteChange?.();
-        },
-        onSettled: () => {
-          // End animation after vote completes
-          setAnimatingButton(null);
-        },
-      });
-    }, 150); // Slight delay for scale-up animation
-  };
+    // Trigger vote mutation IMMEDIATELY (optimistic update happens instantly)
+    voteMutation.mutate(voteType);
+
+    // End animation after brief delay
+    setTimeout(() => setAnimatingButton(null), 150);
+
+    // Call parent callback
+    onVoteChange?.();
+  }, [user, navigate, isOwnProject, voteMutation, onVoteChange]);
 
   // Disable for own projects OR during animation
   const isVoting = voteMutation.isPending || animatingButton !== null;
@@ -66,10 +151,21 @@ export function VoteButtons({
     ? "You can't vote on your own project"
     : 'Dislike project';
 
-  // Use props directly - parent will re-render when cache updates
-  const normalizedCount = typeof voteCount === 'number' ? voteCount : 0;
+  // Use live data from cache (updates immediately)
+  const normalizedCount = typeof liveVoteCount === 'number' ? liveVoteCount : 0;
   const finalDisplayCount = Number.isFinite(normalizedCount) ? normalizedCount : 0;
-  const currentVote = userVote;
+  const currentVote = liveUserVote;
+
+  // Debug: Log when display values change
+  useEffect(() => {
+    console.log('[VoteButtons] Display update:', {
+      projectId,
+      finalDisplayCount,
+      currentVote,
+      liveVoteCount,
+      liveUserVote
+    });
+  }, [projectId, finalDisplayCount, currentVote, liveVoteCount, liveUserVote]);
 
   return (
     <div

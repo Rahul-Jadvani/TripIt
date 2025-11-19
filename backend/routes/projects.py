@@ -463,6 +463,16 @@ def get_project(user_id, project_id):
             except:
                 pass  # Don't fail if view increment fails
 
+            # CRITICAL FIX: Override cached vote counts with fresh Redis data
+            from services.vote_service import VoteService
+            vote_service = VoteService()
+            redis_votes = vote_service.get_vote_counts(project_id)
+
+            if redis_votes and cached.get('data'):
+                cached['data']['upvotes'] = redis_votes['upvotes']
+                cached['data']['downvotes'] = redis_votes['downvotes']
+                cached['data']['voteCount'] = redis_votes['voteCount']
+
             # Add user's vote to cached data if authenticated
             if user_id and cached.get('data'):
                 from models.vote import Vote
@@ -481,10 +491,24 @@ def get_project(user_id, project_id):
         db.session.commit()
 
         # Build response data
+        project_data = project.to_dict(include_creator=True, user_id=user_id)
+
+        # CRITICAL FIX: Override vote counts with fresh Redis data
+        # This prevents stale data from projects table being returned during the eventual consistency gap
+        from services.vote_service import VoteService
+        vote_service = VoteService()
+        redis_votes = vote_service.get_vote_counts(project_id)
+
+        if redis_votes:
+            # Use Redis as source of truth (always up-to-date)
+            project_data['upvotes'] = redis_votes['upvotes']
+            project_data['downvotes'] = redis_votes['downvotes']
+            project_data['voteCount'] = redis_votes['voteCount']
+
         response_data = {
             'status': 'success',
             'message': 'Project retrieved',
-            'data': project.to_dict(include_creator=True, user_id=user_id)
+            'data': project_data
         }
 
         # Cache for 5 minutes

@@ -34,18 +34,13 @@ def process_vote_event(
     action: str
 ):
     """
-    Durable vote processing task - runs asynchronously
+    Lightweight vote processing task - logs events only
 
-    Flow:
-    1. Acquire project row lock (serialized writes)
-    2. Load ground truth from votes table
-    3. Reconcile: only apply if intent differs from DB
-    4. Update project counts + community score
-    5. Commit to database
-    6. Update request status in Redis
-    7. Enqueue cache invalidation (batched)
-    8. Emit Socket.IO events
-    9. Send notifications
+    NEW ARCHITECTURE:
+    1. Update votes table (user vote state)
+    2. Log event to vote_events table
+    3. Mark post as changed in Redis
+    4. DO NOT update projects table (done by Beat sync task)
 
     Args:
         request_id: Unique request ID from fast path
@@ -62,18 +57,9 @@ def process_vote_event(
     vote_service = VoteService()
 
     try:
-        print(f"[VoteTask] Processing request {request_id}: {action} {vote_type} on project {project_id} by user {user_id}")
+        # Reduced logging for cleaner output
 
-        # 1. Acquire project row lock for serialized writes
-        project = db.session.query(Project).with_for_update().get(project_id)
-        if not project:
-            error_msg = 'Project not found'
-            vote_service.update_request_status(
-                request_id, 'failed', error=error_msg
-            )
-            return {'success': False, 'error': error_msg}
-
-        # 2. Load ground truth from database
+        # 1. Load existing vote from database
         existing_vote = Vote.query.filter_by(
             user_id=user_id,
             project_id=project_id
@@ -81,72 +67,35 @@ def process_vote_event(
 
         db_vote_type = existing_vote.vote_type if existing_vote else None
 
-        # 3. Reconcile: Check if DB state matches our intent
+        # 2. Reconcile: Check if DB state matches our intent
         reconciliation_needed = False
-
-        # Convert empty string to None for comparison
         prior_vote_normalized = None if prior_vote == '' else prior_vote
 
-        # If DB state doesn't match our assumption, we need to reconcile
         if db_vote_type != prior_vote_normalized:
-            print(f"[VoteTask] RECONCILIATION: DB has '{db_vote_type}', expected '{prior_vote_normalized}'")
             reconciliation_needed = True
 
-        # 4. Apply vote logic based on action
-        upvote_delta = 0
-        downvote_delta = 0
+        # 3. Apply vote logic to votes table ONLY
         vote_created = False
 
         if action == 'created':
-            # Create new vote
             if existing_vote:
-                # Already exists in DB - reconciliation case
+                # Already exists - change type if different
                 if existing_vote.vote_type != vote_type:
-                    # Different type - change it
-                    if existing_vote.vote_type == 'up':
-                        upvote_delta = -1
-                    else:
-                        downvote_delta = -1
-
                     existing_vote.vote_type = vote_type
-
-                    if vote_type == 'up':
-                        upvote_delta += 1
-                    else:
-                        downvote_delta += 1
-                # else: same type already exists, no change needed
             else:
                 # Create new vote
                 vote = Vote(user_id=user_id, project_id=project_id, vote_type=vote_type)
                 db.session.add(vote)
                 vote_created = True
 
-                if vote_type == 'up':
-                    upvote_delta = 1
-                else:
-                    downvote_delta = 1
-
         elif action == 'removed':
             # Remove vote
             if existing_vote:
-                if existing_vote.vote_type == 'up':
-                    upvote_delta = -1
-                else:
-                    downvote_delta = -1
-
                 db.session.delete(existing_vote)
-            # else: already removed, no change needed
 
         elif action == 'changed':
             # Change vote type
             if existing_vote:
-                if existing_vote.vote_type == 'up':
-                    upvote_delta = -1
-                    downvote_delta = 1
-                else:
-                    upvote_delta = 1
-                    downvote_delta = -1
-
                 existing_vote.vote_type = vote_type
             else:
                 # Vote doesn't exist - create it
@@ -154,91 +103,52 @@ def process_vote_event(
                 db.session.add(vote)
                 vote_created = True
 
-                if vote_type == 'up':
-                    upvote_delta = 1
-                else:
-                    downvote_delta = 1
+        # 4. Log event to vote_events table
+        try:
+            from sqlalchemy import text
+            db.session.execute(text("""
+                INSERT INTO vote_events (request_id, user_id, project_id, vote_type, action)
+                VALUES (:request_id, :user_id, :project_id, :vote_type, :action)
+            """), {
+                'request_id': request_id,
+                'user_id': user_id,
+                'project_id': project_id,
+                'vote_type': vote_type,
+                'action': action
+            })
+        except Exception as e:
+            print(f"[VoteTask] Warning: Failed to log event: {e}")
+            # Non-critical
 
-        # 5. Update project counts
-        project.upvotes = max(0, (project.upvotes or 0) + upvote_delta)
-        project.downvotes = max(0, (project.downvotes or 0) + downvote_delta)
-
-        # 6. Recalculate community score
-        from models.event_listeners import update_project_community_score
-        update_project_community_score(project)
-
-        # 7. Commit to database
+        # 5. Commit votes table changes
         db.session.commit()
 
-        print(f"[VoteTask] ✓ Committed: project {project_id} now has {project.upvotes} upvotes, {project.downvotes} downvotes")
-
-        # 8. Update request status in Redis
+        # 6. Update request status in Redis
         vote_service.update_request_status(
             request_id,
             status='completed',
-            final_upvotes=project.upvotes,
-            final_downvotes=project.downvotes,
             reconciled=reconciliation_needed
         )
 
-        # 9. Enqueue batched cache invalidation (debounced to reduce DB load)
-        batch_invalidate_caches.apply_async(
-            args=[[project_id], [user_id]],
-            countdown=2  # Wait 2 seconds to batch multiple votes
-        )
-
-        # 10. Queue materialized view refresh (debounced)
-        try:
-            from sqlalchemy import text
-            event_type = 'vote_removed' if action == 'removed' else 'vote_cast'
-            db.session.execute(text(f"SELECT queue_mv_refresh('mv_feed_projects', '{event_type}')"))
-            db.session.commit()
-        except Exception as e:
-            print(f"[VoteTask] Warning: MV refresh queue failed: {e}")
-            # Non-critical
-
-        # 11. Emit Socket.IO events
-        from services.socket_service import SocketService
-
-        if action == 'removed':
-            SocketService.emit_vote_removed(project_id)
-        else:
-            new_score = project.upvotes - project.downvotes
-            SocketService.emit_vote_cast(project_id, vote_type, new_score)
-
-        SocketService.emit_leaderboard_updated()
-
-        # If reconciliation occurred, notify frontend
-        if reconciliation_needed:
-            from extensions import socketio
-            socketio.emit('vote:reconciled', {
-                'request_id': request_id,
-                'project_id': project_id,
-                'final_upvotes': project.upvotes,
-                'final_downvotes': project.downvotes
-            })
-
-        # 12. Send notification to project owner (only on new vote creation)
+        # 7. Send notification to project owner (only on new vote creation)
         if vote_created and action == 'created':
             try:
                 from utils.notifications import notify_project_vote
                 voter = User.query.get(user_id)
-                if voter and project.user_id != user_id:
+                project = Project.query.get(project_id)
+                if voter and project and project.user_id != user_id:
                     notify_project_vote(project.user_id, project, voter, vote_type)
             except Exception as e:
                 print(f"[VoteTask] Warning: Notification failed: {e}")
                 # Non-critical
 
-        # 13. Update task metrics
+        # 8. Update task metrics
         latency_ms = (time.time() - start_time) * 1000
-        print(f"[VoteTask] ✓ Completed in {latency_ms:.2f}ms (reconciliation: {reconciliation_needed})")
 
         return {
             'success': True,
             'request_id': request_id,
             'project_id': project_id,
-            'final_upvotes': project.upvotes,
-            'final_downvotes': project.downvotes,
             'reconciliation_needed': reconciliation_needed,
             'latency_ms': round(latency_ms, 2)
         }
@@ -264,6 +174,96 @@ def process_vote_event(
         return {
             'success': False,
             'request_id': request_id,
+            'error': str(e)
+        }
+
+
+@celery.task(bind=True, base=CallbackTask, name='sync_votes_to_db')
+def sync_votes_to_db(self):
+    """
+    Periodic task to sync Redis vote counts to PostgreSQL
+
+    FIXED: Now recalculates from votes table (source of truth) instead of
+    blindly copying Redis counts. This ensures eventual consistency even if
+    Redis data becomes stale or incorrect.
+    """
+    start_time = time.time()
+    vote_service = VoteService()
+
+    try:
+        # 1. Get all changed posts from Redis
+        changed_posts = vote_service.get_changed_posts()
+
+        if not changed_posts:
+            return {'success': True, 'synced': 0}
+
+        # 2. For each changed project, recalculate from votes table
+        synced_count = 0
+        failed_projects = []
+
+        for project_id in changed_posts:
+            try:
+                # FIXED: Count from votes table (source of truth)
+                from sqlalchemy import func, text
+                upvotes_count = db.session.query(func.count(Vote.id))\
+                    .filter(Vote.project_id == project_id, Vote.vote_type == 'up').scalar() or 0
+                downvotes_count = db.session.query(func.count(Vote.id))\
+                    .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
+
+                # 3. Update project in DB
+                result = db.session.execute(text("""
+                    UPDATE projects
+                    SET upvotes = :upvotes,
+                        downvotes = :downvotes
+                    WHERE id = :project_id
+                """), {
+                    'upvotes': upvotes_count,
+                    'downvotes': downvotes_count,
+                    'project_id': project_id
+                })
+
+                # 4. Update Redis to match votes table truth
+                if result.rowcount > 0:
+                    key = vote_service.KEY_VOTE_STATE.format(project_id=project_id)
+                    vote_service.redis.hset(key, mapping={
+                        'upvotes': upvotes_count,
+                        'downvotes': downvotes_count
+                    })
+                    vote_service.redis.expire(key, vote_service.STATE_TTL)
+                    synced_count += 1
+
+            except Exception as e:
+                print(f"[VoteSync] Error syncing {project_id}: {e}")
+                failed_projects.append(project_id)
+
+        # 5. Commit all changes at once
+        db.session.commit()
+
+        # 6. Clear successfully synced posts from Redis
+        successfully_synced = list(changed_posts - set(failed_projects))
+        if successfully_synced:
+            vote_service.clear_changed_posts(successfully_synced)
+
+        # 7. Invalidate caches for synced projects
+        if synced_count > 0:
+            batch_invalidate_caches.delay(successfully_synced, [])
+
+        latency_ms = (time.time() - start_time) * 1000
+
+        return {
+            'success': True,
+            'synced': synced_count,
+            'failed': len(failed_projects),
+            'latency_ms': round(latency_ms, 2)
+        }
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[VoteSync] Critical error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
             'error': str(e)
         }
 
@@ -324,3 +324,119 @@ def get_vote_metrics(self):
     except Exception as e:
         print(f"[VoteMetrics] Error getting metrics: {e}")
         return {}
+
+
+@celery.task(bind=True, base=CallbackTask, name='reconcile_all_vote_counts')
+def reconcile_all_vote_counts(self, batch_size=100):
+    """
+    Full reconciliation task - Recalculates ALL project vote counts from votes table
+
+    Use this to fix data inconsistencies across the entire system.
+    This task:
+    1. Counts votes from votes table (source of truth)
+    2. Updates projects table
+    3. Updates Redis cache
+    4. Processes in batches to avoid blocking
+
+    Args:
+        batch_size: Number of projects to process per batch (default: 100)
+
+    Returns:
+        Dict with reconciliation statistics
+    """
+    start_time = time.time()
+    vote_service = VoteService()
+
+    try:
+        print("[VoteReconciliation] Starting full vote count reconciliation...")
+
+        # 1. Get all projects with votes
+        from sqlalchemy import func, text
+        projects_with_votes = db.session.query(Vote.project_id)\
+            .distinct().limit(batch_size).all()
+
+        project_ids = [p[0] for p in projects_with_votes]
+
+        if not project_ids:
+            print("[VoteReconciliation] No projects with votes found")
+            return {'success': True, 'reconciled': 0, 'message': 'No projects to reconcile'}
+
+        print(f"[VoteReconciliation] Processing {len(project_ids)} projects...")
+
+        reconciled_count = 0
+        fixed_count = 0
+
+        for project_id in project_ids:
+            try:
+                # Count from votes table (source of truth)
+                upvotes_count = db.session.query(func.count(Vote.id))\
+                    .filter(Vote.project_id == project_id, Vote.vote_type == 'up').scalar() or 0
+                downvotes_count = db.session.query(func.count(Vote.id))\
+                    .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
+
+                # Get current values from projects table
+                project = Project.query.get(project_id)
+                if not project:
+                    continue
+
+                # Check if values are different (need fixing)
+                if project.upvotes != upvotes_count or project.downvotes != downvotes_count:
+                    print(f"[VoteReconciliation] Fixing {project_id[:8]}... "
+                          f"DB: {project.upvotes}↑ {project.downvotes}↓ → "
+                          f"Truth: {upvotes_count}↑ {downvotes_count}↓")
+                    fixed_count += 1
+
+                # Update projects table
+                db.session.execute(text("""
+                    UPDATE projects
+                    SET upvotes = :upvotes,
+                        downvotes = :downvotes
+                    WHERE id = :project_id
+                """), {
+                    'upvotes': upvotes_count,
+                    'downvotes': downvotes_count,
+                    'project_id': project_id
+                })
+
+                # Update Redis cache
+                key = vote_service.KEY_VOTE_STATE.format(project_id=project_id)
+                vote_service.redis.hset(key, mapping={
+                    'upvotes': upvotes_count,
+                    'downvotes': downvotes_count
+                })
+                vote_service.redis.expire(key, vote_service.STATE_TTL)
+
+                reconciled_count += 1
+
+            except Exception as e:
+                print(f"[VoteReconciliation] Error reconciling {project_id}: {e}")
+                continue
+
+        # Commit all changes
+        db.session.commit()
+
+        # Invalidate caches
+        if reconciled_count > 0:
+            batch_invalidate_caches.delay(project_ids, [])
+
+        latency_ms = (time.time() - start_time) * 1000
+
+        print(f"[VoteReconciliation] ✓ Completed: {reconciled_count} projects reconciled, "
+              f"{fixed_count} had incorrect counts (fixed)")
+
+        return {
+            'success': True,
+            'reconciled': reconciled_count,
+            'fixed': fixed_count,
+            'latency_ms': round(latency_ms, 2)
+        }
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[VoteReconciliation] Critical error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }

@@ -37,6 +37,11 @@ def make_celery(app=None):
         enable_utc=True,
         # Periodic task schedule (Celery Beat)
         beat_schedule={
+            # Sync Redis vote counts to PostgreSQL (NEW ARCHITECTURE)
+            'sync-votes-to-db': {
+                'task': 'sync_votes_to_db',
+                'schedule': 60.0,  # Every 60 seconds
+            },
             # Refresh most requested projects cache every hour
             'refresh-most-requested-hourly': {
                 'task': 'refresh_most_requested_projects_cache',

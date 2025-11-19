@@ -83,6 +83,9 @@ export function transformProject(backendProject: any) {
     scoring_error: backendProject.scoring_error,
     scoringError: backendProject.scoring_error,
     badges: backendProject.badges || [],
+    // Voting fields - pass through ALL needed fields
+    upvotes: backendProject.upvotes || 0,
+    downvotes: backendProject.downvotes || 0,
     voteCount: (backendProject.upvotes || 0) - (backendProject.downvotes || 0),
     commentCount: backendProject.comment_count || 0,
     viewCount: backendProject.view_count || 0,
@@ -136,12 +139,12 @@ export function useProjectById(id: string) {
       };
     },
     enabled: !!id,
-    staleTime: 1000 * 60 * 1, // Consider data fresh for 1 minute (votes/comments change frequently)
+    staleTime: 1000 * 60 * 2, // Keep fresh for 2 minutes
     gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
 
-    // Always fetch fresh data when component mounts to ensure latest votes/comments
-    refetchOnMount: 'always',
-    // Conditional polling: Fast refresh when AI scoring is in progress
+    // Only refetch on mount if data is stale
+    refetchOnMount: true,
+    // Conditional polling for AI scoring only
     refetchInterval: (query) => {
       const project = query.state.data?.data;
       const scoringStatus = project?.scoring_status || project?.scoringStatus;
@@ -151,12 +154,11 @@ export function useProjectById(id: string) {
         return 5000; // 5 seconds
       }
 
-      // Normal polling (2 min) for completed/failed or no AI scoring
-      return 1000 * 60 * 2; // 2 minutes
+      // No polling otherwise (rely on optimistic updates for votes)
+      return false;
     },
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    // Don't use placeholderData for project details to avoid showing stale data when navigating between projects
   });
 }
 
