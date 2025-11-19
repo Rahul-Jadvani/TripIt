@@ -10,9 +10,11 @@ from extensions import db
 from utils.cache import CacheService
 from models.project import Project
 from models.user import User
+from models.user_stats import UserDashboardStats
 from models.chain import Chain
 from models.notification import Notification
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy import func
 
 
 class CacheWarmer:
@@ -100,9 +102,12 @@ class CacheWarmer:
         print(f"[{datetime.now()}] Warming top profiles...")
 
         try:
-            # Top 20 users by karma
+            # Top 20 users by karma (denormalized stats)
+            karma_score = func.coalesce(UserDashboardStats.karma_score, 0)
             top_users = User.query.filter_by(is_active=True)\
-                .order_by(User.karma.desc())\
+                .outerjoin(UserDashboardStats, UserDashboardStats.user_id == User.id)\
+                .options(contains_eager(User.dashboard_stats))\
+                .order_by(karma_score.desc(), User.created_at.asc())\
                 .limit(20).all()
 
             for user in top_users:

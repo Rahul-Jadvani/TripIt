@@ -6,10 +6,11 @@ from flask import Blueprint, jsonify, request
 from extensions import db
 from models.project import Project
 from models.user import User
+from models.user_stats import UserDashboardStats
 from models.chain import Chain
 from utils.cache import CacheService
 from utils.decorators import optional_auth
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 
@@ -96,9 +97,13 @@ def get_user_leaderboard():
                 'from_cache': True
             }), 200
 
-        # Query top users by karma (indexed)
-        users = User.query.filter_by(is_active=True)\
-            .order_by(desc(User.karma))\
+        # Query top users by karma (denormalized stats)
+        karma_score = func.coalesce(UserDashboardStats.karma_score, 0)
+        users = User.query\
+            .outerjoin(UserDashboardStats, UserDashboardStats.user_id == User.id)\
+            .options(contains_eager(User.dashboard_stats))\
+            .filter(User.is_active == True)\
+            .order_by(karma_score.desc(), User.created_at.asc())\
             .limit(limit).all()
 
         # Format results
@@ -195,8 +200,11 @@ def get_trending_overview(user_id):
             .order_by(desc(Project.proof_score))\
             .limit(10).all()
 
+        karma_score = func.coalesce(UserDashboardStats.karma_score, 0)
         users = User.query.filter_by(is_active=True)\
-            .order_by(desc(User.karma))\
+            .outerjoin(UserDashboardStats, UserDashboardStats.user_id == User.id)\
+            .options(contains_eager(User.dashboard_stats))\
+            .order_by(karma_score.desc(), User.created_at.asc())\
             .limit(10).all()
 
         chains = Chain.query.filter_by(is_public=True, is_active=True)\

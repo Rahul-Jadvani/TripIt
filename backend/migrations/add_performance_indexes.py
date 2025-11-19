@@ -47,10 +47,6 @@ def migrate():
                 """),
 
                 # ===== USER INDEXES =====
-                ("idx_users_karma", """
-                    CREATE INDEX IF NOT EXISTS idx_users_karma
-                    ON users(karma DESC)
-                """),
                 ("idx_users_username", """
                     CREATE INDEX IF NOT EXISTS idx_users_username
                     ON users(username)

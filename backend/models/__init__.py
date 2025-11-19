@@ -11,6 +11,7 @@ from .feedback import Feedback
 from .chain import Chain, ChainProject, ChainProjectRequest, ChainFollower, ChainModerationLog
 from .chain_post import ChainPost, ChainPostReaction
 from .notification import Notification
+from .user_stats import UserDashboardStats
 
 __all__ = [
     'User',
@@ -28,5 +29,6 @@ __all__ = [
     'ChainModerationLog',
     'ChainPost',
     'ChainPostReaction',
-    'Notification'
+    'Notification',
+    'UserDashboardStats'
 ]

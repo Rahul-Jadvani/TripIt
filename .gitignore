@@ -78,3 +78,6 @@ build/
 .env.local
 .cache/
 .pytest_cache/
+
+
+backend/celerybeat-schedule.dat

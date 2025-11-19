@@ -36,7 +36,6 @@ class User(db.Model):
     bio = db.Column(db.Text)
 
     # Status & Roles
-    karma = db.Column(db.Integer, default=0)
     is_admin = db.Column(db.Boolean, default=False)
     is_investor = db.Column(db.Boolean, default=False)
     is_validator = db.Column(db.Boolean, default=False)
@@ -66,6 +65,12 @@ class User(db.Model):
                                           foreign_keys='EventSubscriber.user_id', cascade='all, delete-orphan')
     saved_projects = db.relationship('SavedProject', backref='user', lazy='dynamic',
                                      foreign_keys='SavedProject.user_id', cascade='all, delete-orphan')
+    dashboard_stats = db.relationship(
+        'UserDashboardStats',
+        back_populates='user',
+        uselist=False,
+        lazy='selectin'
+    )
 
     def set_password(self, password: str):
         """Hash and set password"""
@@ -83,7 +88,7 @@ class User(db.Model):
             'display_name': self.display_name,
             'avatar_url': self.avatar_url,
             'bio': self.bio,
-            'karma': self.karma,
+            'karma': self.get_karma(),
             'is_admin': self.is_admin,
             'is_investor': self.is_investor,
             'is_validator': self.is_validator,
@@ -102,6 +107,20 @@ class User(db.Model):
         if include_email:
             data['email'] = self.email
         return data
+
+    def get_karma(self) -> int:
+        """Return up-to-date karma from denormalized stats"""
+        stats = getattr(self, 'dashboard_stats', None)
+        if stats:
+            return stats.karma()
+
+        from models.user_stats import UserDashboardStats
+        stats = UserDashboardStats.query.filter_by(user_id=self.id).first()
+        if stats:
+            # Cache on relationship for subsequent access during request
+            self.dashboard_stats = stats
+            return stats.karma()
+        return 0
 
     def __repr__(self):
         return f'<User {self.username}>'

@@ -341,7 +341,6 @@ def seed_database():
             display_name='0x.ship Admin',
             email_verified=True,
             is_admin=True,
-            karma=1000,
             bio='Platform administrator and validator',
             wallet_address=generate_random_wallet(),
             github_connected=True,
@@ -361,7 +360,6 @@ def seed_database():
                 username=username,
                 display_name=f"{first} {last}",
                 email_verified=random.choice([True, True, True, False]),  # 75% verified
-                karma=random.randint(0, 500),
                 bio=generate_bio('builder'),
                 wallet_address=generate_random_wallet() if random.random() > 0.3 else None,
                 has_oxcert=random.random() > 0.6,  # 40% have NFT
@@ -384,7 +382,6 @@ def seed_database():
                 display_name=f"{first} {last}",
                 email_verified=True,
                 is_investor=True,
-                karma=random.randint(100, 800),
                 bio=generate_bio('investor'),
                 wallet_address=generate_random_wallet(),
                 avatar_url=f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"

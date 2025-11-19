@@ -3,10 +3,11 @@ User routes
 """
 from flask import Blueprint, request
 from marshmallow import ValidationError
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 from extensions import db
 from models.user import User
+from models.user_stats import UserDashboardStats
 from models.project import Project
 from schemas.user import UserProfileUpdateSchema
 from utils.decorators import token_required, optional_auth
@@ -73,15 +74,19 @@ def get_user_profile(user_id, username):
             return error_response('Not found', 'User not found', 404)
 
         # OPTIMIZED: Use a single query with count instead of lazy loading
-        from sqlalchemy import func
-        project_count = db.session.query(func.count(Project.id)).filter(
-            Project.user_id == user.id,
-            Project.is_deleted == False
-        ).scalar() or 0
+        stats = user.dashboard_stats or UserDashboardStats.query.filter_by(user_id=user.id).first()
+        karma_value = stats.karma() if stats else 0
+        if stats:
+            project_count = stats.project_count
+        else:
+            project_count = db.session.query(func.count(Project.id)).filter(
+                Project.user_id == user.id,
+                Project.is_deleted == False
+            ).scalar() or 0
 
         profile = user.to_dict()
         profile['project_count'] = project_count
-        profile['karma'] = user.karma
+        profile['karma'] = karma_value
 
         # Build response data
         response_data = {
