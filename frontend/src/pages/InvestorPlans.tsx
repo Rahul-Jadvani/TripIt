@@ -1020,7 +1020,7 @@ export default function InvestorPlans() {
                     value={formData.reason}
                     onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                     className={`w-full min-h-[100px] p-3 rounded-md border bg-background ${errors.reason ? 'border-destructive' : 'border-input'}`}
-                    placeholder="Tell us what you're looking for on 0x.ship..."
+                    placeholder="Tell us what you're looking for on Zer0..."
                     required
                   />
                   {errors.reason && (
@@ -1442,10 +1442,33 @@ export default function InvestorPlans() {
   if (checkingStatus) {
     return (
       <div className="min-h-screen bg-background pt-20 px-4 pb-12">
-        <div className="max-w-7xl mx-auto flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-4"></div>
-            <p className="text-muted-foreground">Checking application status...</p>
+        <div className="max-w-7xl mx-auto">
+          {/* Header skeleton */}
+          <div className="text-center mb-12 space-y-4 animate-pulse">
+            <div className="h-10 w-48 bg-secondary rounded-full mx-auto"></div>
+            <div className="h-12 w-64 bg-secondary rounded mx-auto"></div>
+            <div className="h-6 w-96 bg-secondary rounded mx-auto"></div>
+          </div>
+
+          {/* Cards grid skeleton */}
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="relative animate-pulse">
+                <div className="rounded-2xl bg-secondary p-6 border-[3px] border-black shadow-[8px_8px_0_0_#000]">
+                  <div className="space-y-4">
+                    <div className="h-6 w-32 bg-secondary-600 rounded"></div>
+                    <div className="h-8 w-20 bg-secondary-600 rounded"></div>
+                    <div className="h-4 w-40 bg-secondary-600 rounded"></div>
+                    <div className="space-y-2">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="h-4 w-full bg-secondary-600 rounded"></div>
+                      ))}
+                    </div>
+                    <div className="h-10 w-full bg-secondary-600 rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

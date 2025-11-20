@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,16 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE } from '@/services/api';
+import SigningInLoader from '@/components/SigningInLoader';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthProvider, setOauthProvider] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const showTimerRef = useRef<number | null>(null);
+  const oauthTimerRef = useRef<number | null>(null);
   const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -57,6 +60,27 @@ export default function Login() {
       showTimerRef.current = null;
     }, 3000);
   };
+
+  const handleOAuth = (provider: 'Google' | 'GitHub') => {
+    setOauthProvider(provider);
+    if (oauthTimerRef.current) window.clearTimeout(oauthTimerRef.current);
+
+    const target =
+      provider === 'Google'
+        ? `${API_BASE}/auth/google/login`
+        : `${API_BASE}/auth/github/login`;
+
+    // Small delay so overlay renders before redirect
+    oauthTimerRef.current = window.setTimeout(() => {
+      window.location.href = target;
+    }, 80);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (oauthTimerRef.current) window.clearTimeout(oauthTimerRef.current);
+    };
+  }, []);
 
   if (!authLoading && user) {
     return <Navigate to="/" replace />;
@@ -139,11 +163,18 @@ export default function Login() {
               <button
                 type="button"
                 className="btn-secondary w-full mb-3 sm:mb-4 text-sm sm:text-base"
-                onClick={() => {
-                  window.location.href = `${API_BASE}/auth/google/login`;
-                }}
+                onClick={() => handleOAuth('Google')}
+                disabled={!!oauthProvider}
               >
                 Continue with Google
+              </button>
+              <button
+                type="button"
+                className="btn-secondary w-full mb-3 sm:mb-4 text-sm sm:text-base"
+                onClick={() => handleOAuth('GitHub')}
+                disabled={!!oauthProvider}
+              >
+                Continue with GitHub
               </button>
 
               {/* Sign Up Link */}
@@ -157,6 +188,9 @@ export default function Login() {
           </form>
         </div>
       </div>
+      {oauthProvider && (
+        <SigningInLoader message={`Signing you in with ${oauthProvider}...`} />
+      )}
     </div>
   );
 }

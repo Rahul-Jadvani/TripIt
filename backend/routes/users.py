@@ -3,7 +3,7 @@ User routes
 """
 from flask import Blueprint, request
 from marshmallow import ValidationError
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 
 from extensions import db
 from models.user import User
@@ -62,14 +62,26 @@ def search_users():
 def get_user_profile(user_id, username):
     """Get user profile by username"""
     try:
+        normalized_username = (username or '').strip().lower()
+
         # Check cache (5 min TTL)
-        cache_key = f"user_profile:{username}"
+        cache_key = f"user_profile:{normalized_username}"
         cached = CacheService.get(cache_key)
         if cached:
             from flask import jsonify
             return jsonify(cached), 200
 
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(
+            and_(
+                User.is_active == True,
+                or_(
+                    func.lower(User.username) == normalized_username,
+                    func.lower(User.github_username) == normalized_username,
+                    func.lower(User.email) == normalized_username
+                )
+            )
+        ).first()
+
         if not user:
             return error_response('Not found', 'User not found', 404)
 

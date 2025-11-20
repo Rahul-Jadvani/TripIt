@@ -83,7 +83,7 @@ export function ProjectBadges({ projectId }: ProjectBadgesProps) {
 
       <div className="space-y-3">
         {badges.map((badge: any) => {
-          const config = BADGE_CONFIG[badge.badgeType as keyof typeof BADGE_CONFIG] || BADGE_CONFIG.silver;
+          const config = BADGE_CONFIG[badge.badge_type as keyof typeof BADGE_CONFIG] || BADGE_CONFIG.silver;
           const Icon = config.icon;
 
           return (
@@ -98,7 +98,6 @@ export function ProjectBadges({ projectId }: ProjectBadgesProps) {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">{config.emoji}</span>
                     <span className={`font-black text-sm ${config.color}`}>
                       {config.label} Badge
                     </span>

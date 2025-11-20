@@ -231,7 +231,7 @@ export const Footer = memo(function Footer() {
               <Twitter className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             </a>
             <a
-              href="mailto:support@0x.ship"
+              href="mailto:support@zer0.pro"
               className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
               aria-label="Email"
             >

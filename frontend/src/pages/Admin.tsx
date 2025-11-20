@@ -568,8 +568,27 @@ function ChainsModerationSection() {
 
       {/* Chains List */}
       {chainsLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <Card key={idx} className="animate-pulse">
+              <CardContent className="py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 w-40 bg-secondary rounded"></div>
+                    <div className="h-4 w-48 bg-secondary rounded"></div>
+                    <div className="flex gap-3 mt-2">
+                      <div className="h-6 w-16 bg-secondary rounded-full"></div>
+                      <div className="h-6 w-24 bg-secondary rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-9 w-20 bg-secondary rounded"></div>
+                    <div className="h-9 w-20 bg-secondary rounded"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : chains.length === 0 ? (
         <Card>
@@ -849,8 +868,21 @@ function FeedbackManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-4">
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <Card key={idx} className="animate-pulse">
+            <CardContent className="py-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="h-5 w-32 bg-secondary rounded"></div>
+                  <div className="h-5 w-20 bg-secondary rounded"></div>
+                </div>
+                <div className="h-4 w-full bg-secondary rounded"></div>
+                <div className="h-4 w-5/6 bg-secondary rounded"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -1206,22 +1238,14 @@ export default function Admin() {
 
     setBulkAssigningValidatorId(validatorId);
     try {
-      const response = await toast.promise(
-        adminService.bulkAssignProjects({
-          validator_id: validatorId,
-          category_filter: category,
-          priority,
-          limit,
-        }),
-        {
-          loading: 'Assigning projects...',
-          success: (res) => {
-            const assignedCount = res?.data?.data?.count ?? 0;
-            return `${assignedCount} project${assignedCount === 1 ? '' : 's'} assigned successfully!`;
-          },
-          error: (err) => err?.response?.data?.message || 'Failed to assign projects',
-        }
-      );
+      const response = await adminService.bulkAssignProjects({
+        validator_id: validatorId,
+        category_filter: category,
+        priority,
+        limit,
+      });
+      const assignedCount = response?.data?.data?.count ?? 0;
+      toast.success(`${assignedCount} project${assignedCount === 1 ? '' : 's'} assigned successfully!`);
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
@@ -1245,22 +1269,28 @@ export default function Admin() {
     setAssigningSelectedValidatorId(currentValidatorForAssignment);
 
     try {
-      await toast.promise(
-        Promise.all(
-          selectedProjects.map(projectId =>
-            adminService.assignProjectToValidator({
-              validator_id: currentValidatorForAssignment,
-              project_id: projectId,
-              priority: 'normal'
-            })
-          )
-        ),
-        {
-          loading: 'Assigning projects...',
-          success: `${selectedProjects.length} project${selectedProjects.length === 1 ? '' : 's'} assigned successfully`,
-          error: (err) => err?.response?.data?.message || 'Failed to assign some projects',
-        }
+      const results = await Promise.allSettled(
+        selectedProjects.map(projectId =>
+          adminService.assignProjectToValidator({
+            validator_id: currentValidatorForAssignment,
+            project_id: projectId,
+            priority: 'normal'
+          })
+        )
       );
+
+      const successes = results.filter(r => r.status === 'fulfilled').length;
+      const errors = results
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map(r => (r.reason?.response?.data?.message || r.reason?.message || 'Failed'));
+
+      if (successes > 0) {
+        toast.success(`${successes} project${successes === 1 ? '' : 's'} assigned successfully`);
+      }
+      if (errors.length > 0) {
+        const uniqueErrors = Array.from(new Set(errors));
+        toast.error(uniqueErrors.join('; '));
+      }
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
@@ -1444,8 +1474,25 @@ export default function Admin() {
           </div>
 
           {usersLoading && users.length === 0 ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <Card key={idx} className="animate-pulse">
+                  <CardContent className="flex items-center justify-between py-4">
+                    <div className="flex-1">
+                      <div className="h-5 w-32 bg-secondary rounded mb-2"></div>
+                      <div className="h-4 w-48 bg-secondary rounded mb-2"></div>
+                      <div className="flex gap-2 mt-2">
+                        <div className="h-6 w-16 bg-secondary rounded-full"></div>
+                        <div className="h-6 w-20 bg-secondary rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="h-9 w-24 bg-secondary rounded"></div>
+                      <div className="h-9 w-24 bg-secondary rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="space-y-3">
@@ -1557,8 +1604,24 @@ export default function Admin() {
           </Card>
 
           {validatorsLoading && validators.length === 0 ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <Card key={idx} className="animate-pulse">
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-5 w-40 bg-secondary rounded"></div>
+                        <div className="h-4 w-32 bg-secondary rounded mb-2"></div>
+                        <div className="flex gap-2">
+                          <div className="h-6 w-16 bg-secondary rounded-full"></div>
+                          <div className="h-6 w-20 bg-secondary rounded-full"></div>
+                        </div>
+                      </div>
+                      <div className="h-9 w-32 bg-secondary rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="space-y-3">

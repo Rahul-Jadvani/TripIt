@@ -441,7 +441,11 @@ export default function UserProfile() {
 
             <TabsContent value="projects">
               {projectsLoading ? (
-                <ProjectCardSkeletonGrid count={3} />
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="h-[520px] bg-secondary rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
               ) : projectsData?.data && projectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {projectsData.data.map((project: any) => (
@@ -462,7 +466,11 @@ export default function UserProfile() {
 
             <TabsContent value="tagged">
               {taggedProjectsLoading ? (
-                <ProjectCardSkeletonGrid count={3} />
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="h-[520px] bg-secondary rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
               ) : taggedProjectsData?.data && taggedProjectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {taggedProjectsData.data.map((project: any) => (
@@ -483,8 +491,24 @@ export default function UserProfile() {
 
             <TabsContent value="owned-chains">
               {ownedChainsLoading ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="card-elevated p-6 animate-pulse">
+                      <div className="flex items-start gap-4">
+                        <div className="h-16 w-16 rounded-full bg-secondary flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="h-6 w-32 bg-secondary rounded"></div>
+                          <div className="h-4 w-full bg-secondary rounded"></div>
+                          <div className="h-4 w-5/6 bg-secondary rounded"></div>
+                          <div className="flex items-center gap-4 text-xs mt-3">
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : ownedChainsData?.chains && ownedChainsData.chains.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -542,8 +566,24 @@ export default function UserProfile() {
 
             <TabsContent value="following-chains">
               {followingChainsLoading ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="card-elevated p-6 animate-pulse">
+                      <div className="flex items-start gap-4">
+                        <div className="h-16 w-16 rounded-full bg-secondary flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="h-6 w-32 bg-secondary rounded"></div>
+                          <div className="h-4 w-full bg-secondary rounded"></div>
+                          <div className="h-4 w-5/6 bg-secondary rounded"></div>
+                          <div className="flex items-center gap-4 text-xs mt-3">
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : followingChainsData?.chains && followingChainsData.chains.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

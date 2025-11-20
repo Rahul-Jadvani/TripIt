@@ -6,7 +6,7 @@ export default function About() {
     <div className="container mx-auto px-4 py-8">
       <div className="mx-auto max-w-4xl">
         <div className="mb-12 text-center">
-          <h1 className="mb-4 text-5xl font-bold">About 0x.ship</h1>
+          <h1 className="mb-4 text-5xl font-bold">About Zer0</h1>
           <p className="text-xl text-muted-foreground">
             Proof-weighted discovery platform for hackathon projects
           </p>
@@ -15,7 +15,7 @@ export default function About() {
         <Card className="mb-8 p-8">
           <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
-            0x.ship is a Reddit-style discovery platform designed specifically for hackathon projects. We use a
+            Zer0 is a Reddit-style discovery platform designed specifically for hackathon projects. We use a
             proof-based credibility system to surface the most authentic and impactful projects, helping builders
             connect with opportunities, collaborators, and recognition they deserve.
           </p>

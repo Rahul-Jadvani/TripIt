@@ -787,7 +787,11 @@ export default function Gallery() {
 
             {/* Projects Grid */}
             {isLoading ? (
-              <ProjectCardSkeletonGrid />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 12 }).map((_, idx) => (
+                  <div key={idx} className="h-[600px] bg-secondary rounded-lg animate-pulse"></div>
+                ))}
+              </div>
             ) : filteredProjects.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProjects.map((project: any) => (
