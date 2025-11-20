@@ -18,9 +18,9 @@ export function useMostRequestedProjects(limit: number = 20) {
 
     // No polling - backend cache refreshes every hour via Celery
     refetchInterval: false,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchOnMount: true,
+    refetchOnWindowFocus: false, // Don't refetch on tab switches - rely on backend cache + WebSocket invalidation
+    refetchOnReconnect: false,   // Don't refetch on reconnect - data is cached for 1 hour
+    refetchOnMount: false,       // Don't refetch on mount - use cached data
 
     // Keep old data visible during background refetch
     placeholderData: (previousData) => previousData,
@@ -40,9 +40,9 @@ export function useRecentConnections(limit: number = 20) {
 
     // No polling - backend cache refreshes every hour via Celery
     refetchInterval: false,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchOnMount: true,
+    refetchOnWindowFocus: false, // Don't refetch on tab switches - rely on backend cache + WebSocket invalidation
+    refetchOnReconnect: false,   // Don't refetch on reconnect - data is cached for 1 hour
+    refetchOnMount: false,       // Don't refetch on mount - use cached data
 
     // Keep old data visible during background refetch
     placeholderData: (previousData) => previousData,

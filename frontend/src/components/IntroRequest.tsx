@@ -84,9 +84,9 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <button className="btn-primary gap-2 inline-flex items-center w-full group hover:scale-[1.02] transition-transform text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5">
-          <Send className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 group-hover:rotate-12 transition-transform" />
-          <span className="font-bold truncate">Request Intro</span>
+        <button className="btn-primary h-10 px-4 text-sm inline-flex items-center gap-1.5 whitespace-nowrap">
+          <Send className="h-4 w-4" />
+          Request Intro
         </button>
       </DialogTrigger>
 

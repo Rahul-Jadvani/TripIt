@@ -122,7 +122,7 @@ export function useRealTimeUpdates() {
       // Project updated event
       socket.on('project:updated', (data) => {
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        // Don't invalidate feed - backend cache + periodic refresh handles it
       });
 
       // Project deleted event
@@ -135,12 +135,13 @@ export function useRealTimeUpdates() {
       // Voting and comments
       socket.on('vote:cast', (data) => {
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        // Don't invalidate feed on every vote - backend cache handles it
+        // Only invalidate leaderboard as vote counts affect rankings
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       });
       socket.on('vote:removed', (data) => {
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        // Don't invalidate feed on every vote - backend cache handles it
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       });
       socket.on('vote:reconciled', (data) => {
@@ -150,9 +151,9 @@ export function useRealTimeUpdates() {
           duration: 3000,
         });
 
-        // Force refetch to get authoritative counts
+        // Force refetch to get authoritative counts for the specific project only
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        // Don't invalidate entire feed - backend cache handles consistency
       });
       socket.on('comment:added', (data) => {
         // Only invalidate project cache for comment count update
@@ -185,7 +186,8 @@ export function useRealTimeUpdates() {
       socket.on('project:featured', (data) => {
         toast.success('Project featured!');
         queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        // Invalidate featured projects specifically, not entire feed
+        queryClient.invalidateQueries({ queryKey: ['featured-projects'] });
       });
       socket.on('badge:awarded', (data) => {
         toast.success('New badge awarded!');

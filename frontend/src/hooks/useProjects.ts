@@ -143,14 +143,14 @@ export function useProjects(sort: string = 'hot', page: number = 1, includeDetai
       };
     },
     // Smart caching: Balance freshness with performance
-    staleTime: 1000 * 60 * 5, // 5 min - data stays fresh for typical session
-    gcTime: 1000 * 60 * 30,   // 30 min - keeps in memory for instant navigation
+    staleTime: 1000 * 60 * 10, // 10 min - backend Redis cache is 1 hour, this is safe
+    gcTime: 1000 * 60 * 30,    // 30 min - keeps in memory for instant navigation
 
-    // Efficient refetch strategy - only when truly needed
-    refetchInterval: false, // NO polling - rely on Socket.IO invalidation
-    refetchOnWindowFocus: 'stale', // Only refetch if data is stale when window regains focus
-    refetchOnReconnect: 'stale',   // Only refetch if data is stale after reconnect
-    refetchOnMount: true,          // Only refetch if data is stale on component mount
+    // Efficient refetch strategy - rely on backend cache + materialized views
+    refetchInterval: false,         // NO polling - backend Celery refreshes cache
+    refetchOnWindowFocus: false,    // Don't refetch on tab switch - backend cache handles freshness
+    refetchOnReconnect: false,      // Don't refetch on reconnect - data is cached
+    refetchOnMount: false,          // Don't refetch on mount - use cached data
 
     // Keep old data visible during background refetch (NO loading spinners!)
     placeholderData: (previousData) => previousData,

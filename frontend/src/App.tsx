@@ -55,10 +55,10 @@ const Gallery = lazy(() => import("./pages/Gallery"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,      // Data fresh for 5 min (matches backend cache)
-      gcTime: 1000 * 60 * 30,         // Keep in cache for 30 min
+      staleTime: 1000 * 60 * 10,      // Data fresh for 10 min (increased for better caching)
+      gcTime: 1000 * 60 * 30,         // Keep in cache for 30 min after becoming inactive
       refetchOnWindowFocus: false,    // Don't refetch on focus - rely on cache
-      refetchOnReconnect: true,       // Refetch when internet reconnects
+      refetchOnReconnect: false,      // Don't refetch on reconnect - rely on cache
       refetchOnMount: false,          // Don't refetch on mount - use cached data
       retry: 1,                       // Retry failed requests once
     },

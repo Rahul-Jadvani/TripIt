@@ -22,6 +22,7 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
   const [commentText, setCommentText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+  const [showAllComments, setShowAllComments] = useState(false);
   const resolvedProjectId = resolveProjectId(projectId, altProjectId);
 
   const { data: commentsData, isLoading, error } = useComments(projectId, altProjectId);
@@ -30,6 +31,9 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
   const voteCommentMutation = useVoteComment(projectId, altProjectId);
 
   const comments = commentsData?.data || [];
+  const INITIAL_COMMENTS_LIMIT = 3;
+  const displayedComments = showAllComments ? comments : comments.slice(0, INITIAL_COMMENTS_LIMIT);
+  const hasMoreComments = comments.length > INITIAL_COMMENTS_LIMIT;
 
   const handlePostComment = () => {
     if (!user) {
@@ -116,55 +120,77 @@ export function CommentSection({ projectId, altProjectId }: CommentSectionProps)
         {comments.length === 0 ? (
           <p className="text-center text-muted-foreground">No comments yet. Be the first to comment!</p>
         ) : (
-          comments.map((comment: any) => (
-            <Card key={comment.id} id={`comment-${comment.id}`} className="p-4">
-              <div className="flex gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={comment.author.avatar} alt={comment.author.username} />
-                  <AvatarFallback className="text-xs">
-                    {comment.author.username.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+          <>
+            {displayedComments.map((comment: any) => (
+              <Card key={comment.id} id={`comment-${comment.id}`} className="p-4">
+                <div className="flex gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.author.avatar} alt={comment.author.username} />
+                    <AvatarFallback className="text-xs">
+                      {comment.author.username.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{comment.author.displayName || comment.author.username}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                      </p>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{comment.author.displayName || comment.author.username}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+
+                      {user?.id === comment.author.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(comment.id)}
+                          disabled={deleteCommentMutation.isPending || !resolvedProjectId}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
 
-                    {user?.id === comment.author.id && (
+                    <p className="mt-2 text-sm">{comment.content}</p>
+
+                    <div className="mt-3 flex gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(comment.id)}
-                        disabled={deleteCommentMutation.isPending || !resolvedProjectId}
+                        onClick={() => voteCommentMutation.mutate({ commentId: comment.id, voteType: 'up' })}
+                        disabled={voteCommentMutation.isPending || !resolvedProjectId}
+                        className="text-muted-foreground"
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <ThumbsUp className="h-4 w-4" />
+                        <span className="ml-1 text-xs">{comment.upvotes}</span>
                       </Button>
-                    )}
-                  </div>
-
-                  <p className="mt-2 text-sm">{comment.content}</p>
-
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => voteCommentMutation.mutate({ commentId: comment.id, voteType: 'up' })}
-                      disabled={voteCommentMutation.isPending || !resolvedProjectId}
-                      className="text-muted-foreground"
-                    >
-                      <ThumbsUp className="h-4 w-4" />
-                      <span className="ml-1 text-xs">{comment.upvotes}</span>
-                    </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))
+              </Card>
+            ))}
+
+            {hasMoreComments && !showAllComments && (
+              <Button
+                variant="outline"
+                onClick={() => setShowAllComments(true)}
+                className="w-full"
+              >
+                Show {comments.length - INITIAL_COMMENTS_LIMIT} more comment{comments.length - INITIAL_COMMENTS_LIMIT !== 1 ? 's' : ''}
+              </Button>
+            )}
+
+            {showAllComments && hasMoreComments && (
+              <Button
+                variant="outline"
+                onClick={() => setShowAllComments(false)}
+                className="w-full"
+              >
+                Show less
+              </Button>
+            )}
+          </>
         )}
       </div>
 
