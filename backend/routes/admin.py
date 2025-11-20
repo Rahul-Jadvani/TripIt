@@ -13,6 +13,7 @@ from models.chain import Chain, ChainModerationLog
 from models.admin_scoring_config import AdminScoringConfig
 from utils.decorators import admin_required
 from utils.cache import CacheService
+from utils.notifications import notify_investor_request_approved, notify_investor_request_rejected
 from services.socket_service import SocketService
 from schemas.scoring import UpdateConfigSchema
 from tasks.scoring_tasks import score_project_task
@@ -169,12 +170,54 @@ def get_all_validators(user_id):
     """Get all validators with their permissions and assignment counts"""
     try:
         from models.validator_assignment import ValidatorAssignment
-        # OPTIMIZED: Eager load permissions to prevent N+1 queries
         from sqlalchemy.orm import joinedload
+        from sqlalchemy import func, case
+
+        # OPTIMIZED: Single aggregation query instead of N+1 queries
+        # Get all validators with eager-loaded permissions
         validators = User.query.filter(User.is_validator == True)\
             .options(joinedload(User.validator_permissions))\
             .all()
 
+        # Get assignment stats for ALL validators in ONE query using aggregation
+        validator_stats = db.session.query(
+            ValidatorAssignment.validator_id,
+            func.count(ValidatorAssignment.id).label('total'),
+            func.sum(case((ValidatorAssignment.status == 'pending', 1), else_=0)).label('pending'),
+            func.sum(case((ValidatorAssignment.status == 'in_review', 1), else_=0)).label('in_review'),
+            func.sum(case((ValidatorAssignment.status == 'validated', 1), else_=0)).label('completed')
+        ).group_by(ValidatorAssignment.validator_id).all()
+
+        # Convert to dict for easy lookup
+        stats_by_validator = {
+            stat[0]: {
+                'total': stat[1] or 0,
+                'pending': stat[2] or 0,
+                'in_review': stat[3] or 0,
+                'completed': stat[4] or 0
+            }
+            for stat in validator_stats
+        }
+
+        # Get all assignments with eager-loaded projects in ONE query
+        all_assignments = ValidatorAssignment.query\
+            .options(joinedload(ValidatorAssignment.project))\
+            .all()
+
+        # Build category breakdown per validator
+        category_breakdown_by_validator = {}
+        for assignment in all_assignments:
+            validator_id = assignment.validator_id
+            if validator_id not in category_breakdown_by_validator:
+                category_breakdown_by_validator[validator_id] = {}
+
+            if assignment.project and assignment.project.categories:
+                for category in assignment.project.categories:
+                    if category not in category_breakdown_by_validator[validator_id]:
+                        category_breakdown_by_validator[validator_id][category] = 0
+                    category_breakdown_by_validator[validator_id][category] += 1
+
+        # Build response with minimal additional queries
         validators_data = []
         for validator in validators:
             validator_dict = validator.to_dict(include_email=True)
@@ -190,40 +233,20 @@ def get_all_validators(user_id):
                     'allowed_project_ids': []
                 }
 
-            # Add assignment counts
-            total_assignments = ValidatorAssignment.query.filter_by(validator_id=validator.id).count()
-            pending_assignments = ValidatorAssignment.query.filter_by(
-                validator_id=validator.id,
-                status='pending'
-            ).count()
-            in_review_assignments = ValidatorAssignment.query.filter_by(
-                validator_id=validator.id,
-                status='in_review'
-            ).count()
-            completed_assignments = ValidatorAssignment.query.filter_by(
-                validator_id=validator.id,
-                status='validated'
-            ).count()
-
-            # Get category breakdown for assigned projects
-            assignments_with_projects = ValidatorAssignment.query.filter_by(
-                validator_id=validator.id
-            ).join(Project).all()
-
-            category_breakdown = {}
-            for assignment in assignments_with_projects:
-                if assignment.project and assignment.project.categories:
-                    for category in assignment.project.categories:
-                        if category not in category_breakdown:
-                            category_breakdown[category] = 0
-                        category_breakdown[category] += 1
+            # Use pre-computed assignment stats
+            stats = stats_by_validator.get(validator.id, {
+                'total': 0,
+                'pending': 0,
+                'in_review': 0,
+                'completed': 0
+            })
 
             validator_dict['assignments'] = {
-                'total': total_assignments,
-                'pending': pending_assignments,
-                'in_review': in_review_assignments,
-                'completed': completed_assignments,
-                'category_breakdown': category_breakdown
+                'total': stats['total'],
+                'pending': stats['pending'],
+                'in_review': stats['in_review'],
+                'completed': stats['completed'],
+                'category_breakdown': category_breakdown_by_validator.get(validator.id, {})
             }
 
             validators_data.append(validator_dict)
@@ -372,11 +395,14 @@ def update_validator_permissions(user_id, validator_id):
 def get_all_projects(user_id):
     """Get all projects with pagination"""
     try:
+        from sqlalchemy.orm import joinedload
+
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 50, type=int)
         search = request.args.get('search', '')
 
-        query = Project.query
+        # OPTIMIZED: Eager load creator to prevent N+1 queries
+        query = Project.query.options(joinedload(Project.creator))
 
         if search:
             query = query.filter(
@@ -551,6 +577,9 @@ def approve_investor_request(user_id, request_id):
 
         db.session.commit()
 
+        # Send notification to the investor
+        notify_investor_request_approved(investor_request.user_id, investor_request.name)
+
         return jsonify({
             'status': 'success',
             'message': 'Investor request approved',
@@ -577,6 +606,9 @@ def reject_investor_request(user_id, request_id):
 
         db.session.commit()
 
+        # Send notification to the investor
+        notify_investor_request_rejected(investor_request.user_id)
+
         return jsonify({
             'status': 'success',
             'message': 'Investor request rejected',
@@ -597,34 +629,69 @@ def reject_investor_request(user_id, request_id):
 def get_platform_stats(user_id):
     """Get platform statistics"""
     try:
-        # User stats
-        total_users = User.query.count()
-        active_users = User.query.filter_by(is_active=True).count()
-        admins = User.query.filter_by(is_admin=True).count()
-        validators = User.query.filter_by(is_validator=True).count()
-        investors = User.query.filter_by(is_investor=True).count()
+        from sqlalchemy import func, case
 
-        # Project stats
-        total_projects = Project.query.count()
-        featured_projects = Project.query.filter_by(is_featured=True).count()
+        # OPTIMIZED: Get all stats in fewer queries using aggregation
+        # User stats - single query with aggregation
+        user_stats = db.session.query(
+            func.count(User.id).label('total'),
+            func.sum(case((User.is_active == True, 1), else_=0)).label('active'),
+            func.sum(case((User.is_admin == True, 1), else_=0)).label('admins'),
+            func.sum(case((User.is_validator == True, 1), else_=0)).label('validators'),
+            func.sum(case((User.is_investor == True, 1), else_=0)).label('investors')
+        ).first()
 
-        # Badge stats
-        total_badges = ValidationBadge.query.count()
-        badge_breakdown = {}
+        total_users = user_stats[0] or 0
+        active_users = user_stats[1] or 0
+        admins = user_stats[2] or 0
+        validators = user_stats[3] or 0
+        investors = user_stats[4] or 0
+
+        # Project stats - single query
+        project_stats = db.session.query(
+            func.count(Project.id).label('total'),
+            func.sum(case((Project.is_featured == True, 1), else_=0)).label('featured')
+        ).first()
+
+        total_projects = project_stats[0] or 0
+        featured_projects = project_stats[1] or 0
+
+        # Badge stats - single query with GROUP BY
+        badge_stats = db.session.query(
+            ValidationBadge.badge_type,
+            func.count(ValidationBadge.id).label('count')
+        ).group_by(ValidationBadge.badge_type).all()
+
+        total_badges = sum(count for _, count in badge_stats)
+        badge_breakdown = {badge_type: count for badge_type, count in badge_stats}
+        # Fill in missing badge types with 0
         for badge_type in ['stone', 'silver', 'gold', 'platinum', 'demerit', 'custom']:
-            count = ValidationBadge.query.filter_by(badge_type=badge_type).count()
-            badge_breakdown[badge_type] = count
+            if badge_type not in badge_breakdown:
+                badge_breakdown[badge_type] = 0
 
-        # Investor request stats
-        pending_investor_requests = InvestorRequest.query.filter_by(status='pending').count()
-        approved_investor_requests = InvestorRequest.query.filter_by(status='approved').count()
+        # Investor request stats - single query
+        investor_stats = db.session.query(
+            InvestorRequest.status,
+            func.count(InvestorRequest.id).label('count')
+        ).group_by(InvestorRequest.status).all()
 
-        # Chain stats
-        total_chains = Chain.query.count()
-        active_chains = Chain.query.filter_by(status='active').count()
-        banned_chains = Chain.query.filter_by(status='banned').count()
-        suspended_chains = Chain.query.filter_by(status='suspended').count()
-        featured_chains = Chain.query.filter_by(is_featured=True).count()
+        pending_investor_requests = next((count for status, count in investor_stats if status == 'pending'), 0)
+        approved_investor_requests = next((count for status, count in investor_stats if status == 'approved'), 0)
+
+        # Chain stats - single query
+        chain_stats = db.session.query(
+            func.count(Chain.id).label('total'),
+            func.sum(case((Chain.status == 'active', 1), else_=0)).label('active'),
+            func.sum(case((Chain.status == 'banned', 1), else_=0)).label('banned'),
+            func.sum(case((Chain.status == 'suspended', 1), else_=0)).label('suspended'),
+            func.sum(case((Chain.is_featured == True, 1), else_=0)).label('featured')
+        ).first()
+
+        total_chains = chain_stats[0] or 0
+        active_chains = chain_stats[1] or 0
+        banned_chains = chain_stats[2] or 0
+        suspended_chains = chain_stats[3] or 0
+        featured_chains = chain_stats[4] or 0
 
         return jsonify({
             'status': 'success',

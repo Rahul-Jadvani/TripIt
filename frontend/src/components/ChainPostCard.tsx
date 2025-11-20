@@ -62,16 +62,22 @@ export function ChainPostCard({
   const isAuthor = user && post.author_id === user.id;
 
   const handlePin = () => {
-    pinMutation.mutate(post.id);
+    if (!pinMutation.isPending) {
+      pinMutation.mutate(post.id);
+    }
   };
 
   const handleLock = () => {
-    lockMutation.mutate(post.id);
+    if (!lockMutation.isPending) {
+      lockMutation.mutate(post.id);
+    }
   };
 
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this post?')) {
-      deleteMutation.mutate(post.id);
+      if (!deleteMutation.isPending) {
+        deleteMutation.mutate(post.id);
+      }
     }
   };
 
@@ -123,33 +129,78 @@ export function ChainPostCard({
               {user && (isAuthor || isOwner) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      disabled={pinMutation.isPending || lockMutation.isPending || deleteMutation.isPending}
+                    >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {isAuthor && !post.is_deleted && (
                       <>
-                        <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+                        <DropdownMenuItem
+                          onClick={() => setShowEditDialog(true)}
+                          disabled={deleteMutation.isPending}
+                        >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                        <DropdownMenuItem
+                          onClick={handleDelete}
+                          className="text-destructive"
+                          disabled={deleteMutation.isPending}
+                        >
+                          {deleteMutation.isPending ? (
+                            <>
+                              <div className="h-4 w-4 mr-2 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </>
+                          )}
                         </DropdownMenuItem>
                       </>
                     )}
                     {isOwner && !post.parent_id && (
                       <>
                         {(isAuthor || isOwner) && <DropdownMenuSeparator />}
-                        <DropdownMenuItem onClick={handlePin}>
-                          <Pin className="h-4 w-4 mr-2" />
-                          {post.is_pinned ? 'Unpin' : 'Pin'}
+                        <DropdownMenuItem
+                          onClick={handlePin}
+                          disabled={pinMutation.isPending}
+                        >
+                          {pinMutation.isPending ? (
+                            <>
+                              <div className="h-4 w-4 mr-2 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                              {post.is_pinned ? 'Unpinning...' : 'Pinning...'}
+                            </>
+                          ) : (
+                            <>
+                              <Pin className="h-4 w-4 mr-2" />
+                              {post.is_pinned ? 'Unpin' : 'Pin'}
+                            </>
+                          )}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleLock}>
-                          <Lock className="h-4 w-4 mr-2" />
-                          {post.is_locked ? 'Unlock' : 'Lock'}
+                        <DropdownMenuItem
+                          onClick={handleLock}
+                          disabled={lockMutation.isPending}
+                        >
+                          {lockMutation.isPending ? (
+                            <>
+                              <div className="h-4 w-4 mr-2 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                              {post.is_locked ? 'Unlocking...' : 'Locking...'}
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="h-4 w-4 mr-2" />
+                              {post.is_locked ? 'Unlock' : 'Lock'}
+                            </>
+                          )}
                         </DropdownMenuItem>
                       </>
                     )}

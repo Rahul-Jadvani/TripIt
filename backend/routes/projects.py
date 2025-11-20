@@ -611,7 +611,17 @@ def get_project(user_id, project_id):
             from flask import jsonify
             return jsonify(cached), 200
 
-        project = Project.query.options(joinedload(Project.creator)).get(project_id)
+        # OPTIMIZED: Eager load all relationships to prevent lazy loading
+        from sqlalchemy.orm import joinedload, contains_eager
+        from models.validation_badge import ValidationBadge
+
+        project = Project.query.options(
+            joinedload(Project.creator),
+            joinedload(Project.screenshots),
+            joinedload(Project.badges).joinedload(ValidationBadge.validator),
+            joinedload(Project.chain_memberships).joinedload('chain')
+        ).get(project_id)
+
         if not project or project.is_deleted:
             return error_response('Not found', 'Project not found', 404)
 

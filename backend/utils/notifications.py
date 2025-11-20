@@ -418,3 +418,59 @@ def notify_comment_reply(comment_author_id, original_comment, reply_comment, rep
         print(f"[Notifications] ERROR in notify_comment_reply: {str(e)}")
         import traceback
         traceback.print_exc()
+
+
+def notify_investor_request_approved(user_id, investor_name=None):
+    """
+    Notify user when their investor request is approved
+
+    Args:
+        user_id: ID of user whose request was approved
+        investor_name: Optional name of the investor (for context)
+    """
+    try:
+        print(f"\n[Notifications] notify_investor_request_approved called:")
+        print(f"  User: {user_id}")
+        print(f"  Investor name: {investor_name}")
+
+        create_notification(
+            user_id=user_id,
+            notification_type='investor_request_approved',
+            title="Investor request approved!",
+            message="Congratulations! Your investor profile has been approved and is now active.",
+            redirect_url="/investor/dashboard"
+        )
+    except Exception as e:
+        print(f"[Notifications] ❌ ERROR in notify_investor_request_approved: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+def notify_investor_request_rejected(user_id, reason=None):
+    """
+    Notify user when their investor request is rejected
+
+    Args:
+        user_id: ID of user whose request was rejected
+        reason: Optional rejection reason
+    """
+    try:
+        print(f"\n[Notifications] notify_investor_request_rejected called:")
+        print(f"  User: {user_id}")
+        print(f"  Reason: {reason}")
+
+        message = "Your investor request has been reviewed and unfortunately could not be approved at this time."
+        if reason:
+            message += f" Reason: {reason}"
+
+        create_notification(
+            user_id=user_id,
+            notification_type='investor_request_rejected',
+            title="Investor request status update",
+            message=message,
+            redirect_url="/investor"
+        )
+    except Exception as e:
+        print(f"[Notifications] ❌ ERROR in notify_investor_request_rejected: {str(e)}")
+        import traceback
+        traceback.print_exc()

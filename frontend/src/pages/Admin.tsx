@@ -1036,6 +1036,12 @@ export default function Admin() {
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [currentValidatorForAssignment, setCurrentValidatorForAssignment] = useState<string>('');
 
+  // Add validator by search state
+  const [validatorSearchQuery, setValidatorSearchQuery] = useState('');
+  const [validatorSearchResults, setValidatorSearchResults] = useState<any[]>([]);
+  const [isSearchingValidators, setIsSearchingValidators] = useState(false);
+  const [selectedValidatorForAdd, setSelectedValidatorForAdd] = useState<any>(null);
+
   // Badge state
   const [customBadgeName, setCustomBadgeName] = useState('');
   const [customBadgeImage, setCustomBadgeImage] = useState('');
@@ -1115,6 +1121,40 @@ export default function Admin() {
     }
     addValidatorMutation.mutate(newValidatorEmail, {
       onSuccess: () => setNewValidatorEmail(''),
+    });
+  };
+
+  const handleSearchValidators = async (query: string) => {
+    setValidatorSearchQuery(query);
+    if (query.trim().length < 2) {
+      setValidatorSearchResults([]);
+      return;
+    }
+
+    setIsSearchingValidators(true);
+    try {
+      const response = await adminService.getUsers({ search: query, perPage: 10 });
+      const payload = response.data?.data;
+      const users = Array.isArray(payload) ? payload : payload?.users || [];
+      // Filter out existing validators
+      const nonValidators = users.filter((user: any) => !user.is_validator);
+      setValidatorSearchResults(nonValidators);
+    } catch (error) {
+      console.error('Error searching validators:', error);
+      setValidatorSearchResults([]);
+    } finally {
+      setIsSearchingValidators(false);
+    }
+  };
+
+  const handleSelectValidatorForAdd = (user: any) => {
+    setSelectedValidatorForAdd(user);
+    addValidatorMutation.mutate(user.email, {
+      onSuccess: () => {
+        setSelectedValidatorForAdd(null);
+        setValidatorSearchQuery('');
+        setValidatorSearchResults([]);
+      },
     });
   };
 
@@ -1374,16 +1414,34 @@ export default function Admin() {
                         size="sm"
                         variant="outline"
                         onClick={() => toggleUserAdminMutation.mutate(user.id)}
+                        disabled={toggleUserAdminMutation.isPending}
                       >
-                        {user.is_admin ? 'Remove Admin' : 'Make Admin'}
+                        {toggleUserAdminMutation.isPending ? (
+                          <>
+                            <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          user.is_admin ? 'Remove Admin' : 'Make Admin'
+                        )}
                       </Button>
                       <Button
                         size="sm"
                         variant={user.is_active ? 'destructive' : 'default'}
                         onClick={() => toggleUserActiveMutation.mutate(user.id)}
+                        disabled={toggleUserActiveMutation.isPending}
                       >
-                        <Ban className="h-4 w-4 mr-1" />
-                        {user.is_active ? 'Ban' : 'Unban'}
+                        {toggleUserActiveMutation.isPending ? (
+                          <>
+                            <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                            {user.is_active ? 'Banning...' : 'Unbanning...'}
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="h-4 w-4 mr-1" />
+                            {user.is_active ? 'Ban' : 'Unban'}
+                          </>
+                        )}
                       </Button>
                     </div>
                   </CardContent>
@@ -1398,17 +1456,50 @@ export default function Admin() {
           <Card>
             <CardHeader>
               <CardTitle>Add Validator</CardTitle>
-              <CardDescription>Add a user as validator by email</CardDescription>
+              <CardDescription>Search and add a user as validator</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
+            <CardContent className="space-y-3">
+              <div className="relative">
                 <Input
-                  placeholder="validator@example.com"
-                  value={newValidatorEmail}
-                  onChange={(e) => setNewValidatorEmail(e.target.value)}
+                  placeholder="Search by username or email..."
+                  value={validatorSearchQuery}
+                  onChange={(e) => handleSearchValidators(e.target.value)}
+                  disabled={isSearchingValidators}
                 />
-                <Button onClick={handleAddValidator}>Add Validator</Button>
+                {isSearchingValidators && (
+                  <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
               </div>
+
+              {/* Search Results */}
+              {validatorSearchResults.length > 0 && (
+                <div className="border rounded-md max-h-64 overflow-y-auto space-y-1 bg-muted/30 p-2">
+                  {validatorSearchResults.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleSelectValidatorForAdd(user)}
+                      disabled={addValidatorMutation.isPending}
+                      className="w-full text-left p-3 rounded-md hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">{user.username}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+                      {addValidatorMutation.isPending && selectedValidatorForAdd?.id === user.id && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {validatorSearchQuery.trim().length >= 2 && validatorSearchResults.length === 0 && !isSearchingValidators && (
+                <p className="text-sm text-muted-foreground p-2">No users found</p>
+              )}
+
+              {validatorSearchQuery.trim().length < 2 && (
+                <p className="text-sm text-muted-foreground p-2">Type at least 2 characters to search</p>
+              )}
             </CardContent>
           </Card>
 
@@ -1770,8 +1861,16 @@ export default function Admin() {
                           size="sm"
                           variant="destructive"
                           onClick={() => removeValidatorMutation.mutate(validator.id)}
+                          disabled={removeValidatorMutation.isPending}
                         >
-                          Remove
+                          {removeValidatorMutation.isPending ? (
+                            <>
+                              <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                              Removing...
+                            </>
+                          ) : (
+                            'Remove'
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -1829,8 +1928,16 @@ export default function Admin() {
                         size="sm"
                         variant="outline"
                         onClick={() => toggleProjectFeaturedMutation.mutate(project.id)}
+                        disabled={toggleProjectFeaturedMutation.isPending}
                       >
-                        {project.is_featured ? 'Unfeature' : 'Feature'}
+                        {toggleProjectFeaturedMutation.isPending ? (
+                          <>
+                            <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          project.is_featured ? 'Unfeature' : 'Feature'
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -1972,17 +2079,37 @@ export default function Admin() {
                               <Button
                                 size="sm"
                                 onClick={() => approveInvestorMutation.mutate(request.id)}
+                                disabled={approveInvestorMutation.isPending}
                               >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Approve
+                                {approveInvestorMutation.isPending ? (
+                                  <>
+                                    <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                                    Approving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Approve
+                                  </>
+                                )}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => rejectInvestorMutation.mutate(request.id)}
+                                disabled={rejectInvestorMutation.isPending}
                               >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Reject
+                                {rejectInvestorMutation.isPending ? (
+                                  <>
+                                    <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                                    Rejecting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>
