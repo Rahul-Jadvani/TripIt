@@ -12,8 +12,6 @@ export function useVote(projectId: string) {
 
     // INSTANT optimistic update
     onMutate: async (voteType: 'up' | 'down') => {
-      console.log('[VOTE] Optimistic update starting for', projectId, voteType);
-
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['project', projectId] });
 
@@ -106,19 +104,15 @@ export function useVote(projectId: string) {
         return { ...old, data: projects };
       });
 
-      console.log('[VOTE] Optimistic update completed');
       return { previousProject };
     },
 
     // On success: Reconcile with server response
     onSuccess: (response) => {
-      console.log('[VOTE] Server response received:', response?.data);
       const voteData = response?.data?.data;
       if (!voteData) {
-        console.warn('[VOTE] No vote data in response!');
         return;
       }
-      console.log('[VOTE] Updating caches with server data:', voteData);
 
       // Update project detail cache with server truth
       queryClient.setQueryData(['project', projectId], (old: any) => {
@@ -154,13 +148,10 @@ export function useVote(projectId: string) {
 
         return { ...old, data: projects };
       });
-
-      console.log('[VOTE] Cache update completed successfully');
     },
 
     // On error: Rollback
     onError: (error: any, voteType, context) => {
-      console.error('[VOTE] Error occurred:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to vote';
       toast.error(errorMessage);
 

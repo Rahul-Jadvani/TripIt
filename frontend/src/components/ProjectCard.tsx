@@ -71,11 +71,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <div className="group relative w-full h-full z-0">
-      <Card className="card-interactive overflow-hidden relative w-full h-full box-border flex flex-col transition-all duration-300 group-hover:z-10">
+      <Card className="card-interactive overflow-hidden relative w-full h-full min-h-0 box-border flex flex-col transition-all duration-300 group-hover:z-10">
         <InteractiveScrollBackground className="text-primary/20" />
-        <Link to={`/project/${project.id}`} className="flex flex-col h-full relative z-10">
+        <Link to={`/project/${project.id}`} className="flex flex-col flex-1 min-h-0 relative z-10">
           {/* Main content container - scrollable */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
             {/* Header with title and proof score badge */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">

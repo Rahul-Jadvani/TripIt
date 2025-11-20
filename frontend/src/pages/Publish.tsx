@@ -315,7 +315,7 @@ export default function Publish() {
           uploadedUrls.push(data.data.url);
           uploadedFiles.push(file);
         } catch (uploadError) {
-          console.error('Screenshot upload error:', uploadError);
+          if (import.meta.env.DEV) console.error('Screenshot upload error:', uploadError);
           toast.error(`Failed to upload ${file.name}`);
         }
       }
@@ -378,7 +378,7 @@ export default function Publish() {
       setPitchDeckFile(file);
       toast.success('Pitch deck uploaded successfully!');
     } catch (error: any) {
-      console.error('Pitch deck upload error:', error);
+      if (import.meta.env.DEV) console.error('Pitch deck upload error:', error);
       toast.error('Failed to upload pitch deck');
     } finally {
       setUploadingPitchDeck(false);
@@ -444,7 +444,7 @@ export default function Publish() {
       }
       window.location.href = authUrl;
     } catch (error: any) {
-      console.error('GitHub connect error:', error);
+      if (import.meta.env.DEV) console.error('GitHub connect error:', error);
       const message = error.response?.data?.message || error.message || 'Failed to connect GitHub';
       toast.error(message);
       setGithubActionLoading(false);
@@ -458,7 +458,7 @@ export default function Publish() {
       toast.success('GitHub account disconnected');
       if (refreshUser) await refreshUser();
     } catch (error: any) {
-      console.error('GitHub disconnect error:', error);
+      if (import.meta.env.DEV) console.error('GitHub disconnect error:', error);
       const message = error.response?.data?.message || error.message || 'Failed to disconnect GitHub';
       toast.error(message);
     } finally {
@@ -546,10 +546,12 @@ export default function Publish() {
         payload.chain_ids = selectedChainIds;
       }
 
-      console.log('=== SUBMITTING PROJECT ===');
-      console.log('GitHub URL from form:', data.githubUrl);
-      console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
-      console.log('========================');
+      if (import.meta.env.DEV) {
+        console.log('=== SUBMITTING PROJECT ===');
+        console.log('GitHub URL from form:', data.githubUrl);
+        console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
+        console.log('========================');
+      }
 
       setShowPublishModal(true);
       setPublishState('loading');
@@ -573,7 +575,7 @@ export default function Publish() {
       setSelectedChainIds([]);
       // Navigation handled by success modal action
     } catch (error: any) {
-      console.error('Error publishing project:', error);
+      if (import.meta.env.DEV) console.error('Error publishing project:', error);
       // Friendly fallback
       toast.error('Please fix the highlighted fields and try again.');
 

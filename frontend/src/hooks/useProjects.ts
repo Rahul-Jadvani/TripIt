@@ -95,7 +95,18 @@ export function transformProject(backendProject: any) {
     badges: (backendProject.badges || []).map((b: any) => {
       if (!b) return { type: '' };
       if (typeof b === 'string') return { type: b };
-      if (typeof b === 'object') return { type: b.type || b.name || b.label || '' , ...b };
+      if (typeof b === 'object') {
+        const derivedType =
+          b.type ||
+          b.badge_type ||
+          b.badgeType ||
+          b.name ||
+          b.label ||
+          b.value ||
+          b.code ||
+          '';
+        return { ...b, type: derivedType };
+      }
       return { type: String(b) };
     }),
     // Voting fields - pass through ALL needed fields

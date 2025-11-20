@@ -9,7 +9,7 @@ export function SigningInLoader({ message = 'Signing you in...' }: SigningInLoad
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div
         className="flex flex-col items-center"
-        style={{ fontFamily: "'Comic Sans MS', Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" }}
+        style={{ fontFamily: "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" }}
       >
         <div className="cube-spinner mb-8">
           <div />

@@ -83,16 +83,24 @@ const formatBadgeLabel = (raw: string): string => {
 const extractBadgeValue = (badge: any): string => {
   if (!badge) return '';
   if (typeof badge === 'string') return badge;
-  return (
-    badge.type ??
-    badge.badgeType ??
-    badge.badge_type ??
-    badge.name ??
-    badge.label ??
-    badge.value ??
-    badge.code ??
-    ''
-  );
+
+  const candidates = [
+    badge.type,
+    badge.badgeType,
+    badge.badge_type,
+    badge.name,
+    badge.label,
+    badge.value,
+    badge.code,
+  ];
+
+  const valid = candidates.find((val) => {
+    if (val === undefined || val === null) return false;
+    const str = String(val).trim();
+    return str.length > 0;
+  });
+
+  return valid ? String(valid) : '';
 };
 
 const getProjectBadgeEntries = (project: any): any[] => {

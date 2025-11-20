@@ -55,7 +55,7 @@ function playNotificationSound(type: 'message' | 'intro') {
     }
   } catch (error) {
     // Silently fail if audio context is not available
-    console.debug('[Audio] Notification sound error:', error);
+    if (import.meta.env.DEV) console.debug('[Audio] Notification sound error:', error);
   }
 }
 
@@ -144,8 +144,6 @@ export function useRealTimeUpdates() {
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       });
       socket.on('vote:reconciled', (data) => {
-        console.log('[VoteReconciled] Backend reconciled vote counts:', data);
-
         // Show toast notification
         toast.info('Vote counts updated', {
           description: 'Your vote has been synchronized',

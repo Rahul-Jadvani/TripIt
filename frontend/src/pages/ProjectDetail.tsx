@@ -547,108 +547,116 @@ export default function ProjectDetail() {
 
         <div className="space-y-8">
           {/* ===== HERO SECTION ===== */}
-          <div className="card-elevated p-6">
-            {/* Title & Score Row */}
-            <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
+          <div className="card-elevated p-4 sm:p-6">
+            <div className="flex flex-col gap-4">
+              {/* Title, tagline, and stats */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
                   {project.isFeatured && (
                     <span className="badge-primary text-xs px-2 py-1">⭐ Featured</span>
                   )}
                 </div>
-                <h1 className="text-3xl lg:text-4xl font-black text-foreground mb-2 break-words">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground leading-tight break-words">
                   {project.title}
                 </h1>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {project.tagline}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-muted-foreground">
                   <div className="flex items-center gap-1.5 font-medium">
                     <Eye className="h-4 w-4" />
                     {project.viewCount?.toLocaleString() || 0} views
                   </div>
-                  <VoteButtons
-                    projectId={project.id}
-                    voteCount={project.voteCount}
-                    userVote={project.userVote as 'up' | 'down' | null}
-                    projectOwnerId={project.authorId || project.user_id}
-                  />
+                  <div className="flex items-center gap-2">
+                    <VoteButtons
+                      projectId={project.id}
+                      voteCount={project.voteCount}
+                      userVote={project.userVote as 'up' | 'down' | null}
+                      projectOwnerId={project.authorId || project.user_id}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
-                    className={`btn-secondary h-10 px-4 text-sm flex items-center gap-1.5 disabled:opacity-50 ${isSaved ? 'bg-primary text-black hover:bg-primary/90' : ''}`}
+              {/* Save / Share / Score */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 items-stretch">
+                <button
+                  onClick={handleSave}
+                  disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
+                  className={`btn-secondary w-full h-11 text-sm flex items-center justify-center gap-1.5 disabled:opacity-50 ${isSaved ? 'bg-primary text-black hover:bg-primary/90' : ''}`}
+                >
+                  <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+                  {isSaved ? 'Saved' : 'Save'}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="btn-secondary w-full h-11 text-sm flex items-center justify-center gap-1.5"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </button>
+                <div className="col-span-2 sm:col-span-1">
+                  <div className="h-full badge-primary flex flex-col items-center justify-center px-4 py-3 rounded-[14px] text-center">
+                    <div className="text-xl sm:text-2xl font-black text-black">{formatScore(displayScore)}</div>
+                    <div className="text-[11px] sm:text-xs font-bold text-black mt-0.5">Score</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Primary CTAs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
+                {project.demoUrl && (
+                  <a
+                    href={project.demoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary w-full h-11 text-sm inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
                   >
-                    <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
-                    {isSaved ? 'Saved' : 'Save'}
-                  </button>
-                  <button onClick={handleShare} className="btn-secondary h-10 px-4 text-sm flex items-center gap-1.5">
-                    <Share2 className="h-4 w-4" />
-                    Share
-                  </button>
+                    <ExternalLink className="h-4 w-4" />
+                    Demo
+                  </a>
+                )}
+                {project.githubUrl && (
+                  <a
+                    href={project.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary w-full h-11 text-sm inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  >
+                    <Github className="h-4 w-4" />
+                    Code
+                  </a>
+                )}
+                {project.pitch_deck_url && (
+                  <a
+                    href={project.pitch_deck_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary w-full h-11 text-sm inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Pitch Deck
+                  </a>
+                )}
+                <div className="w-full">
+                  <BadgeAwarder projectId={project.id} />
                 </div>
-                <div className="badge-primary flex flex-col items-center justify-center px-6 py-3 rounded-[15px] whitespace-nowrap min-w-[110px]">
-                  <div className="text-2xl font-black text-black">{formatScore(displayScore)}</div>
-                  <div className="text-xs font-bold text-black mt-1">Score</div>
-                </div>
+                {user?.id !== project.authorId && (
+                  <IntroRequest projectId={project.id} builderId={project.authorId} />
+                )}
+                {user?.id === project.authorId && (
+                  <>
+                    <button onClick={() => setShowPostUpdate(true)} className="btn-primary w-full h-11 text-sm flex items-center justify-center gap-1.5">
+                      <Sparkles className="h-4 w-4" />
+                      Post Update
+                    </button>
+                    <Link to={`/project/${project.id}/edit`} className="btn-secondary w-full h-11 text-sm flex items-center justify-center gap-1.5">
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </Link>
+                  </>
+                )}
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {project.demoUrl && (
-                <a
-                  href={project.demoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Demo
-                </a>
-              )}
-              {project.githubUrl && (
-                <a
-                  href={project.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  <Github className="h-4 w-4" />
-                  Code
-                </a>
-              )}
-              {project.pitch_deck_url && (
-                <a
-                  href={project.pitch_deck_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  <FileText className="h-4 w-4" />
-                  Pitch Deck
-                </a>
-              )}
-              <BadgeAwarder projectId={project.id} />
-              {user?.id !== project.authorId && (
-                <IntroRequest projectId={project.id} builderId={project.authorId} />
-              )}
-              {user?.id === project.authorId && (
-                <>
-                  <button onClick={() => setShowPostUpdate(true)} className="btn-primary text-sm flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4" />
-                    Post Update
-                  </button>
-                  <Link to={`/project/${project.id}/edit`} className="btn-secondary text-sm flex items-center gap-1.5">
-                    <Edit className="h-4 w-4" />
-                    Edit
-                  </Link>
-                </>
-              )}
             </div>
           </div>
 

@@ -49,12 +49,14 @@ export default function Register() {
       toast.success('Account created successfully! Please log in.');
       navigate('/login');
     } catch (error: any) {
-      console.error('❌ Registration error:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
-        errorMessage: error.message,
-      });
+      if (import.meta.env.DEV) {
+        console.error('❌ Registration error:', {
+          status: error.response?.status,
+          message: error.response?.data?.message,
+          data: error.response?.data,
+          errorMessage: error.message,
+        });
+      }
       toast.error(error.response?.data?.message || error.message || 'Failed to create account');
     } finally {
       setIsLoading(false);

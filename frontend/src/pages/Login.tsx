@@ -34,12 +34,14 @@ export default function Login() {
       toast.success('Welcome back!');
       navigate('/');
     } catch (error: any) {
-      console.error('❌ Login error:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
-        errorMessage: error.message,
-      });
+      if (import.meta.env.DEV) {
+        console.error('❌ Login error:', {
+          status: error.response?.status,
+          message: error.response?.data?.message,
+          data: error.response?.data,
+          errorMessage: error.message,
+        });
+      }
       toast.error(error.response?.data?.message || error.message || 'Failed to login');
     } finally {
       setIsLoading(false);
