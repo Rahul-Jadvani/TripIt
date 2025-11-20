@@ -210,7 +210,7 @@ def sync_votes_to_db(self):
                 downvotes_count = db.session.query(func.count(Vote.id))\
                     .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
 
-                # 3. Update project in DB
+                # 3. Update project in DB with raw SQL
                 result = db.session.execute(text("""
                     UPDATE projects
                     SET upvotes = :upvotes,
@@ -221,6 +221,15 @@ def sync_votes_to_db(self):
                     'downvotes': downvotes_count,
                     'project_id': project_id
                 })
+
+                # 3.5. CRITICAL: Recalculate community score + total score after raw SQL update
+                # Raw SQL bypasses event listeners, so we must manually update scores
+                if result.rowcount > 0:
+                    project = Project.query.get(project_id)
+                    if project:
+                        from models.event_listeners import update_project_community_score
+                        update_project_community_score(project)
+                        # Note: update_project_community_score already updates proof_score
 
                 # 4. Update Redis to match votes table truth
                 if result.rowcount > 0:
@@ -386,7 +395,7 @@ def reconcile_all_vote_counts(self, batch_size=100):
                           f"Truth: {upvotes_count}↑ {downvotes_count}↓")
                     fixed_count += 1
 
-                # Update projects table
+                # Update projects table with raw SQL
                 db.session.execute(text("""
                     UPDATE projects
                     SET upvotes = :upvotes,
@@ -397,6 +406,12 @@ def reconcile_all_vote_counts(self, batch_size=100):
                     'downvotes': downvotes_count,
                     'project_id': project_id
                 })
+
+                # CRITICAL: Recalculate community score + total score after raw SQL update
+                # Raw SQL bypasses event listeners, so we must manually update scores
+                from models.event_listeners import update_project_community_score
+                update_project_community_score(project)
+                # Note: update_project_community_score already updates proof_score
 
                 # Update Redis cache
                 key = vote_service.KEY_VOTE_STATE.format(project_id=project_id)

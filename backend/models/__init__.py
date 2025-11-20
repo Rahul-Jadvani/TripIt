@@ -12,6 +12,8 @@ from .chain import Chain, ChainProject, ChainProjectRequest, ChainFollower, Chai
 from .chain_post import ChainPost, ChainPostReaction
 from .notification import Notification
 from .user_stats import UserDashboardStats
+from .admin_user import AdminUser
+from .admin_otp import AdminOTP
 
 __all__ = [
     'User',
@@ -30,5 +32,7 @@ __all__ = [
     'ChainPost',
     'ChainPostReaction',
     'Notification',
-    'UserDashboardStats'
+    'UserDashboardStats',
+    'AdminUser',
+    'AdminOTP'
 ]

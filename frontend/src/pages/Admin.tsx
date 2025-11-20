@@ -14,6 +14,7 @@ import { Shield, Users, Award, FolderOpen, TrendingUp, CheckCircle, XCircle, Loa
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { adminService } from '@/services/api';
+import { adminApi } from '@/services/adminApi';
 import { formatScore, getProjectScore } from '@/utils/score';
 import {
   useAdminStats,
@@ -44,6 +45,8 @@ import {
 } from '@/hooks/useAdminChains';
 import CoffeeLoader from '@/components/CoffeeLoader';
 import { AdminScoringConfig } from '@/components/AdminScoringConfig';
+import { AdminUserManagement } from '@/components/AdminUserManagement';
+import { AdminOTPLogin } from '@/components/AdminOTPLogin';
 
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -1054,6 +1057,29 @@ export default function Admin() {
   const [validatorTab, setValidatorTab] = useState('current');
   const [investorTab, setInvestorTab] = useState('current');
 
+  // OTP Authentication state
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check admin authentication on mount
+  useEffect(() => {
+    const checkAdminAuth = async () => {
+      try {
+        const response = await adminApi.checkAuth();
+        if (response.data.status === 'success' && response.data.authenticated) {
+          setIsAdminAuthenticated(true);
+        }
+      } catch (error) {
+        // Not authenticated
+        setIsAdminAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAdminAuth();
+  }, []);
+
   // Search/filter state
   const [userSearch, setUserSearch] = useState('');
   const [userFilter, setUserFilter] = useState('all');
@@ -1325,19 +1351,51 @@ export default function Admin() {
 
   // ==================== Render ====================
 
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return <CoffeeLoader overlay captionCategory="admin" />;
+  }
+
+  // Show OTP login if not authenticated
+  if (!isAdminAuthenticated) {
+    return <AdminOTPLogin onSuccess={() => setIsAdminAuthenticated(true)} />;
+  }
+
   // Show loading animation on first load
   if ((usersLoading || validatorsLoading || projectsLoading) && users.length === 0 && validators.length === 0 && projects.length === 0) {
     return <CoffeeLoader overlay captionCategory="admin" />;
   }
 
+  const handleAdminLogout = async () => {
+    try {
+      await adminApi.logout();
+      setIsAdminAuthenticated(false);
+      showToast({
+        title: 'Logged Out',
+        description: 'Admin session ended',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force logout even if API call fails
+      setIsAdminAuthenticated(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Shield className="h-8 w-8 text-primary" />
+              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            </div>
+            <p className="text-muted-foreground">Manage users, validators, projects, and platform settings</p>
+          </div>
+          <Button variant="outline" onClick={handleAdminLogout}>
+            Logout
+          </Button>
         </div>
-        <p className="text-muted-foreground">Manage users, validators, projects, and platform settings</p>
       </div>
 
       <Card className="mb-6 border-dashed border-primary/40 bg-secondary/10">
@@ -1361,7 +1419,7 @@ export default function Admin() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="analytics">
             <TrendingUp className="h-4 w-4 mr-2" />
             Analytics
@@ -1393,6 +1451,10 @@ export default function Admin() {
           <TabsTrigger value="feedback">
             <MessageSquare className="h-4 w-4 mr-2" />
             Feedback
+          </TabsTrigger>
+          <TabsTrigger value="admins">
+            <Shield className="h-4 w-4 mr-2 text-purple-600" />
+            Admins
           </TabsTrigger>
         </TabsList>
 
@@ -2650,6 +2712,11 @@ export default function Admin() {
               <FeedbackManagement />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Admin Management Tab */}
+        <TabsContent value="admins" className="space-y-6 mt-6">
+          <AdminUserManagement />
         </TabsContent>
       </Tabs>
     </div>

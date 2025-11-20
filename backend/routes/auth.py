@@ -17,7 +17,6 @@ from schemas.user import UserRegisterSchema, UserLoginSchema
 from utils.validators import validate_email, validate_username, validate_password
 from utils.helpers import success_response, error_response
 from utils.decorators import token_required
-from utils.init_admins import check_and_promote_admin
 from utils.cache import CacheService
 
 auth_bp = Blueprint('auth', __name__)
@@ -57,10 +56,6 @@ def register():
             email_verified=True  # Auto-verify for MVP (no email service yet)
         )
         user.set_password(validated_data['password'])
-
-        # Check if email should be auto-promoted to admin
-        if check_and_promote_admin(validated_data['email']):
-            user.is_admin = True 
 
         db.session.add(user)
         db.session.commit()

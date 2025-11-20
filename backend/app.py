@@ -94,10 +94,6 @@ def create_app(config_name=None):
             print("WARNING: No database tables found after db.create_all()")
             print("Check that models are properly defined and imported.")
 
-        # Initialize default admins
-        from utils.init_admins import init_default_admins
-        init_default_admins()
-
         # PERFORMANCE: Initialize Redis Cache (Instagram-style instant updates)
         try:
             redis_url = os.getenv('REDIS_URL')

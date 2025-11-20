@@ -86,4 +86,85 @@ export const adminApi = {
   getStats: () => {
     return api.get('/admin/stats');
   },
+
+  // ============================================================================
+  // ADMIN OTP AUTHENTICATION
+  // ============================================================================
+
+  /**
+   * Request OTP code for admin login
+   */
+  requestOTP: (email: string) => {
+    return api.post('/admin/request-otp', { email });
+  },
+
+  /**
+   * Verify OTP code and create admin session
+   */
+  verifyOTP: (email: string, otpCode: string) => {
+    return api.post('/admin/verify-otp', {
+      email,
+      otp_code: otpCode
+    }, {
+      withCredentials: true  // Important for session cookies
+    });
+  },
+
+  /**
+   * Check admin authentication status
+   */
+  checkAuth: () => {
+    return api.get('/admin/check', {
+      withCredentials: true
+    });
+  },
+
+  /**
+   * Logout admin
+   */
+  logout: () => {
+    return api.post('/admin/logout', {}, {
+      withCredentials: true
+    });
+  },
+
+  // ============================================================================
+  // ADMIN USER MANAGEMENT (Root Admin Only)
+  // ============================================================================
+
+  /**
+   * List all admin users
+   */
+  listAdmins: () => {
+    return api.get('/admin/admins', {
+      withCredentials: true
+    });
+  },
+
+  /**
+   * Add new admin user
+   */
+  addAdmin: (email: string) => {
+    return api.post('/admin/admins/add', { email }, {
+      withCredentials: true
+    });
+  },
+
+  /**
+   * Remove admin user
+   */
+  removeAdmin: (adminId: string) => {
+    return api.delete(`/admin/admins/${adminId}`, {
+      withCredentials: true
+    });
+  },
+
+  /**
+   * Toggle admin active status
+   */
+  toggleAdminActive: (adminId: string) => {
+    return api.post(`/admin/admins/${adminId}/toggle-active`, {}, {
+      withCredentials: true
+    });
+  },
 };

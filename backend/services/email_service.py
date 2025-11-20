@@ -539,3 +539,138 @@ class EmailService:
             "FRONTEND_APP_URL", "https://discoveryplatform.netlify.app"
         ).rstrip("/")
         return f"{frontend_base}/validator"
+
+    @classmethod
+    def send_admin_otp_email(cls, *, email: str, otp_code: str) -> bool:
+        """Send OTP code to admin email for authentication."""
+        if not email or not otp_code:
+            current_app.logger.warning(
+                "[EmailService] Cannot send admin OTP email - email or OTP code missing"
+            )
+            return False
+
+        if not cls.is_enabled():
+            current_app.logger.info("[EmailService] ZeptoMail disabled - admin OTP email skipped")
+            return False
+
+        config = current_app.config
+
+        subject = "Your Admin Login OTP for Zer0"
+        html_body = cls._build_admin_otp_html(email=email, otp_code=otp_code)
+        text_body = cls._build_admin_otp_text(otp_code=otp_code)
+
+        payload = {
+            "from": {
+                "address": config["ZEPTO_SENDER_ADDRESS"],
+                "name": config.get("ZEPTO_SENDER_NAME", "Team Zer0"),
+            },
+            "to": [
+                {
+                    "email_address": {
+                        "address": email,
+                        "name": "Admin",
+                    }
+                }
+            ],
+            "subject": subject,
+            "htmlbody": html_body,
+            "textbody": text_body,
+        }
+
+        current_app.logger.info(
+            "[EmailService] Sending admin OTP email via Zepto - email=%s",
+            email,
+        )
+
+        headers = {
+            "authorization": f"Zoho-enczapikey {config['ZEPTO_SEND_MAIL_TOKEN']}",
+            "content-type": "application/json",
+        }
+
+        try:
+            response = requests.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            )
+            response.raise_for_status()
+            return True
+        except requests.RequestException as exc:
+            body = getattr(exc.response, "text", "") if hasattr(exc, "response") else ""
+            logging.exception(
+                "[EmailService] Failed to send admin OTP email: %s | response=%s",
+                exc,
+                body[:500],
+            )
+            return False
+
+    @classmethod
+    def _build_admin_otp_html(cls, *, email: str, otp_code: str) -> str:
+        """Branded HTML for admin OTP email."""
+        return f"""<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Login OTP</title>
+  </head>
+  <body style="margin:0;padding:24px;background:#050A13;font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;color:#F8FBFF;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      <tr>
+        <td align="center">
+          <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background:{cls.BRAND_PRIMARY};border-radius:18px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;box-shadow:0 25px 60px rgba(14,26,75,0.35);">
+            <tr>
+              <td style="padding:32px 32px 16px;background:linear-gradient(135deg,{cls.BRAND_GRADIENT_START}, {cls.BRAND_GRADIENT_END});color:#0B0B0B;font-size:20px;font-weight:600;">
+                <span style="text-transform:uppercase;letter-spacing:2px;font-size:13px;color:#0B0B0B;opacity:0.9;">ZER0 ADMIN</span>
+                <div style="font-size:26px;font-weight:700;margin-top:6px;color:#0B0B0B;">Admin Login OTP</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 24px;">
+                <p style="margin:0 0 18px;font-size:16px;color:#F8FAFC;">Hello,</p>
+                <p style="margin:0 0 18px;line-height:1.6;color:{cls.ACCENT_TEXT};">
+                  Use this OTP code to authenticate your admin session on Zer0:
+                </p>
+                <div style="background:rgba(255,255,255,0.03);padding:24px;border-radius:14px;border:2px solid {cls.BRAND_GRADIENT_START};margin-bottom:24px;text-align:center;">
+                  <div style="font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#FACC15;margin-bottom:10px;">Your OTP Code</div>
+                  <div style="font-size:42px;font-weight:700;color:#FFFFFF;letter-spacing:8px;font-family:monospace;">{otp_code}</div>
+                  <div style="margin-top:12px;color:#E5E7EB;font-size:14px;">Valid for 10 minutes</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.02);padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+                  <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.5;">
+                    <strong style="color:#FACC15;">Security Notice:</strong> This code is valid for 10 minutes and can only be used once.
+                    If you didn't request this login, please ignore this email.
+                  </p>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 32px;">
+                <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:0 0 18px;" />
+                <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5;">
+                  This is an automated security email from Zer0 Admin Authentication System.<br/>
+                  For security questions, contact the development team.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"""
+
+    @staticmethod
+    def _build_admin_otp_text(*, otp_code: str) -> str:
+        """Plain text version of admin OTP email."""
+        lines = [
+            "Hello,",
+            "",
+            "Use this OTP code to authenticate your admin session on Zer0:",
+            "",
+            f"OTP Code: {otp_code}",
+            "",
+            "This code is valid for 10 minutes and can only be used once.",
+            "If you didn't request this login, please ignore this email.",
+            "",
+            "---",
+            "Zer0 Admin Authentication System",
+        ]
+        return "\n".join(lines)

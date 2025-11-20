@@ -106,21 +106,16 @@ def optional_auth(f):
 
 
 def admin_or_session_required(f):
-    """Decorator that accepts both JWT admin token OR session-based admin auth OR password in header"""
+    """Decorator that accepts both JWT admin token OR session-based admin auth (OTP-verified)"""
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Check for admin password in header (for admin+validator page)
-        admin_password = request.headers.get('X-Admin-Password')
-        if admin_password == 'Admin':
-            # Return special admin_session ID
-            return f('admin_session', *args, **kwargs)
-
-        # Check for session-based admin authentication
+        # Check for session-based admin authentication (OTP-verified)
         if session.get('admin_authenticated'):
-            # Return special admin_session ID
-            return f('admin_session', *args, **kwargs)
+            # Return the admin ID from session
+            admin_id = session.get('admin_id', 'admin_session')
+            return f(admin_id, *args, **kwargs)
 
-        # If no session/password, check for JWT token
+        # If no session, check for JWT token
         try:
             verify_jwt_in_request()
             user_id = get_jwt_identity()
