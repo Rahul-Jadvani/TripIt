@@ -84,12 +84,21 @@ export default function Register() {
       if (import.meta.env.DEV) {
         console.log('🚀 Attempting registration with:', { email, username });
       }
-      await register(email, password, username);
+      const response = await register(email, password, username);
       if (import.meta.env.DEV) {
-        console.log('✅ Registration successful');
+        console.log('✅ Registration successful', response);
       }
-      toast.success('Account created successfully! Please log in.');
-      navigate('/login');
+
+      // If user is now logged in (OAuth user setting password), navigate to home
+      // Otherwise navigate to login
+      const isLoggedIn = localStorage.getItem('token');
+      if (isLoggedIn) {
+        toast.success('Password set successfully! You are now logged in.');
+        navigate('/');
+      } else {
+        toast.success('Account created successfully! Please log in.');
+        navigate('/login');
+      }
     } catch (error: any) {
       if (import.meta.env.DEV) {
         console.error('❌ Registration error:', {
@@ -99,7 +108,20 @@ export default function Register() {
           errorMessage: error.message,
         });
       }
-      toast.error(error.response?.data?.message || error.message || 'Failed to create account');
+
+      // Extract error message properly
+      let errorMessage = 'Failed to create account';
+      if (error.response?.data) {
+        // Backend returns {status: 'error', error: 'Error Type', message: 'Details'}
+        errorMessage = error.response.data.message || error.response.data.error || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      if (import.meta.env.DEV) {
+        console.log('🔔 Showing toast with message:', errorMessage);
+      }
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

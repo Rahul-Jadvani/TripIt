@@ -13,10 +13,9 @@ import traceback
 
 
 class CallbackTask(Task):
-    """Base task with Flask app context"""
+    """Base task with Flask app context - reuses existing app instance"""
     def __call__(self, *args, **kwargs):
-        from app import create_app
-        app = create_app()
+        from app import app  # Import existing app instance instead of creating new one
         with app.app_context():
             return self.run(*args, **kwargs)
 

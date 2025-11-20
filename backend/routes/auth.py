@@ -37,8 +37,46 @@ def register():
         validated_data = schema.load(data)
 
         # Check if user already exists
-        if User.query.filter_by(email=validated_data['email']).first():
-            return error_response('User already exists', 'Email is already registered', 409)
+        existing_user = User.query.filter_by(email=validated_data['email']).first()
+        if existing_user:
+            # Check if this is an OAuth account without a password
+            # OAuth accounts have a random token as password, we'll allow them to set a real password
+            try:
+                # Try to authenticate with the stored password - OAuth accounts will have random tokens
+                # that won't match any user input, so we can safely check if they need to set a password
+
+                # If user has logged in via OAuth (has avatar_url or github_connected)
+                # and the username matches, allow them to set a password
+                if (existing_user.avatar_url or existing_user.github_connected) and \
+                   existing_user.username == validated_data['username']:
+                    # This is an OAuth user trying to set a password - allow it
+                    print(f"[Auth] OAuth user {existing_user.email} setting password for first time")
+                    existing_user.set_password(validated_data['password'])
+                    db.session.commit()
+
+                    # Generate tokens
+                    access_token = create_access_token(identity=existing_user.id)
+                    refresh_token = create_refresh_token(identity=existing_user.id)
+
+                    return success_response({
+                        'user': existing_user.to_dict(include_email=True),
+                        'tokens': {
+                            'access': access_token,
+                            'refresh': refresh_token
+                        }
+                    }, 'Password set successfully! You can now sign in with email and password.', 200)
+
+                # Otherwise, user already exists with different username or is a regular account
+                error_msg = 'This email is already registered.'
+                if existing_user.avatar_url or existing_user.github_connected:
+                    # OAuth user with different username
+                    error_msg += ' If you signed up with Google or GitHub, please use that method to sign in, or use the same username to set a password.'
+                else:
+                    error_msg += ' Please use the login page to sign in.'
+                return error_response('User already exists', error_msg, 409)
+            except Exception as e:
+                print(f"[Auth] Error checking existing user: {e}")
+                return error_response('User already exists', 'This email is already registered. Please sign in.', 409)
 
         if User.query.filter_by(username=validated_data['username']).first():
             return error_response('Username taken', 'Username is already in use', 409)
@@ -62,6 +100,13 @@ def register():
 
         # Invalidate search cache when a new user is created
         CacheService.invalidate_search_results()
+
+        # Send welcome email
+        try:
+            from services.email_service import EmailService
+            EmailService.send_welcome_email(user=user)
+        except Exception as email_err:
+            print(f"[Auth] Warning: failed to send welcome email: {email_err}")
 
         # Generate tokens
         access_token = create_access_token(identity=user.id)
@@ -342,6 +387,13 @@ def google_callback():
             # Invalidate search cache when a new user is created via OAuth
             CacheService.invalidate_search_results()
 
+            # Send welcome email for new OAuth users
+            try:
+                from services.email_service import EmailService
+                EmailService.send_welcome_email(user=user)
+            except Exception as email_err:
+                print(f"[Auth] Warning: failed to send welcome email for Google OAuth: {email_err}")
+
         if not user.is_active:
             return redirect(f"{frontend_url}/login?google_error=account_disabled")
 
@@ -472,6 +524,13 @@ def github_callback():
                 db.session.add(user)
                 db.session.commit()
                 CacheService.invalidate_search_results()
+
+                # Send welcome email for new OAuth users
+                try:
+                    from services.email_service import EmailService
+                    EmailService.send_welcome_email(user=user)
+                except Exception as email_err:
+                    print(f"[Auth] Warning: failed to send welcome email for GitHub OAuth: {email_err}")
 
             if not user.is_active:
                 frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]

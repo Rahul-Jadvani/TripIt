@@ -188,7 +188,19 @@ def create_app(config_name=None):
 
         # AI SCORING: Start Celery worker and beat scheduler
         # Skip if disabled (e.g., during testing or if running Celery separately)
-        if not app.config.get('TESTING') and not os.environ.get('DISABLE_CELERY'):
+        # CRITICAL: Also skip if we're already inside a Celery worker to prevent infinite spawn loop
+        # Check if we're inside a Celery task by trying to access current_task.request
+        is_inside_celery_worker = False
+        try:
+            from celery import current_task
+            # If we can access request, we're inside a task
+            _ = current_task.request
+            is_inside_celery_worker = True
+        except (AttributeError, RuntimeError):
+            # Not inside a Celery task
+            is_inside_celery_worker = False
+
+        if not app.config.get('TESTING') and not os.environ.get('DISABLE_CELERY') and not is_inside_celery_worker:
             from tasks.retry_failed_scores import setup_periodic_tasks
             from celery_app import celery
             import threading
@@ -220,6 +232,20 @@ def create_app(config_name=None):
                 except Exception as e:
                     print(f"[AI SCORING] Celery beat error: {e}")
 
+            def run_vote_sync_scheduler():
+                """Fallback scheduler for vote sync - runs every 60 seconds"""
+                import time
+                print("[VOTE SYNC] Starting fallback vote sync scheduler...")
+                while True:
+                    try:
+                        time.sleep(60)  # Wait 60 seconds
+                        # Queue the task asynchronously - if worker is busy, it gets queued
+                        from tasks.vote_tasks import sync_votes_to_db
+                        sync_votes_to_db.delay()
+                        print(f"[VOTE SYNC] Vote sync task queued")
+                    except Exception as e:
+                        print(f"[VOTE SYNC] Error queuing sync task: {e}")
+
             # Start Celery worker in background thread
             worker_thread = threading.Thread(target=run_celery_worker, daemon=True)
             worker_thread.start()
@@ -230,6 +256,11 @@ def create_app(config_name=None):
             beat_thread.start()
             print("[AI SCORING] Celery beat scheduler started in background")
             print("[AI SCORING] Retry failed scores task scheduled (every 30 minutes)")
+
+            # Start fallback vote sync scheduler (more reliable than beat on Windows)
+            vote_sync_thread = threading.Thread(target=run_vote_sync_scheduler, daemon=True)
+            vote_sync_thread.start()
+            print("[VOTE SYNC] Fallback vote sync scheduler started (every 60s)")
 
     # Health check
     @app.route('/health', methods=['GET'])
@@ -382,8 +413,9 @@ def register_error_handlers(app):
 if __name__ == '__main__':
     app = create_app()
     # Use socketio.run() instead of app.run() for WebSocket support
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
-
-
-# Create app instance for gunicorn
-app = create_app()
+    # CRITICAL: use_reloader=False to prevent Flask from spawning duplicate processes
+    # The reloader creates 2 processes which doubles all workers/connections
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True, use_reloader=False)
+else:
+    # Create app instance for gunicorn/production (only when imported as module)
+    app = create_app()

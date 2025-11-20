@@ -52,16 +52,36 @@ def update_project_community_score(project):
         community_score = upvote_score + comment_score
         project.community_score = round(min(community_score, 10), 2)
 
+        # CRITICAL: Update score_breakdown.community so frontend calculation matches
+        import json
+        if project.score_breakdown:
+            try:
+                breakdown = json.loads(project.score_breakdown) if isinstance(project.score_breakdown, str) else project.score_breakdown
+                if isinstance(breakdown, dict) and 'community' in breakdown:
+                    breakdown['community']['score'] = project.community_score
+                    breakdown['community']['upvotes'] = project.upvotes
+                    breakdown['community']['downvotes'] = project.downvotes
+                    breakdown['community']['comments'] = project.comment_count
+                    breakdown['community']['upvote_score'] = round(upvote_score, 2)
+                    breakdown['community']['comment_score'] = round(comment_score, 2)
+                    breakdown['community']['max_upvotes'] = max_upvotes
+                    breakdown['community']['max_comments'] = max_comments
+                    breakdown['community']['calculation'] = f"({project.upvotes}/{max_upvotes})x6 + ({project.comment_count}/{max_comments})x4"
+                    project.score_breakdown = json.dumps(breakdown)
+            except:
+                pass  # If breakdown is invalid, skip update
+
         # On-chain placeholder stays at 0 for now
         project.onchain_score = 0.0
 
-        # Recalculate total proof score
-        project.proof_score = (
+        # Recalculate total proof score (round to 1 decimal for precision)
+        project.proof_score = round(
             project.quality_score +
             project.verification_score +
             project.validation_score +
             project.community_score +
-            project.onchain_score
+            project.onchain_score,
+            1  # Round to 1 decimal place for display precision
         )
 
     except Exception as e:
@@ -73,6 +93,7 @@ def update_project_community_score(project):
             project.quality_score +
             project.verification_score +
             project.validation_score +
+            project.community_score +
             project.onchain_score
         )
 

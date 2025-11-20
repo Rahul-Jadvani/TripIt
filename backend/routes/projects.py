@@ -584,12 +584,13 @@ def get_project(user_id, project_id):
         # Check cache first (5 min TTL)
         cached = CacheService.get_cached_project(project_id)
         if cached:
-            # Still increment view count in background
+            # Still increment view count in background AND get fresh scores
             try:
                 project = Project.query.get(project_id)
                 if project:
                     project.view_count += 1
                     db.session.commit()
+
             except:
                 pass  # Don't fail if view increment fails
 
@@ -804,6 +805,19 @@ def create_project(user_id):
         project_data = project.to_dict(include_creator=True)
         SocketService.emit_project_created(project_data)
         SocketService.emit_leaderboard_updated()
+
+        # Send confirmation email to project owner
+        try:
+            from services.email_service import EmailService
+            from models.user import User
+            project_owner = User.query.get(user_id)
+            if project_owner:
+                EmailService.send_project_created_email(
+                    project_owner=project_owner,
+                    project=project
+                )
+        except Exception as email_err:
+            print(f"[Projects] Warning: failed to send project created email: {email_err}")
 
         return success_response(project_data, 'Project created', 201)
     except ValidationError as e:

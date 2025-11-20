@@ -96,8 +96,18 @@ def toggle_admin(admin_id, user_id):
         if not user:
             return jsonify({'status': 'error', 'message': 'User not found'}), 404
 
+        was_admin = user.is_admin
         user.is_admin = not user.is_admin
         db.session.commit()
+
+        # Send email notification
+        try:
+            EmailService.send_admin_role_changed_email(
+                user=user,
+                is_admin=user.is_admin
+            )
+        except Exception as email_err:
+            print(f"[Admin] Warning: failed to send admin role changed email: {email_err}")
 
         action = 'granted' if user.is_admin else 'removed'
         return jsonify({
@@ -124,11 +134,23 @@ def toggle_user_active(admin_id, user_id):
         if user_id == admin_id:
             return jsonify({'status': 'error', 'message': 'Cannot ban yourself'}), 400
 
+        was_active = user.is_active
         user.is_active = not user.is_active
         db.session.commit()
 
         # Invalidate search cache when user's active status changes
         CacheService.invalidate_search_results()
+
+        # Send email notification
+        try:
+            if user.is_active and not was_active:
+                # User was unbanned
+                EmailService.send_user_unbanned_email(user=user)
+            elif not user.is_active and was_active:
+                # User was banned
+                EmailService.send_user_banned_email(user=user, reason=None)
+        except Exception as email_err:
+            print(f"[Admin] Warning: failed to send user ban/unban email: {email_err}")
 
         action = 'activated' if user.is_active else 'banned'
         return jsonify({
@@ -532,11 +554,24 @@ def feature_project(user_id, project_id):
         if not project:
             return jsonify({'status': 'error', 'message': 'Project not found'}), 404
 
+        was_featured = project.is_featured
         project.is_featured = not project.is_featured
         db.session.commit()
 
         # Invalidate cache
         CacheService.invalidate_project(project_id)
+
+        # Send email notification when project is featured (not unfeatured)
+        if project.is_featured and not was_featured:
+            try:
+                project_owner = User.query.get(project.user_id)
+                if project_owner:
+                    EmailService.send_project_featured_email(
+                        project_owner=project_owner,
+                        project=project
+                    )
+            except Exception as email_err:
+                print(f"[Admin] Warning: failed to send project featured email: {email_err}")
 
         action = 'featured' if project.is_featured else 'unfeatured'
         return jsonify({
@@ -600,6 +635,16 @@ def approve_investor_request(user_id, request_id):
         # Send notification to the investor
         notify_investor_request_approved(investor_request.user_id, investor_request.name)
 
+        # Send approval email to the investor
+        try:
+            if user:
+                EmailService.send_investor_approved_email(
+                    investor=user,
+                    investor_name=investor_request.name
+                )
+        except Exception as email_err:
+            print(f"[Admin] Warning: failed to send investor approval email: {email_err}")
+
         return jsonify({
             'status': 'success',
             'message': 'Investor request approved',
@@ -628,6 +673,18 @@ def reject_investor_request(user_id, request_id):
 
         # Send notification to the investor
         notify_investor_request_rejected(investor_request.user_id)
+
+        # Send rejection email to the investor
+        try:
+            user = User.query.get(investor_request.user_id)
+            if user:
+                EmailService.send_investor_rejected_email(
+                    investor=user,
+                    investor_name=investor_request.name,
+                    reason=None  # Could add admin_notes field if needed
+                )
+        except Exception as email_err:
+            print(f"[Admin] Warning: failed to send investor rejection email: {email_err}")
 
         return jsonify({
             'status': 'success',

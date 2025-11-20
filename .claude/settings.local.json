@@ -6,7 +6,9 @@
       "Bash(python migrate_schema.py:*)",
       "Bash(python:*)",
       "Bash(chcp 65001:*)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(celery -A celery_app.celery inspect:*)",
+      "Bash(timeout 5 python:*)"
     ],
     "deny": [],
     "ask": []

@@ -104,6 +104,21 @@ def award_badge(user_id):
         SocketService.emit_badge_awarded(validated_data['project_id'], badge.to_dict(include_validator=True))
         SocketService.emit_leaderboard_updated()  # Badges affect leaderboard
 
+        # Send email notification to project owner
+        try:
+            from services.email_service import EmailService
+            project_owner = User.query.get(project.user_id)
+            validator_user = User.query.get(user_id)
+            if project_owner and validator_user:
+                EmailService.send_badge_awarded_email(
+                    project_owner=project_owner,
+                    project=project,
+                    badge_type=validated_data['badge_type'],
+                    validator=validator_user
+                )
+        except Exception as email_err:
+            print(f"[Badges] Warning: failed to send badge awarded email: {email_err}")
+
         return success_response(badge.to_dict(include_validator=True), 'Badge awarded', 201)
 
     except ValidationError as e:

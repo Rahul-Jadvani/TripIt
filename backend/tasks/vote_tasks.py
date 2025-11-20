@@ -15,10 +15,9 @@ import time
 
 
 class CallbackTask(Task):
-    """Base task with Flask app context"""
+    """Base task with Flask app context - reuses existing app instance"""
     def __call__(self, *args, **kwargs):
-        from app import create_app
-        app = create_app()
+        from app import app  # Import existing app instance instead of creating new one
         with app.app_context():
             return self.run(*args, **kwargs)
 
@@ -225,10 +224,14 @@ def sync_votes_to_db(self):
                 # 3.5. CRITICAL: Recalculate community score + total score after raw SQL update
                 # Raw SQL bypasses event listeners, so we must manually update scores
                 if result.rowcount > 0:
+                    # Expire session to fetch fresh data after raw SQL
+                    db.session.expire_all()
                     project = Project.query.get(project_id)
                     if project:
                         from models.event_listeners import update_project_community_score
                         update_project_community_score(project)
+                        # Explicitly mark project as modified so changes are committed
+                        db.session.add(project)
                         # Note: update_project_community_score already updates proof_score
 
                 # 4. Update Redis to match votes table truth
@@ -409,8 +412,13 @@ def reconcile_all_vote_counts(self, batch_size=100):
 
                 # CRITICAL: Recalculate community score + total score after raw SQL update
                 # Raw SQL bypasses event listeners, so we must manually update scores
+                # Expire and refresh project to get fresh data
+                db.session.expire(project)
+                db.session.refresh(project)
                 from models.event_listeners import update_project_community_score
                 update_project_community_score(project)
+                # Explicitly mark project as modified so changes are committed
+                db.session.add(project)
                 # Note: update_project_community_score already updates proof_score
 
                 # Update Redis cache

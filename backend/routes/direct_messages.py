@@ -74,12 +74,14 @@ def get_conversations(user_id):
     """Get all conversations for current user"""
     try:
         # Get all users current user has conversations with
+        # Note: We only group by User.id to avoid issues with JSON columns
         conversations = db.session.query(
-            User,
+            User.id,
             db.func.max(DirectMessage.created_at).label('last_message_time'),
             db.func.count(
                 db.case(
-                    (and_(DirectMessage.recipient_id == user_id, DirectMessage.is_read == False), 1)
+                    (and_(DirectMessage.recipient_id == user_id, DirectMessage.is_read == False), 1),
+                    else_=None
                 )
             ).label('unread_count')
         ).join(
@@ -98,22 +100,26 @@ def get_conversations(user_id):
 
         # OPTIMIZED: Fetch all last messages in a single query instead of N queries
         if conversations:
-            user_ids = [user.id for user, _, _ in conversations]
+            user_ids = [user_id for user_id, _, _ in conversations]
+
+            # Fetch full user objects for all conversation partners
+            users_dict = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()}
 
             # Subquery to get the latest message for each conversation
             from sqlalchemy import func
+            other_user_id_expr = db.case(
+                (DirectMessage.sender_id == user_id, DirectMessage.recipient_id),
+                else_=DirectMessage.sender_id
+            )
             subquery = db.session.query(
-                db.case(
-                    (DirectMessage.sender_id == user_id, DirectMessage.recipient_id),
-                    else_=DirectMessage.sender_id
-                ).label('other_user_id'),
+                other_user_id_expr.label('other_user_id'),
                 func.max(DirectMessage.created_at).label('max_time')
             ).filter(
                 or_(
                     DirectMessage.sender_id == user_id,
                     DirectMessage.recipient_id == user_id
                 )
-            ).group_by('other_user_id').subquery()
+            ).group_by(other_user_id_expr).subquery()
 
             # Get the actual last messages
             last_messages = db.session.query(DirectMessage).join(
@@ -134,10 +140,15 @@ def get_conversations(user_id):
                 last_message_dict[other_id] = msg
         else:
             last_message_dict = {}
+            users_dict = {}
 
         result = []
-        for user, last_message_time, unread_count in conversations:
-            last_message = last_message_dict.get(user.id)
+        for other_user_id, last_message_time, unread_count in conversations:
+            user = users_dict.get(other_user_id)
+            if not user:
+                continue
+
+            last_message = last_message_dict.get(other_user_id)
 
             result.append({
                 'user': user.to_dict(),
@@ -152,6 +163,9 @@ def get_conversations(user_id):
         }), 200
 
     except Exception as e:
+        import traceback
+        print(f"[DirectMessages] Error in get_conversations: {str(e)}")
+        print(f"[DirectMessages] Traceback: {traceback.format_exc()}")
         return jsonify({
             'status': 'error',
             'message': str(e)

@@ -292,6 +292,19 @@ def accept_request(user_id, request_id):
             }
         )
 
+        # Send email notification to investor
+        try:
+            from services.email_service import EmailService
+            investor = User.query.get(intro_request.investor_id)
+            if investor:
+                EmailService.send_intro_accepted_email(
+                    investor=investor,
+                    builder=current_user,
+                    project=intro_request.project
+                )
+        except Exception as email_err:
+            print(f"[IntroRequests] Warning: failed to send intro accepted email: {email_err}")
+
         return jsonify({
             'status': 'success',
             'message': 'Intro request accepted and conversation started',
@@ -332,6 +345,21 @@ def decline_request(user_id, request_id):
         # Invalidate cache for both users
         CacheService.invalidate_intro_requests(user_id)
         CacheService.invalidate_intro_requests(intro_request.investor_id)
+
+        # Send email notification to investor
+        try:
+            from services.email_service import EmailService
+            from models.user import User
+            investor = User.query.get(intro_request.investor_id)
+            builder = User.query.get(user_id)
+            if investor and builder:
+                EmailService.send_intro_declined_email(
+                    investor=investor,
+                    builder=builder,
+                    project=intro_request.project
+                )
+        except Exception as email_err:
+            print(f"[IntroRequests] Warning: failed to send intro declined email: {email_err}")
 
         return jsonify({
             'status': 'success',
