@@ -798,6 +798,90 @@ def migrate_comments(old_conn, new_conn, tables):
     print()
 
 
+def configure_database_settings(conn):
+    """Configure database settings for production performance"""
+    print("⚙️  Configuring database settings...")
+
+    # Detect database type (cloud vs local)
+    is_cloud_db = False
+    db_host = NEW_DB_URL.split('@')[1].split('/')[0].split(':')[0]
+
+    # Cloud database providers
+    cloud_providers = ['neon.tech', 'supabase.co', 'railway.app', 'render.com', 'aws.com', 'azure.com', 'googleapis.com']
+    if any(provider in db_host for provider in cloud_providers):
+        is_cloud_db = True
+
+    # Check if localhost/127.0.0.1 (local database)
+    is_local_db = db_host in ['localhost', '127.0.0.1', '::1']
+
+    if is_local_db:
+        print("  📍 Detected: Local PostgreSQL database")
+    elif is_cloud_db:
+        print(f"  ☁️  Detected: Cloud database ({db_host})")
+    else:
+        print(f"  🔍 Database: {db_host}")
+
+    print()
+
+    # Try to set max_connections (requires superuser or appropriate permissions)
+    try:
+        execute_sql(conn, "ALTER SYSTEM SET max_connections = 200;")
+        print("  ✅ Successfully set max_connections = 200")
+
+        if is_local_db:
+            print("  ⚠️  IMPORTANT: Restart PostgreSQL for this change to take effect")
+            print("  💡 Local database restart commands:")
+            print("     - Linux/macOS: sudo systemctl restart postgresql")
+            print("     - Windows: Restart PostgreSQL service from Services app")
+            print("     - Docker: docker restart <postgres-container-name>")
+        else:
+            print("  ⚠️  Note: Database restart required for this change to take effect")
+            if is_cloud_db:
+                print("  💡 Cloud databases usually restart automatically or via dashboard")
+
+    except Exception as e:
+        print(f"  ❌ Could not set max_connections automatically: {str(e)}")
+        print()
+
+        if is_local_db:
+            print("  📝 Manual configuration for LOCAL PostgreSQL:")
+            print("     1. Edit postgresql.conf file:")
+            print("        - Linux: /etc/postgresql/<version>/main/postgresql.conf")
+            print("        - Windows: C:\\Program Files\\PostgreSQL\\<version>\\data\\postgresql.conf")
+            print("        - macOS: /usr/local/var/postgres/postgresql.conf")
+            print("     2. Find and change: max_connections = 200")
+            print("     3. Restart PostgreSQL service")
+            print("     4. Verify with: SHOW max_connections;")
+        elif is_cloud_db:
+            print("  📝 Manual configuration for CLOUD database:")
+            print("     - NeonDB: Go to Dashboard → Settings → Connection pooling")
+            print("     - Supabase: Go to Database → Settings → Configuration")
+            print("     - Other providers: Check provider dashboard/settings")
+        else:
+            print("  📝 Manual configuration:")
+            print("     - Cloud: Update via provider dashboard")
+            print("     - Local: Edit postgresql.conf and set max_connections = 200")
+
+    print()
+
+    # Additional performance recommendations for local databases
+    if is_local_db:
+        print("  💡 Additional local PostgreSQL performance settings to consider:")
+        print("     - shared_buffers = 256MB (25% of RAM for dedicated server)")
+        print("     - effective_cache_size = 1GB (50-75% of RAM)")
+        print("     - work_mem = 16MB")
+        print("     - maintenance_work_mem = 128MB")
+        print("     - checkpoint_completion_target = 0.9")
+        print()
+
+    print("  ℹ️  Current application connection pool settings:")
+    print("     - pool_size: 20 connections (always maintained)")
+    print("     - max_overflow: 40 connections (during peak load)")
+    print("     - Total per process: up to 60 connections")
+    print("     - Recommended PostgreSQL max_connections: 200+")
+    print()
+
+
 def main():
     """Main migration orchestrator"""
     print("=" * 90)
@@ -816,6 +900,9 @@ def main():
     new_conn = connect_to_database(NEW_DB_URL)
     print("  ✓ Connected to NEW database")
     print()
+
+    # Configure database settings
+    configure_database_settings(new_conn)
 
     # Drop all existing objects
     drop_all_schema_objects(new_conn)
