@@ -7,16 +7,19 @@ interface SigningInLoaderProps {
 export function SigningInLoader({ message = 'Signing you in...' }: SigningInLoaderProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-        <div className="flex flex-col items-center gap-5">
-          <div className="cube-spinner">
-            <div />
-            <div />
-            <div />
-            <div />
+      <div
+        className="flex flex-col items-center"
+        style={{ fontFamily: "'Comic Sans MS', Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" }}
+      >
+        <div className="cube-spinner mb-8">
+          <div />
+          <div />
+          <div />
+          <div />
           <div />
           <div />
         </div>
-        <p className="text-white font-semibold text-sm sm:text-base">{message}</p>
+        <p className="text-white font-semibold text-sm sm:text-base mt-2">{message}</p>
       </div>
       <style>{`
         .cube-spinner {

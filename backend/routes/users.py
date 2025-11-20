@@ -65,7 +65,7 @@ def get_user_profile(user_id, username):
         normalized_username = (username or '').strip().lower()
 
         # Check cache (5 min TTL)
-        cache_key = f"user_profile:{normalized_username}"
+        cache_key = f"user_profile:v2:{normalized_username}"
         cached = CacheService.get(cache_key)
         if cached:
             from flask import jsonify
@@ -85,16 +85,13 @@ def get_user_profile(user_id, username):
         if not user:
             return error_response('Not found', 'User not found', 404)
 
-        # OPTIMIZED: Use a single query with count instead of lazy loading
+        # Use denormalized stats for karma, but always recompute project_count to ensure accuracy
         stats = user.dashboard_stats or UserDashboardStats.query.filter_by(user_id=user.id).first()
         karma_value = stats.karma() if stats else 0
-        if stats:
-            project_count = stats.project_count
-        else:
-            project_count = db.session.query(func.count(Project.id)).filter(
-                Project.user_id == user.id,
-                Project.is_deleted == False
-            ).scalar() or 0
+        project_count = db.session.query(func.count(Project.id)).filter(
+            Project.user_id == user.id,
+            Project.is_deleted == False
+        ).scalar() or 0
 
         profile = user.to_dict()
         profile['project_count'] = project_count
