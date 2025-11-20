@@ -33,6 +33,37 @@ def import_models():
     return True
 
 
+def initialize_root_admins():
+    """Initialize root admin users on startup"""
+    ROOT_ADMIN_EMAILS = [
+        'sameerkatte@gmail.com',
+        'saijadhav148@gmail.com',
+        'sarankumar.0x@gmail.com',
+        'zer0@z-0.io'
+    ]
+
+    try:
+        from models.user import User
+
+        # Update registered users to admin
+        updated_count = 0
+        for email in ROOT_ADMIN_EMAILS:
+            user = User.query.filter_by(email=email).first()
+            if user and not user.is_admin:
+                user.is_admin = True
+                db.session.add(user)
+                updated_count += 1
+                print(f"[ADMIN] Set {email} as root admin")
+
+        if updated_count > 0:
+            db.session.commit()
+            print(f"[ADMIN] Initialized {updated_count} root admin(s)")
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ADMIN] Error initializing root admins: {e}")
+
+
 def create_app(config_name=None):
     """Application factory"""
     if config_name is None:
@@ -93,6 +124,9 @@ def create_app(config_name=None):
         if not tables:
             print("WARNING: No database tables found after db.create_all()")
             print("Check that models are properly defined and imported.")
+
+        # Initialize root admin users
+        initialize_root_admins()
 
         # PERFORMANCE: Initialize Redis Cache (Instagram-style instant updates)
         try:

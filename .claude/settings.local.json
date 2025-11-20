@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(python3:*)",
-      "Bash(python check_onchain_column.py:*)"
+      "Bash(python check_onchain_column.py:*)",
+      "Bash(python migrate_schema.py:*)",
+      "Bash(python:*)",
+      "Bash(chcp 65001:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []

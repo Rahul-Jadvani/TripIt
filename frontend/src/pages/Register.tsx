@@ -14,25 +14,67 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-   const [oauthProvider, setOauthProvider] = useState<string | null>(null);
+  const [oauthProvider, setOauthProvider] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [errors, setErrors] = useState<{
+    username?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
   const pwdTimerRef = useRef<number | null>(null);
   const confirmTimerRef = useRef<number | null>(null);
   const oauthTimerRef = useRef<number | null>(null);
   const { register, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
+
+    // Username validation
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      newErrors.username = 'Username can only contain letters, numbers, hyphens, and underscores';
+    }
+
+    // Email validation
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    // Password validation
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+
+    // Confirm password validation
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
+    // Clear previous errors
+    setErrors({});
 
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+    // Validate form
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form');
       return;
     }
 
@@ -146,10 +188,16 @@ export default function Register() {
                     id="username"
                     placeholder="johndoe"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (errors.username) setErrors({ ...errors, username: undefined });
+                    }}
                     required
-                    className="text-sm sm:text-base h-9 sm:h-10"
+                    className={`text-sm sm:text-base h-9 sm:h-10 ${errors.username ? 'border-red-500 focus:ring-red-500' : ''}`}
                   />
+                  {errors.username && (
+                    <p className="text-xs text-red-500 mt-1">{errors.username}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5 sm:space-y-2">
                   <Label htmlFor="email" className="text-xs sm:text-sm">Email *</Label>
@@ -158,10 +206,16 @@ export default function Register() {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) setErrors({ ...errors, email: undefined });
+                    }}
                     required
-                    className="text-sm sm:text-base h-9 sm:h-10"
+                    className={`text-sm sm:text-base h-9 sm:h-10 ${errors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
                   />
+                  {errors.email && (
+                    <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5 sm:space-y-2">
                   <Label htmlFor="password" className="text-xs sm:text-sm">Password *</Label>
@@ -171,9 +225,12 @@ export default function Register() {
                       type={showPassword ? 'text' : 'password'}
                       placeholder="At least 8 characters"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (errors.password) setErrors({ ...errors, password: undefined });
+                      }}
                       required
-                      className="pr-10 sm:pr-12 text-sm sm:text-base h-9 sm:h-10"
+                      className={`pr-10 sm:pr-12 text-sm sm:text-base h-9 sm:h-10 ${errors.password ? 'border-red-500 focus:ring-red-500' : ''}`}
                     />
                     <button
                       type="button"
@@ -184,6 +241,9 @@ export default function Register() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {errors.password && (
+                    <p className="text-xs text-red-500 mt-1">{errors.password}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5 sm:space-y-2">
                   <Label htmlFor="confirmPassword" className="text-xs sm:text-sm">Confirm Password *</Label>
@@ -193,9 +253,12 @@ export default function Register() {
                       type={showConfirm ? 'text' : 'password'}
                       placeholder="Confirm your password"
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
+                      }}
                       required
-                      className="pr-10 sm:pr-12 text-sm sm:text-base h-9 sm:h-10"
+                      className={`pr-10 sm:pr-12 text-sm sm:text-base h-9 sm:h-10 ${errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : ''}`}
                     />
                     <button
                       type="button"
@@ -206,6 +269,9 @@ export default function Register() {
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {errors.confirmPassword && (
+                    <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>
+                  )}
                 </div>
               </div>
 
