@@ -160,18 +160,24 @@ def apply_for_investor(user_id):
 @investor_requests_bp.route('/apply', methods=['PUT'])
 @token_required
 def update_pending_application(user_id):
-    """Update pending investor application"""
+    """Update investor application/profile (pending or approved)"""
     try:
         data = request.get_json()
 
-        # Get existing pending request
-        investor_request = InvestorRequest.query.filter_by(user_id=user_id, status='pending').first()
+        # Allow editing even if the request is already approved
+        investor_request = InvestorRequest.query.filter_by(user_id=user_id).first()
 
         if not investor_request:
             return jsonify({
                 'status': 'error',
-                'message': 'No pending investor request found'
+                'message': 'No investor profile found'
             }), 404
+
+        if investor_request.status not in ['pending', 'approved']:
+            return jsonify({
+                'status': 'error',
+                'message': 'Your investor request cannot be updated at this time'
+            }), 400
 
         # Validate required fields (same as create)
         errors = {}

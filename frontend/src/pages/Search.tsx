@@ -113,7 +113,7 @@ export default function Search() {
           <div className="mb-10 card-elevated p-8">
             <h1 className="text-3xl font-black text-foreground mb-2">Search</h1>
             <p className="text-sm text-muted-foreground">
-              Find projects, builders, and hackathons on 0x.ship
+              Find projects, builders, and hackathons on Zer0
             </p>
           </div>
 
@@ -161,7 +161,27 @@ export default function Search() {
 
           {/* Loading State */}
           {loading && query && (
-            <ProjectCardSkeletonGrid count={3} />
+            <div className="space-y-8">
+              {/* Projects Section Skeleton */}
+              <div>
+                <div className="h-7 w-32 bg-secondary rounded mb-4"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="h-[520px] bg-secondary rounded-lg"></div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Users Section Skeleton */}
+              <div>
+                <div className="h-7 w-32 bg-secondary rounded mb-4"></div>
+                <div className="grid gap-4">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="card-elevated p-4 flex items-center gap-4 h-20"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Results or Empty State */}

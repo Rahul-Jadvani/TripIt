@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -547,7 +548,7 @@ function ChainsModerationSection() {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           <Input
-            placeholder="Search chains..."
+            placeholder="Search layerz..."
             value={chainSearch}
             onChange={(e) => setChainSearch(e.target.value)}
           />
@@ -567,13 +568,32 @@ function ChainsModerationSection() {
 
       {/* Chains List */}
       {chainsLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <Card key={idx} className="animate-pulse">
+              <CardContent className="py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 w-40 bg-secondary rounded"></div>
+                    <div className="h-4 w-48 bg-secondary rounded"></div>
+                    <div className="flex gap-3 mt-2">
+                      <div className="h-6 w-16 bg-secondary rounded-full"></div>
+                      <div className="h-6 w-24 bg-secondary rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-9 w-20 bg-secondary rounded"></div>
+                    <div className="h-9 w-20 bg-secondary rounded"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : chains.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No chains found
+            No layerz found
           </CardContent>
         </Card>
       ) : (
@@ -585,7 +605,7 @@ function ChainsModerationSection() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3 flex-wrap">
                       <Link
-                        to={`/chains/${chain.slug}`}
+                        to={`/layerz/${chain.slug}`}
                         className="text-lg font-bold hover:text-primary transition-colors flex items-center gap-1"
                       >
                         {chain.name}
@@ -730,7 +750,7 @@ function ChainsModerationSection() {
       {/* Stats */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Total Chains: {totalChains}</CardTitle>
+          <CardTitle className="text-sm">Total layerz: {totalChains}</CardTitle>
         </CardHeader>
       </Card>
     </div>
@@ -848,8 +868,21 @@ function FeedbackManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-4">
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <Card key={idx} className="animate-pulse">
+            <CardContent className="py-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="h-5 w-32 bg-secondary rounded"></div>
+                  <div className="h-5 w-20 bg-secondary rounded"></div>
+                </div>
+                <div className="h-4 w-full bg-secondary rounded"></div>
+                <div className="h-4 w-5/6 bg-secondary rounded"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -1015,7 +1048,8 @@ function FeedbackManagement() {
 }
 
 export default function Admin() {
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('analytics');
   const [validatorTab, setValidatorTab] = useState('current');
   const [investorTab, setInvestorTab] = useState('current');
@@ -1035,6 +1069,14 @@ export default function Admin() {
   });
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [currentValidatorForAssignment, setCurrentValidatorForAssignment] = useState<string>('');
+  const [bulkAssigningValidatorId, setBulkAssigningValidatorId] = useState<string | null>(null);
+  const [assigningSelectedValidatorId, setAssigningSelectedValidatorId] = useState<string | null>(null);
+
+  // Add validator by search state
+  const [validatorSearchQuery, setValidatorSearchQuery] = useState('');
+  const [validatorSearchResults, setValidatorSearchResults] = useState<any[]>([]);
+  const [isSearchingValidators, setIsSearchingValidators] = useState(false);
+  const [selectedValidatorForAdd, setSelectedValidatorForAdd] = useState<any>(null);
 
   // Badge state
   const [customBadgeName, setCustomBadgeName] = useState('');
@@ -1105,16 +1147,50 @@ export default function Admin() {
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: 'Copied!', description: `${label} copied to clipboard` });
+    showToast({ title: 'Copied!', description: `${label} copied to clipboard` });
   };
 
   const handleAddValidator = () => {
     if (!newValidatorEmail.trim()) {
-      toast({ title: 'Error', description: 'Email is required', variant: 'destructive' });
+      showToast({ title: 'Error', description: 'Email is required', variant: 'destructive' });
       return;
     }
     addValidatorMutation.mutate(newValidatorEmail, {
       onSuccess: () => setNewValidatorEmail(''),
+    });
+  };
+
+  const handleSearchValidators = async (query: string) => {
+    setValidatorSearchQuery(query);
+    if (query.trim().length < 2) {
+      setValidatorSearchResults([]);
+      return;
+    }
+
+    setIsSearchingValidators(true);
+    try {
+      const response = await adminService.getUsers({ search: query, perPage: 10 });
+      const payload = response.data?.data;
+      const users = Array.isArray(payload) ? payload : payload?.users || [];
+      // Filter out existing validators
+      const nonValidators = users.filter((user: any) => !user.is_validator);
+      setValidatorSearchResults(nonValidators);
+    } catch (error) {
+      console.error('Error searching validators:', error);
+      setValidatorSearchResults([]);
+    } finally {
+      setIsSearchingValidators(false);
+    }
+  };
+
+  const handleSelectValidatorForAdd = (user: any) => {
+    setSelectedValidatorForAdd(user);
+    addValidatorMutation.mutate(user.email, {
+      onSuccess: () => {
+        setSelectedValidatorForAdd(null);
+        setValidatorSearchQuery('');
+        setValidatorSearchResults([]);
+      },
     });
   };
 
@@ -1128,7 +1204,7 @@ export default function Admin() {
 
   const handleAwardCustomBadge = () => {
     if (!customBadgeProjectId || !customBadgeName || !customBadgeRationale) {
-      toast({ title: 'Error', description: 'All fields required', variant: 'destructive' });
+      showToast({ title: 'Error', description: 'All fields required', variant: 'destructive' });
       return;
     }
     awardCustomBadgeMutation.mutate({
@@ -1153,34 +1229,81 @@ export default function Admin() {
     deleteProjectMutation.mutate(projectId);
   };
 
+  const handleBulkAssignProjects = async (validatorId: string) => {
+    const category = (document.getElementById(`category-${validatorId}`) as HTMLSelectElement | null)?.value || 'all';
+    const limitValue = (document.getElementById(`limit-${validatorId}`) as HTMLInputElement | null)?.value || '50';
+    const parsedLimit = parseInt(limitValue, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50;
+    const priority = (document.getElementById(`priority-${validatorId}`) as HTMLSelectElement | null)?.value || 'normal';
+
+    setBulkAssigningValidatorId(validatorId);
+    try {
+      const response = await adminService.bulkAssignProjects({
+        validator_id: validatorId,
+        category_filter: category,
+        priority,
+        limit,
+      });
+      const assignedCount = response?.data?.data?.count ?? 0;
+      toast.success(`${assignedCount} project${assignedCount === 1 ? '' : 's'} assigned successfully!`);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects', 'infinite'] }),
+      ]);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to assign projects';
+      toast.error(message);
+    } finally {
+      setBulkAssigningValidatorId(null);
+    }
+  };
+
   const handleAssignSelectedProjects = async () => {
     if (!currentValidatorForAssignment || selectedProjects.length === 0) {
-      toast({ title: 'Error', description: 'Select projects and validator', variant: 'destructive' });
+      toast.error('Select projects and validator');
       return;
     }
 
+    setAssigningSelectedValidatorId(currentValidatorForAssignment);
+
     try {
-      const promises = selectedProjects.map(projectId =>
-        adminService.assignProjectToValidator({
-          validator_id: currentValidatorForAssignment,
-          project_id: projectId,
-          priority: 'normal'
-        })
+      const results = await Promise.allSettled(
+        selectedProjects.map(projectId =>
+          adminService.assignProjectToValidator({
+            validator_id: currentValidatorForAssignment,
+            project_id: projectId,
+            priority: 'normal'
+          })
+        )
       );
 
-      await Promise.all(promises);
-      toast({
-        title: 'Success',
-        description: `${selectedProjects.length} project(s) assigned successfully!`
-      });
+      const successes = results.filter(r => r.status === 'fulfilled').length;
+      const errors = results
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map(r => (r.reason?.response?.data?.message || r.reason?.message || 'Failed'));
+
+      if (successes > 0) {
+        toast.success(`${successes} project${successes === 1 ? '' : 's'} assigned successfully`);
+      }
+      if (errors.length > 0) {
+        const uniqueErrors = Array.from(new Set(errors));
+        toast.error(uniqueErrors.join('; '));
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects', 'infinite'] }),
+      ]);
       setSelectedProjects([]);
       setCurrentValidatorForAssignment('');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to assign some projects',
-        variant: 'destructive'
-      });
+    } catch (error: any) {
+      // toast.promise already surfaced the error; keep a fallback log
+      console.error('Assign projects failed', error);
+    } finally {
+      setAssigningSelectedValidatorId(null);
     }
   };
 
@@ -1257,7 +1380,7 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger value="chains">
             <Layers className="h-4 w-4 mr-2" />
-            Chains
+            layerz
           </TabsTrigger>
           <TabsTrigger value="badges">
             <Award className="h-4 w-4 mr-2" />
@@ -1351,8 +1474,25 @@ export default function Admin() {
           </div>
 
           {usersLoading && users.length === 0 ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <Card key={idx} className="animate-pulse">
+                  <CardContent className="flex items-center justify-between py-4">
+                    <div className="flex-1">
+                      <div className="h-5 w-32 bg-secondary rounded mb-2"></div>
+                      <div className="h-4 w-48 bg-secondary rounded mb-2"></div>
+                      <div className="flex gap-2 mt-2">
+                        <div className="h-6 w-16 bg-secondary rounded-full"></div>
+                        <div className="h-6 w-20 bg-secondary rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="h-9 w-24 bg-secondary rounded"></div>
+                      <div className="h-9 w-24 bg-secondary rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="space-y-3">
@@ -1374,16 +1514,34 @@ export default function Admin() {
                         size="sm"
                         variant="outline"
                         onClick={() => toggleUserAdminMutation.mutate(user.id)}
+                        disabled={toggleUserAdminMutation.isPending}
                       >
-                        {user.is_admin ? 'Remove Admin' : 'Make Admin'}
+                        {toggleUserAdminMutation.isPending ? (
+                          <>
+                            <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          user.is_admin ? 'Remove Admin' : 'Make Admin'
+                        )}
                       </Button>
                       <Button
                         size="sm"
                         variant={user.is_active ? 'destructive' : 'default'}
                         onClick={() => toggleUserActiveMutation.mutate(user.id)}
+                        disabled={toggleUserActiveMutation.isPending}
                       >
-                        <Ban className="h-4 w-4 mr-1" />
-                        {user.is_active ? 'Ban' : 'Unban'}
+                        {toggleUserActiveMutation.isPending ? (
+                          <>
+                            <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                            {user.is_active ? 'Banning...' : 'Unbanning...'}
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="h-4 w-4 mr-1" />
+                            {user.is_active ? 'Ban' : 'Unban'}
+                          </>
+                        )}
                       </Button>
                     </div>
                   </CardContent>
@@ -1398,23 +1556,72 @@ export default function Admin() {
           <Card>
             <CardHeader>
               <CardTitle>Add Validator</CardTitle>
-              <CardDescription>Add a user as validator by email</CardDescription>
+              <CardDescription>Search and add a user as validator</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
+            <CardContent className="space-y-3">
+              <div className="relative">
                 <Input
-                  placeholder="validator@example.com"
-                  value={newValidatorEmail}
-                  onChange={(e) => setNewValidatorEmail(e.target.value)}
+                  placeholder="Search by username or email..."
+                  value={validatorSearchQuery}
+                  onChange={(e) => handleSearchValidators(e.target.value)}
+                  disabled={isSearchingValidators}
                 />
-                <Button onClick={handleAddValidator}>Add Validator</Button>
+                {isSearchingValidators && (
+                  <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
               </div>
+
+              {/* Search Results */}
+              {validatorSearchResults.length > 0 && (
+                <div className="border rounded-md max-h-64 overflow-y-auto space-y-1 bg-muted/30 p-2">
+                  {validatorSearchResults.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleSelectValidatorForAdd(user)}
+                      disabled={addValidatorMutation.isPending}
+                      className="w-full text-left p-3 rounded-md hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">{user.username}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+                      {addValidatorMutation.isPending && selectedValidatorForAdd?.id === user.id && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {validatorSearchQuery.trim().length >= 2 && validatorSearchResults.length === 0 && !isSearchingValidators && (
+                <p className="text-sm text-muted-foreground p-2">No users found</p>
+              )}
+
+              {validatorSearchQuery.trim().length < 2 && (
+                <p className="text-sm text-muted-foreground p-2">Type at least 2 characters to search</p>
+              )}
             </CardContent>
           </Card>
 
           {validatorsLoading && validators.length === 0 ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <Card key={idx} className="animate-pulse">
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-5 w-40 bg-secondary rounded"></div>
+                        <div className="h-4 w-32 bg-secondary rounded mb-2"></div>
+                        <div className="flex gap-2">
+                          <div className="h-6 w-16 bg-secondary rounded-full"></div>
+                          <div className="h-6 w-20 bg-secondary rounded-full"></div>
+                        </div>
+                      </div>
+                      <div className="h-9 w-32 bg-secondary rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="space-y-3">
@@ -1562,27 +1769,17 @@ export default function Admin() {
                               </div>
                               <Button
                                 className="w-full"
-                                onClick={() => {
-                                  const category = (document.getElementById(`category-${validator.id}`) as HTMLSelectElement)?.value;
-                                  const limit = parseInt((document.getElementById(`limit-${validator.id}`) as HTMLInputElement)?.value || '50');
-                                  const priority = (document.getElementById(`priority-${validator.id}`) as HTMLSelectElement)?.value;
-
-                                  toast.promise(
-                                    adminService.bulkAssignProjects({
-                                      validator_id: validator.id,
-                                      category_filter: category,
-                                      priority,
-                                      limit
-                                    }),
-                                    {
-                                      loading: 'Assigning projects...',
-                                      success: (res) => `${res.data.data.count} projects assigned successfully!`,
-                                      error: 'Failed to assign projects'
-                                    }
-                                  );
-                                }}
+                                onClick={() => handleBulkAssignProjects(validator.id)}
+                                disabled={bulkAssigningValidatorId === validator.id}
                               >
-                                Assign Projects
+                                {bulkAssigningValidatorId === validator.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Assigning...
+                                  </>
+                                ) : (
+                                  'Assign Projects'
+                                )}
                               </Button>
                             </div>
                           </DialogContent>
@@ -1663,9 +1860,16 @@ export default function Admin() {
                               <Button
                                 className="w-full"
                                 onClick={handleAssignSelectedProjects}
-                                disabled={selectedProjects.length === 0}
+                                disabled={selectedProjects.length === 0 || assigningSelectedValidatorId === currentValidatorForAssignment}
                               >
-                                Assign Selected Projects
+                                {assigningSelectedValidatorId === currentValidatorForAssignment ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Assigning...
+                                  </>
+                                ) : (
+                                  'Assign Selected Projects'
+                                )}
                               </Button>
                             </div>
                           </DialogContent>
@@ -1770,8 +1974,16 @@ export default function Admin() {
                           size="sm"
                           variant="destructive"
                           onClick={() => removeValidatorMutation.mutate(validator.id)}
+                          disabled={removeValidatorMutation.isPending}
                         >
-                          Remove
+                          {removeValidatorMutation.isPending ? (
+                            <>
+                              <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                              Removing...
+                            </>
+                          ) : (
+                            'Remove'
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -1829,8 +2041,16 @@ export default function Admin() {
                         size="sm"
                         variant="outline"
                         onClick={() => toggleProjectFeaturedMutation.mutate(project.id)}
+                        disabled={toggleProjectFeaturedMutation.isPending}
                       >
-                        {project.is_featured ? 'Unfeature' : 'Feature'}
+                        {toggleProjectFeaturedMutation.isPending ? (
+                          <>
+                            <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          project.is_featured ? 'Unfeature' : 'Feature'
+                        )}
                       </Button>
                       <Button
                         size="sm"
@@ -1972,17 +2192,37 @@ export default function Admin() {
                               <Button
                                 size="sm"
                                 onClick={() => approveInvestorMutation.mutate(request.id)}
+                                disabled={approveInvestorMutation.isPending}
                               >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Approve
+                                {approveInvestorMutation.isPending ? (
+                                  <>
+                                    <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                                    Approving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Approve
+                                  </>
+                                )}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => rejectInvestorMutation.mutate(request.id)}
+                                disabled={rejectInvestorMutation.isPending}
                               >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Reject
+                                {rejectInvestorMutation.isPending ? (
+                                  <>
+                                    <div className="h-4 w-4 mr-1 border-2 border-transparent border-t-current rounded-full animate-spin" />
+                                    Rejecting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>

@@ -101,7 +101,7 @@ export const Footer = memo(function Footer() {
               </li>
               <li>
                 <Link to="/gallery/hackathon" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>Gallery</span>
+                  <span>Explore</span>
                 </Link>
               </li>
             </ul>
@@ -231,7 +231,7 @@ export const Footer = memo(function Footer() {
               <Twitter className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             </a>
             <a
-              href="mailto:support@0x.ship"
+              href="mailto:support@zer0.pro"
               className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
               aria-label="Email"
             >

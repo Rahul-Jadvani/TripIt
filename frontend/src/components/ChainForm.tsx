@@ -203,7 +203,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">
-              Chain Name <span className="text-destructive">*</span>
+              Layerz Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
@@ -453,7 +453,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
       {/* Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Chain Settings</CardTitle>
+          <CardTitle>Layerz Settings</CardTitle>
           <CardDescription>
             Configure privacy and approval settings
           </CardDescription>
@@ -463,7 +463,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 flex-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="is_public">Public Chain</Label>
+                <Label htmlFor="is_public">Public layerz</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -471,7 +471,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>
-                        Public chains are visible to everyone. Private chains are only
+                        Public layerz are visible to everyone. Private layerz are only
                         visible to followers and the owner.
                       </p>
                     </TooltipContent>
@@ -530,7 +530,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
               {chain ? 'Saving...' : 'Creating...'}
             </>
           ) : (
-            <>{chain ? 'Save Changes' : 'Create Chain'}</>
+            <>{chain ? 'Save Changes' : 'Create layerz'}</>
           )}
         </Button>
       </div>

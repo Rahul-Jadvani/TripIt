@@ -36,15 +36,12 @@ export function VoteButtons({
 
   // Subscribe to cache changes for THIS project
   useEffect(() => {
-    console.log('[VoteButtons] Setting up cache subscription for project:', projectId);
-
     // Initial read
     const projectData = queryClient.getQueryData(['project', projectId]) as any;
     if (projectData?.data) {
       const data = projectData.data;
       const newCount = (data.upvotes || 0) - (data.downvotes || 0);
       const newVote = data.user_vote || data.userVote || null;
-      console.log('[VoteButtons] Initial cache read:', { upvotes: data.upvotes, downvotes: data.downvotes, newCount, newVote });
       setLiveVoteCount(newCount);
       setLiveUserVote(newVote);
     }
@@ -58,22 +55,18 @@ export function VoteButtons({
 
       // Check if this is a single project update
       if (queryKey[0] === 'project' && queryKey[1] === projectId) {
-        console.log('[VoteButtons] Cache updated for project detail:', projectId, event.type);
         shouldUpdate = true;
       }
 
       // Check if this is a projects list update (contains our project)
       if (queryKey[0] === 'projects') {
-        console.log('[VoteButtons] Cache updated for projects list, checking for project:', projectId);
         const projectsData = queryClient.getQueryData(queryKey as any) as any;
         if (projectsData?.data) {
           const projects = Array.isArray(projectsData.data) ? projectsData.data : [];
           const ourProject = projects.find((p: any) => p.id === projectId);
           if (ourProject) {
-            console.log('[VoteButtons] Found our project in list, updating:', ourProject);
             const newCount = (ourProject.upvotes || 0) - (ourProject.downvotes || 0);
             const newVote = ourProject.user_vote || ourProject.userVote || null;
-            console.log('[VoteButtons] Updating from projects list:', { upvotes: ourProject.upvotes, downvotes: ourProject.downvotes, newCount, newVote });
             setLiveVoteCount(newCount);
             setLiveUserVote(newVote);
             return; // Early return, we found it in the list
@@ -88,7 +81,6 @@ export function VoteButtons({
           const data = projectData.data;
           const newCount = (data.upvotes || 0) - (data.downvotes || 0);
           const newVote = data.user_vote || data.userVote || null;
-          console.log('[VoteButtons] Updating from project detail:', { upvotes: data.upvotes, downvotes: data.downvotes, newCount, newVote });
           setLiveVoteCount(newCount);
           setLiveUserVote(newVote);
         }
@@ -96,7 +88,6 @@ export function VoteButtons({
     });
 
     return () => {
-      console.log('[VoteButtons] Cleaning up cache subscription');
       unsubscribe();
     };
   }, [queryClient, projectId]);
@@ -126,8 +117,6 @@ export function VoteButtons({
 
     lastVoteTimeRef.current = now;
 
-    console.log('[VoteButtons] Triggering vote mutation:', voteType, 'for project:', projectId);
-
     // Start animation immediately
     setAnimatingButton(voteType);
 
@@ -156,16 +145,6 @@ export function VoteButtons({
   const finalDisplayCount = Number.isFinite(normalizedCount) ? normalizedCount : 0;
   const currentVote = liveUserVote;
 
-  // Debug: Log when display values change
-  useEffect(() => {
-    console.log('[VoteButtons] Display update:', {
-      projectId,
-      finalDisplayCount,
-      currentVote,
-      liveVoteCount,
-      liveUserVote
-    });
-  }, [projectId, finalDisplayCount, currentVote, liveVoteCount, liveUserVote]);
 
   return (
     <div

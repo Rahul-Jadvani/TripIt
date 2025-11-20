@@ -14,38 +14,48 @@ function getScoreBreakdown(project?: Partial<Project> & { scoreBreakdown?: any }
   return project?.score_breakdown || project?.scoreBreakdown;
 }
 
-function sumBreakdownScores(breakdown?: Record<string, { score?: number }>): number | null {
+function sumBreakdownScores(breakdown?: Record<string, { score?: number | string }>): number | null {
   if (!breakdown) return null;
 
   let total = 0;
-  let hasValue = false;
+  let hasNonZeroValue = false;
 
   for (const key of SCORE_SECTIONS) {
     const raw = breakdown?.[key]?.score;
-    if (typeof raw === 'number' && !Number.isNaN(raw)) {
-      total += raw;
-      hasValue = true;
+    if (raw === null || raw === undefined) continue;
+
+    const value = Number(raw);
+    if (!Number.isFinite(value)) continue;
+
+    total += value;
+    if (value !== 0) {
+      hasNonZeroValue = true;
     }
   }
 
-  return hasValue ? total : null;
+  return hasNonZeroValue ? total : null;
 }
 
 function sumComponentScores(proofScore?: Partial<Record<typeof SCORE_SECTIONS[number], number>>): number | null {
   if (!proofScore) return null;
 
   let total = 0;
-  let hasValue = false;
+  let hasNonZeroValue = false;
 
   for (const key of SCORE_SECTIONS) {
     const raw = proofScore[key];
-    if (typeof raw === 'number' && !Number.isNaN(raw)) {
-      total += raw;
-      hasValue = true;
+    if (raw === null || raw === undefined) continue;
+
+    const value = Number(raw);
+    if (!Number.isFinite(value)) continue;
+
+    total += value;
+    if (value !== 0) {
+      hasNonZeroValue = true;
     }
   }
 
-  return hasValue ? total : null;
+  return hasNonZeroValue ? total : null;
 }
 
 export function getProjectScore(project?: Partial<Project> & { proof_score?: number; scoreBreakdown?: any }) {

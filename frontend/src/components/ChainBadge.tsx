@@ -42,7 +42,7 @@ export function ChainBadge({ chain, size = 'sm', showPin = false }: ChainBadgePr
     e.preventDefault();
     e.stopPropagation();
     // Navigate programmatically to avoid nested Link issue (no full page refresh)
-    navigate(`/chains/${chain.slug}`);
+    navigate(`/layerz/${chain.slug}`);
   };
 
   return (

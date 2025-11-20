@@ -34,16 +34,16 @@ export default function ChainsListPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-4xl font-bold">Chains</h1>
+          <h1 className="text-4xl font-bold">SubZer0 Layerz</h1>
           <p className="text-muted-foreground mt-2">
-            Discover and join project collections
+            Discover and join project layerz
           </p>
         </div>
         {user && (
           <Button asChild>
-            <Link to="/chains/create">
+            <Link to="/layerz/create">
               <Plus className="h-4 w-4 mr-2" />
-              Create Chain
+              Create layerz
             </Link>
           </Button>
         )}
@@ -66,11 +66,11 @@ export default function ChainsListPage() {
         <ChainCardSkeletonGrid count={12} />
       ) : error ? (
         <Card className="p-8 text-center">
-          <p className="text-destructive">Failed to load chains. Please try again.</p>
+          <p className="text-destructive">Failed to load layerz. Please try again.</p>
         </Card>
       ) : chains.length === 0 ? (
         <Card className="p-12 text-center space-y-4">
-          <p className="text-muted-foreground text-lg">No chains found</p>
+          <p className="text-muted-foreground text-lg">No layerz found</p>
           {search && (
             <p className="text-sm text-muted-foreground">
               Try adjusting your search or filters
@@ -78,9 +78,9 @@ export default function ChainsListPage() {
           )}
           {user && !search && (
             <Button asChild className="mt-4">
-              <Link to="/chains/create">
+              <Link to="/layerz/create">
                 <Plus className="h-4 w-4 mr-2" />
-                Create the first chain
+                Create the first layerz
               </Link>
             </Button>
           )}

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import SigningInLoader from '@/components/SigningInLoader';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export default function AuthCallback() {
       (async () => {
         try {
           await refreshUser();
-        } catch (e) {
+        } catch {
           // ignore hydration errors, carry on
         }
         navigate(redirect, { replace: true });
@@ -37,13 +38,5 @@ export default function AuthCallback() {
     navigate('/login', { replace: true });
   }, [location.search, navigate, refreshUser]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-2xl font-bold mb-2">Signing you in…</div>
-        <div className="text-muted-foreground">Just a moment.</div>
-      </div>
-    </div>
-  );
+  return <SigningInLoader message="Signing you in..." />;
 }
-

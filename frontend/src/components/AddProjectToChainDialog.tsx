@@ -211,7 +211,7 @@ export function AddProjectToChainDialog({
             ) : requiresApproval ? (
               'Submit for Approval'
             ) : (
-              'Add to Chain'
+              'Add to layerz'
             )}
           </Button>
         </DialogFooter>

@@ -1,25 +1,30 @@
 import axios from 'axios';
 
-// Ensure API base always ends with /api
-export const getApiBase = () => {
-  // Priority: Environment variable > URL detection > Fallback
+// Get backend URL without /api suffix (used for non-API endpoints)
+export const getBackendUrl = (): string => {
   let baseUrl = import.meta.env.VITE_API_URL;
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
   const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
 
   if (!baseUrl) {
     if (isDev) {
-      // Development: use localhost
       baseUrl = 'http://localhost:5000';
     } else {
-      // Production: use Render backend (for Netlify and other production hosts)
       baseUrl = 'https://discovery-platform.onrender.com';
     }
   }
 
+  // Remove /api suffix if present
+  return baseUrl.endsWith('/api') ? baseUrl.slice(0, -4) : baseUrl;
+};
+
+// Ensure API base always ends with /api
+export const getApiBase = () => {
+  const baseUrl = getBackendUrl();
+
   if (import.meta.env.DEV) console.log('🌐 API Base URL configured:', {
-    currentHost: currentHost,
-    isDevelopment: isDev,
+    currentHost: typeof window !== 'undefined' ? window.location.hostname : '',
+    isDevelopment: (typeof window !== 'undefined' ? window.location.hostname : '').includes('localhost') || (typeof window !== 'undefined' ? window.location.hostname : '').includes('127.0.0.1'),
     baseUrl: baseUrl,
     fromEnvVar: !!import.meta.env.VITE_API_URL,
     viteApiUrl: import.meta.env.VITE_API_URL || 'not set'

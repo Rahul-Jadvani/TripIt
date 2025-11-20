@@ -18,6 +18,7 @@ from utils.validators import validate_email, validate_username, validate_passwor
 from utils.helpers import success_response, error_response
 from utils.decorators import token_required
 from utils.init_admins import check_and_promote_admin
+from utils.cache import CacheService
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -63,6 +64,9 @@ def register():
 
         db.session.add(user)
         db.session.commit()
+
+        # Invalidate search cache when a new user is created
+        CacheService.invalidate_search_results()
 
         # Generate tokens
         access_token = create_access_token(identity=user.id)
@@ -207,6 +211,30 @@ def github_connect():
         return error_response('Error', str(e), 500)
 
 
+@auth_bp.route('/github/login', methods=['GET'])
+def github_login():
+    """Initiate GitHub OAuth flow for login (no existing session required)"""
+    try:
+        state = secrets.token_urlsafe(32)
+        oauth_state[state] = {
+            'expires_at': datetime.utcnow() + timedelta(minutes=5)
+        }
+
+        github_auth_url = (
+            f"https://github.com/login/oauth/authorize"
+            f"?client_id={current_app.config['GITHUB_CLIENT_ID']}"
+            f"&redirect_uri={current_app.config['GITHUB_REDIRECT_URI']}"
+            f"&scope=read:user user:email"
+            f"&state={state}"
+        )
+
+        return redirect(github_auth_url)
+
+    except Exception as e:
+        frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+        return redirect(f"{frontend_url}/login?github_error=init_failed")
+
+
 # Google OAuth Routes (Login)
 @auth_bp.route('/google/login', methods=['GET'])
 def google_login():
@@ -316,6 +344,9 @@ def google_callback():
             db.session.add(user)
             db.session.commit()
 
+            # Invalidate search cache when a new user is created via OAuth
+            CacheService.invalidate_search_results()
+
         if not user.is_active:
             return redirect(f"{frontend_url}/login?google_error=account_disabled")
 
@@ -348,16 +379,6 @@ def github_callback():
         if not code:
             return error_response('Error', 'No authorization code provided', 400)
 
-        # Extract user_id from state
-        try:
-            state_parts = state.split(':')
-            if len(state_parts) == 2:
-                user_id = state_parts[1]
-            else:
-                return error_response('Error', 'Invalid state parameter', 400)
-        except:
-            return error_response('Error', 'Invalid state parameter', 400)
-
         # Exchange code for access token
         token_response = requests.post(
             'https://github.com/login/oauth/access_token',
@@ -379,7 +400,7 @@ def github_callback():
             print(f"GitHub OAuth Error: {error_msg} - {error_desc}")
             print(f"Full response: {token_data}")
             frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
-            return redirect(f"{frontend_url}/publish?github_error=token_failed&details={error_msg}")
+            return redirect(f"{frontend_url}/login?github_error=token_failed&details={error_msg}")
 
         # Get user info from GitHub
         user_response = requests.get(
@@ -391,9 +412,84 @@ def github_callback():
 
         if not github_username:
             frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
-            return redirect(f"{frontend_url}/publish?github_error=user_fetch_failed")
+            return redirect(f"{frontend_url}/login?github_error=user_fetch_failed")
 
-        # Update user with GitHub info and access token
+        # Determine flow: connect (state includes user_id) or login (state stored in oauth_state)
+        login_flow = ':' not in state
+        if login_flow:
+            stored = oauth_state.get(state)
+            if not stored or datetime.utcnow() > stored.get('expires_at', datetime.utcnow()):
+                frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+                return redirect(f"{frontend_url}/login?github_error=invalid_state")
+            # one-time use
+            del oauth_state[state]
+        else:
+            try:
+                _, encoded_user = state.split(':', 1)
+                user_id = encoded_user
+            except Exception:
+                frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+                return redirect(f"{frontend_url}/login?github_error=invalid_state")
+
+        # Fetch primary email if missing
+        primary_email = github_data.get('email')
+        if not primary_email:
+            try:
+                emails_resp = requests.get(
+                    'https://api.github.com/user/emails',
+                    headers={'Authorization': f'token {access_token}'},
+                )
+                emails_data = emails_resp.json() if emails_resp.ok else []
+                primary = next((e for e in emails_data if e.get('primary') and e.get('verified')), None)
+                fallback = emails_data[0] if emails_data else None
+                primary_email = primary.get('email') if primary else fallback.get('email') if fallback else None
+            except Exception:
+                primary_email = None
+
+        if login_flow:
+            # Login/signup flow similar to Google
+            email = (primary_email or '').lower()
+            name = github_data.get('name') or github_username
+            avatar = github_data.get('avatar_url')
+
+            user = None
+            if email:
+                user = User.query.filter_by(email=email).first()
+
+            if not user:
+                # Create new user
+                base_username = github_username or (email.split('@')[0] if email else 'user')
+                base_username = base_username[:20] or 'user'
+                candidate = base_username
+                suffix = 1
+                while User.query.filter_by(username=candidate).first() is not None:
+                    suffix += 1
+                    candidate = f"{base_username}{suffix}"
+
+                user = User(
+                    email=email or f"{candidate}@users.noreply.github.com",
+                    username=candidate,
+                    display_name=name or candidate,
+                    avatar_url=avatar,
+                    email_verified=bool(email),
+                )
+                user.set_password(secrets.token_urlsafe(32))
+                db.session.add(user)
+                db.session.commit()
+                CacheService.invalidate_search_results()
+
+            if not user.is_active:
+                frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+                return redirect(f"{frontend_url}/login?github_error=account_disabled")
+
+            # Issue JWT tokens
+            access = create_access_token(identity=user.id)
+            refresh = create_refresh_token(identity=user.id)
+
+            frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
+            return redirect(f"{frontend_url}/auth/callback?provider=github&access={access}&refresh={refresh}")
+
+        # Connect flow: update existing user
         user = User.query.get(user_id)
         if not user:
             return error_response('Error', 'User not found', 404)

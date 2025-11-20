@@ -95,7 +95,18 @@ export function transformProject(backendProject: any) {
     badges: (backendProject.badges || []).map((b: any) => {
       if (!b) return { type: '' };
       if (typeof b === 'string') return { type: b };
-      if (typeof b === 'object') return { type: b.type || b.name || b.label || '' , ...b };
+      if (typeof b === 'object') {
+        const derivedType =
+          b.type ||
+          b.badge_type ||
+          b.badgeType ||
+          b.name ||
+          b.label ||
+          b.value ||
+          b.code ||
+          '';
+        return { ...b, type: derivedType };
+      }
       return { type: String(b) };
     }),
     // Voting fields - pass through ALL needed fields
@@ -131,15 +142,15 @@ export function useProjects(sort: string = 'hot', page: number = 1, includeDetai
         data: response.data.data?.map(transformProject) || [],
       };
     },
-    // Instagram-style caching: Short stale time, long cache retention
-    staleTime: 1000 * 60 * 1, // 1 min - marks data as "stale" but still usable (votes change frequently)
+    // Smart caching: Balance freshness with performance
+    staleTime: 1000 * 60 * 5, // 5 min - data stays fresh for typical session
     gcTime: 1000 * 60 * 30,   // 30 min - keeps in memory for instant navigation
 
-    // Real-time refetch strategy
+    // Efficient refetch strategy - only when truly needed
     refetchInterval: false, // NO polling - rely on Socket.IO invalidation
-    refetchOnWindowFocus: true, // Refresh when user returns (catches updates)
-    refetchOnReconnect: true,   // Refresh after internet reconnects
-    refetchOnMount: 'always',   // Always check for fresh data on mount
+    refetchOnWindowFocus: 'stale', // Only refetch if data is stale when window regains focus
+    refetchOnReconnect: 'stale',   // Only refetch if data is stale after reconnect
+    refetchOnMount: true,          // Only refetch if data is stale on component mount
 
     // Keep old data visible during background refetch (NO loading spinners!)
     placeholderData: (previousData) => previousData,
@@ -159,7 +170,7 @@ export function useProjectById(id: string) {
       };
     },
     enabled: !!id,
-    staleTime: 1000 * 60 * 2, // Keep fresh for 2 minutes
+    staleTime: 1000 * 60 * 5, // Keep fresh for 5 minutes
     gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
 
     // Only refetch on mount if data is stale
@@ -177,8 +188,8 @@ export function useProjectById(id: string) {
       // No polling otherwise (rely on optimistic updates for votes)
       return false;
     },
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchOnWindowFocus: 'stale',
+    refetchOnReconnect: 'stale',
   });
 }
 
@@ -195,13 +206,13 @@ export function useUserProjects(userId: string) {
       };
     },
     enabled: !!userId,
-    staleTime: 1000 * 60 * 3, // Consider data fresh for 3 minutes
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
 
-    // Background refetch for user projects
-    refetchInterval: 1000 * 60 * 2, // Refresh every 2 minutes
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    // Efficient refetch for user projects - polling for frequent updates
+    refetchInterval: 1000 * 60 * 3, // Poll every 3 minutes (reduced from 2)
+    refetchOnWindowFocus: 'stale',
+    refetchOnReconnect: 'stale',
     placeholderData: (previousData) => previousData,
   });
 }
@@ -219,13 +230,13 @@ export function useUserTaggedProjects(userId: string) {
       };
     },
     enabled: !!userId,
-    staleTime: 1000 * 60 * 3, // Consider data fresh for 3 minutes
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
 
-    // Background refetch for tagged projects
-    refetchInterval: 1000 * 60 * 2, // Refresh every 2 minutes
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    // Efficient refetch for tagged projects - polling for frequent updates
+    refetchInterval: 1000 * 60 * 3, // Poll every 3 minutes (reduced from 2)
+    refetchOnWindowFocus: 'stale',
+    refetchOnReconnect: 'stale',
     placeholderData: (previousData) => previousData,
   });
 }

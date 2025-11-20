@@ -57,7 +57,7 @@ export default function ChainAnalytics() {
   }
 
   if (!isOwner) {
-    return <Navigate to={`/chains/${slug}`} replace />;
+    return <Navigate to={`/layerz/${slug}`} replace />;
   }
 
   if (!analytics) {
@@ -88,9 +88,9 @@ export default function ChainAnalytics() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <Button asChild variant="ghost" size="sm" className="mb-2">
-            <Link to={`/chains/${slug}`}>
+            <Link to={`/layerz/${slug}`}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Chain
+              Back to layerz
             </Link>
           </Button>
           <h1 className="text-4xl font-black text-foreground flex items-center gap-3">
@@ -98,7 +98,7 @@ export default function ChainAnalytics() {
             {analytics.chain.name} Analytics
           </h1>
           <p className="text-muted-foreground text-lg">
-            Comprehensive insights for your chain
+            Comprehensive insights for your layerz
           </p>
         </div>
       </div>

@@ -315,7 +315,7 @@ export default function Publish() {
           uploadedUrls.push(data.data.url);
           uploadedFiles.push(file);
         } catch (uploadError) {
-          console.error('Screenshot upload error:', uploadError);
+          if (import.meta.env.DEV) console.error('Screenshot upload error:', uploadError);
           toast.error(`Failed to upload ${file.name}`);
         }
       }
@@ -378,7 +378,7 @@ export default function Publish() {
       setPitchDeckFile(file);
       toast.success('Pitch deck uploaded successfully!');
     } catch (error: any) {
-      console.error('Pitch deck upload error:', error);
+      if (import.meta.env.DEV) console.error('Pitch deck upload error:', error);
       toast.error('Failed to upload pitch deck');
     } finally {
       setUploadingPitchDeck(false);
@@ -444,7 +444,7 @@ export default function Publish() {
       }
       window.location.href = authUrl;
     } catch (error: any) {
-      console.error('GitHub connect error:', error);
+      if (import.meta.env.DEV) console.error('GitHub connect error:', error);
       const message = error.response?.data?.message || error.message || 'Failed to connect GitHub';
       toast.error(message);
       setGithubActionLoading(false);
@@ -458,7 +458,7 @@ export default function Publish() {
       toast.success('GitHub account disconnected');
       if (refreshUser) await refreshUser();
     } catch (error: any) {
-      console.error('GitHub disconnect error:', error);
+      if (import.meta.env.DEV) console.error('GitHub disconnect error:', error);
       const message = error.response?.data?.message || error.message || 'Failed to disconnect GitHub';
       toast.error(message);
     } finally {
@@ -546,10 +546,12 @@ export default function Publish() {
         payload.chain_ids = selectedChainIds;
       }
 
-      console.log('=== SUBMITTING PROJECT ===');
-      console.log('GitHub URL from form:', data.githubUrl);
-      console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
-      console.log('========================');
+      if (import.meta.env.DEV) {
+        console.log('=== SUBMITTING PROJECT ===');
+        console.log('GitHub URL from form:', data.githubUrl);
+        console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
+        console.log('========================');
+      }
 
       setShowPublishModal(true);
       setPublishState('loading');
@@ -573,7 +575,7 @@ export default function Publish() {
       setSelectedChainIds([]);
       // Navigation handled by success modal action
     } catch (error: any) {
-      console.error('Error publishing project:', error);
+      if (import.meta.env.DEV) console.error('Error publishing project:', error);
       // Friendly fallback
       toast.error('Please fix the highlighted fields and try again.');
 
@@ -702,7 +704,7 @@ export default function Publish() {
             <div className="mt-4 flex flex-wrap gap-2">
               {[
                 { id: 'basicsSection', label: 'Basics' },
-                { id: 'categoriesSection', label: 'Categories & Chains' },
+                { id: 'categoriesSection', label: 'Categories & layerz' },
                 { id: 'linksSection', label: 'Links' },
                 { id: 'techStackSection', label: 'Tech Stack' },
                 { id: 'teamSection', label: 'Team' },
@@ -723,6 +725,57 @@ export default function Publish() {
                   {s.label}
                 </button>
               ))}
+            </div>
+
+            {/* GitHub Connection - Outside Form */}
+            <div className="mt-6 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">GitHub Connection</p>
+                  <p className="text-xs text-muted-foreground">Connect your GitHub to enable AI analysis of your code and team credentials</p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  {user?.github_connected ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGithubDisconnect}
+                        disabled={githubActionLoading}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        {githubActionLoading ? 'Working...' : 'Disconnect'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleGithubConnect}
+                        disabled={githubActionLoading}
+                      >
+                        <Github className="h-3.5 w-3.5" />
+                        Reconnect
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleGithubConnect}
+                      disabled={githubActionLoading}
+                    >
+                      <Github className="h-3.5 w-3.5" />
+                      {githubActionLoading ? 'Opening...' : 'Connect GitHub'}
+                    </Button>
+                  )}
+                </div>
+                {user?.github_connected && (
+                  <span className="text-xs text-primary font-medium inline-flex items-center gap-1">
+                    <Github className="h-3 w-3" />
+                    @{user.github_username}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Proof Score Info - Collapsible */}
@@ -850,7 +903,7 @@ export default function Publish() {
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe your project in detail (minimum 200 characters recommended)"
+                      placeholder="Describe your project in detail (minimum 50 characters, 200+ recommended)"
                       rows={8}
                       aria-invalid={!!errors.description}
                       className={`text-base ${errors.description ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
@@ -863,9 +916,9 @@ export default function Publish() {
                       </p>
                     )}
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Detailed description helps AI better analyze your project</p>
-                      <span className={`badge ${descLength >= 200 ? 'badge-success' : 'badge-warning'}`}>
-                        {descLength} / 200+
+                      <p className="text-xs text-muted-foreground">Minimum 50 characters (200+ recommended for best scoring)</p>
+                      <span className={`badge ${descLength >= 50 ? 'badge-success' : 'badge-warning'}`}>
+                        {descLength} / 50 min
                       </span>
                     </div>
                   </div>
@@ -876,7 +929,7 @@ export default function Publish() {
                 {currentStep === 2 && (
                   <>
                     <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                      Categories & Chains
+                      Categories & layerz
                     </h2>
                   <div className="space-y-3" id="categoriesSection">
                     <Label className="text-base font-bold">
@@ -1211,46 +1264,9 @@ export default function Publish() {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Label htmlFor="githubUrl">
-                        GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {user?.github_connected ? (
-                          <>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleGithubDisconnect}
-                              disabled={githubActionLoading}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              {githubActionLoading ? 'Working...' : 'Disconnect'}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={handleGithubConnect}
-                              disabled={githubActionLoading}
-                            >
-                              <Github className="h-3.5 w-3.5" />
-                              Reconnect
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleGithubConnect}
-                            disabled={githubActionLoading}
-                          >
-                            <Github className="h-3.5 w-3.5" />
-                            {githubActionLoading ? 'Opening...' : 'Connect GitHub'}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <Label htmlFor="githubUrl">
+                      GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
+                    </Label>
                     <Input
                       id="githubUrl"
                       type="url"
@@ -1285,15 +1301,7 @@ export default function Publish() {
                         <p className={`text-xs font-semibold text-black`}>{githubUrlWarning}</p>
                       </div>
                     )}
-                    <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
-                      <span>GitHub repo required for AI to analyze code quality and team credentials.</span>
-                      {user?.github_connected && (
-                        <span className="text-primary font-medium inline-flex items-center gap-1">
-                          <Github className="h-3 w-3" />
-                          Connected as @{user.github_username}
-                        </span>
-                      )}
-                    </p>
+                    <p className="text-xs text-muted-foreground">GitHub repo required for AI to analyze code quality and team credentials.</p>
                   </div>
                 </div>
               </div>

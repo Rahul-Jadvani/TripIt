@@ -91,7 +91,7 @@ export default function ChainDetailPage() {
             const deleteReason = prompt('Enter reason for deletion (optional):');
             if (deleteReason !== null) {
               await deleteChainMutation.mutateAsync({ slug, reason: deleteReason || undefined });
-              navigate('/chains');
+              navigate('/layerz');
             }
           }
           break;
@@ -111,9 +111,9 @@ export default function ChainDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8 space-y-8">
         <Button asChild variant="ghost" className="gap-2 w-fit">
-          <Link to="/chains">
+          <Link to="/layerz">
             <ArrowLeft className="h-4 w-4" />
-            Back to Chains
+            Back to layerz
           </Link>
         </Button>
 
@@ -137,9 +137,9 @@ export default function ChainDetailPage() {
         <Card className="p-8 text-center">
           <p className="text-destructive">Chain not found or failed to load</p>
           <Button asChild className="mt-4" variant="outline">
-            <Link to="/chains">
+            <Link to="/layerz">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Chains
+              Back to layerz
             </Link>
           </Button>
         </Card>
@@ -151,9 +151,9 @@ export default function ChainDetailPage() {
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Back Button */}
       <Button asChild variant="ghost" size="sm">
-        <Link to="/chains">
+        <Link to="/layerz">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Chains
+          Back to layerz
         </Link>
       </Button>
 
@@ -268,13 +268,13 @@ export default function ChainDetailPage() {
             <span className="text-sm font-medium">Chain Owner Tools</span>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="default" asChild>
-                <Link to={`/chains/${slug}/analytics`}>
+                <Link to={`/layerz/${slug}/analytics`}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   View Analytics
                 </Link>
               </Button>
               <Button size="sm" variant="outline" asChild>
-                <Link to={`/chains/${slug}/requests`}>
+                <Link to={`/layerz/${slug}/requests`}>
                   Manage Requests ({chain.pending_requests || 0})
                 </Link>
               </Button>

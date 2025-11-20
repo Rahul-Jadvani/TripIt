@@ -30,11 +30,11 @@ export default function CreateChainPage() {
   const handleSubmit = async (data: ChainFormData) => {
     try {
       const result = await createChainMutation.mutateAsync(data);
-      toast.success('Chain created successfully!');
-      navigate(`/chains/${result.data.slug}`);
+      toast.success('layerz created successfully!');
+      navigate(`/layerz/${result.data.slug}`);
     } catch (error: any) {
-      console.error('Create chain error:', error);
-      toast.error(error.response?.data?.error || 'Failed to create chain');
+      console.error('Create layerz error:', error);
+      toast.error(error.response?.data?.error || 'Failed to create layerz');
     }
   };
 
@@ -43,14 +43,14 @@ export default function CreateChainPage() {
       {/* Header */}
       <div className="space-y-4">
         <Button asChild variant="ghost" size="sm">
-          <Link to="/chains">
+          <Link to="/layerz">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Chains
+            Back to layerz
           </Link>
         </Button>
 
         <div>
-          <h1 className="text-4xl font-bold">Create Chain</h1>
+          <h1 className="text-4xl font-bold">Create layerz</h1>
           <p className="text-muted-foreground mt-2">
             Create a new collection to organize and showcase projects
           </p>

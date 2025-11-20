@@ -119,6 +119,47 @@ const YEARS_EXPERIENCE_OPTIONS = ['0-2', '3-5', '6-10', '10+'];
 const NUM_INVESTMENTS_OPTIONS = ['0-5', '6-15', '16-30', '30+'];
 const FUND_SIZE_OPTIONS = ['Under $10M', '$10M-$50M', '$50M-$100M', '$100M-$250M', '$250M-$500M', '$500M+'];
 
+const INVESTOR_FORM_STEPS = [
+  {
+    id: 1,
+    label: 'Basics',
+    title: 'Basic Information',
+    description: 'Tell us who you are',
+  },
+  {
+    id: 2,
+    label: 'Focus',
+    title: 'Investment Focus',
+    description: 'Share your thesis & stages',
+  },
+  {
+    id: 3,
+    label: 'About You',
+    title: 'About You',
+    description: 'Help founders get to know you',
+  },
+  {
+    id: 4,
+    label: 'Track Record',
+    title: 'Track Record (Optional)',
+    description: 'Highlight any wins',
+  },
+  {
+    id: 5,
+    label: 'Value Add',
+    title: 'Value Add & Visibility',
+    description: 'Show how you support builders',
+  },
+  {
+    id: 6,
+    label: 'Review',
+    title: 'Review & Submit',
+    description: 'Double-check before sending',
+  },
+];
+
+const TOTAL_INVESTOR_STEPS = INVESTOR_FORM_STEPS.length;
+
 interface NotableInvestment {
   company: string;
   stage: string;
@@ -137,6 +178,7 @@ export default function InvestorPlans() {
 
   // Form data
   const [formData, setFormData] = useState({
+    plan_type: 'free',
     // Basic Info
     investor_type: 'individual',
     name: '',
@@ -206,9 +248,10 @@ export default function InvestorPlans() {
             // Auto-select their current plan to skip plan selection screen
             setSelectedPlan(data.data.plan_type || 'free');
             // Pre-fill form with existing data
-            setFormData({
-              plan_type: data.data.plan_type || 'free',
-              investor_type: data.data.investor_type || '',
+            setFormData((prev) => ({
+              ...prev,
+              plan_type: data.data.plan_type || prev.plan_type,
+              investor_type: data.data.investor_type || prev.investor_type,
               name: data.data.name || '',
               location: data.data.location || '',
               linkedin_url: data.data.linkedin_url || '',
@@ -216,14 +259,23 @@ export default function InvestorPlans() {
               website_url: data.data.website_url || '',
               twitter_url: data.data.twitter_url || '',
               bio: data.data.bio || '',
-              investment_thesis: data.data.investment_thesis || '',
               investment_stages: data.data.investment_stages || [],
               industries: data.data.industries || [],
               geographic_focus: data.data.geographic_focus || [],
               num_investments: data.data.num_investments || '',
               reason: data.data.reason || '',
-              is_public: data.data.is_public !== undefined ? data.data.is_public : true,
-            });
+              is_public: data.data.is_public !== undefined ? data.data.is_public : prev.is_public,
+              value_adds: data.data.value_adds || [],
+              expertise_areas: data.data.expertise_areas || '',
+              notable_investments: data.data.notable_investments || [],
+              portfolio_highlights: data.data.portfolio_highlights || '',
+              investment_thesis: data.data.investment_thesis || '',
+              ticket_size_min: data.data.ticket_size_min?.toString() || '',
+              ticket_size_max: data.data.ticket_size_max?.toString() || '',
+              years_experience: data.data.years_experience || '',
+              open_to_requests: data.data.open_to_requests ?? prev.open_to_requests,
+              calendar_link: data.data.calendar_link || '',
+            }));
             return;
           }
         }
@@ -334,7 +386,8 @@ export default function InvestorPlans() {
         if (data.data.status === 'pending') {
           // Allow editing of pending request
           // Pre-fill form with existing data
-          setFormData({
+          setFormData((prev) => ({
+            ...prev,
             investor_type: data.data.investor_type || 'individual',
             name: data.data.name || '',
             company_name: data.data.company_name || '',
@@ -356,19 +409,20 @@ export default function InvestorPlans() {
             portfolio_highlights: data.data.portfolio_highlights || '',
             value_adds: data.data.value_adds || [],
             expertise_areas: data.data.expertise_areas || '',
-            is_public: data.data.is_public || false,
-            open_to_requests: data.data.open_to_requests || false,
+            is_public: data.data.is_public ?? prev.is_public,
+            open_to_requests: data.data.open_to_requests ?? prev.open_to_requests,
             twitter_url: data.data.twitter_url || '',
             calendar_link: data.data.calendar_link || '',
             fund_size: data.data.fund_size || '',
-          });
+          }));
           setSelectedPlan(data.data.plan_type || planId);
           setIsEditingPending(true);
           return;
         } else if (data.data.status === 'approved') {
           // Allow approved investors to edit their profile
           toast.success('You are already an approved investor! You can update your profile here.');
-          setFormData({
+          setFormData((prev) => ({
+            ...prev,
             plan_type: data.data.plan_type || planId,
             investor_type: data.data.investor_type || '',
             name: data.data.name || '',
@@ -390,12 +444,12 @@ export default function InvestorPlans() {
             portfolio_highlights: data.data.portfolio_highlights || '',
             value_adds: data.data.value_adds || [],
             expertise_areas: data.data.expertise_areas || '',
-            is_public: data.data.is_public !== undefined ? data.data.is_public : true,
-            open_to_requests: data.data.open_to_requests || false,
+            is_public: data.data.is_public !== undefined ? data.data.is_public : prev.is_public,
+            open_to_requests: data.data.open_to_requests ?? prev.open_to_requests,
             twitter_url: data.data.twitter_url || '',
             calendar_link: data.data.calendar_link || '',
             fund_size: data.data.fund_size || '',
-          });
+          }));
           setSelectedPlan(data.data.plan_type || planId);
           setIsEditingPending(true);
           return;
@@ -441,7 +495,7 @@ export default function InvestorPlans() {
     // Clear errors when moving forward
     setErrors({});
 
-    if (currentStep < 6) {
+    if (currentStep < TOTAL_INVESTOR_STEPS) {
       setCurrentStep(currentStep + 1);
     } else {
       handleSubmit();
@@ -526,8 +580,9 @@ export default function InvestorPlans() {
 
   if (selectedPlan) {
     const plan = PLANS.find((p) => p.id === selectedPlan);
-    const totalSteps = 6;
-    const progress = (currentStep / totalSteps) * 100;
+    const totalSteps = TOTAL_INVESTOR_STEPS;
+    const currentStepMeta = INVESTOR_FORM_STEPS.find((step) => step.id === currentStep);
+    const progress = totalSteps > 1 ? ((currentStep - 1) / (totalSteps - 1)) * 100 : 100;
 
     return (
       <div className="min-h-screen bg-background pt-20 px-4 pb-12">
@@ -541,33 +596,23 @@ export default function InvestorPlans() {
               <div className="flex-1">
                 <h1 className="text-2xl font-black mb-2">Apply for {plan?.name}</h1>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  Step {currentStep} of {totalSteps}: {
-                    currentStep === 1 ? 'Basic Information' :
-                    currentStep === 2 ? 'Investment Focus' :
-                    currentStep === 3 ? 'About You' :
-                    currentStep === 4 ? 'Track Record (Optional)' :
-                    currentStep === 5 ? 'Value Add & Visibility' :
-                    'Review & Submit'
-                  }
+                  Step {currentStep} of {totalSteps}: {currentStepMeta?.title}
                 </p>
               </div>
             </div>
 
             {/* Editing Approved Profile Banner */}
             {isEditingPending && (
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">✓</span>
-                    </div>
+              <div className="mb-6 rounded-2xl border border-primary/40 bg-gradient-to-r from-primary/12 via-card to-card p-5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-black shadow-[0_8px_18px_rgba(254,192,23,0.35)]">
+                    <Edit2 className="h-5 w-5" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                      Edit Investor Profile
-                    </h3>
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      You are editing your approved investor profile. Changes will be saved immediately and reflected in the investor directory.
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">Profile edit mode</p>
+                    <h3 className="text-lg font-black text-foreground">Edit Investor Profile</h3>
+                    <p className="text-sm text-muted-foreground">
+                      You are editing your approved investor profile. Changes save immediately and update how you appear in the investor directory.
                     </p>
                   </div>
                 </div>
@@ -575,19 +620,78 @@ export default function InvestorPlans() {
             )}
 
             {/* Progress Bar */}
-            <div className="mb-8">
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+            <div className="mb-8 space-y-4">
+              {/* Compact progress for mobile */}
+              <div className="space-y-3 rounded-2xl border border-border/60 bg-card/70 p-4 shadow-inner md:hidden">
+                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span>
+                    Step {currentStep} of {totalSteps}
+                  </span>
+                  <span>{Math.round(progress)}% complete</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-border/60">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
-              <div className="flex justify-between mt-2">
-                {[1, 2, 3, 4, 5, 6].map(step => (
-                  <div key={step} className={`text-xs ${step === currentStep ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                    {step}
+
+              {/* Detailed desktop progress */}
+              <div className="hidden md:block">
+                <div className="rounded-2xl border border-border/60 bg-card/80 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.45)]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span className="text-foreground">Application progress</span>
+                    <span className="text-muted-foreground/80">{currentStepMeta?.title}</span>
                   </div>
-                ))}
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-border/70">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="mt-5 grid grid-cols-6 gap-3">
+                    {INVESTOR_FORM_STEPS.map((step) => {
+                      const isCurrent = step.id === currentStep;
+                      const isCompleted = step.id < currentStep;
+                      const canNavigate = step.id <= currentStep;
+                      return (
+                        <button
+                          key={step.id}
+                          type="button"
+                          onClick={() => canNavigate && setCurrentStep(step.id)}
+                          disabled={!canNavigate}
+                          className={`flex flex-col gap-2 rounded-2xl border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                            canNavigate ? 'cursor-pointer' : 'cursor-default opacity-60'
+                          } ${
+                            isCurrent
+                              ? 'border-primary bg-primary/10'
+                              : isCompleted
+                                ? 'border-primary/70 bg-primary/5'
+                                : 'border-border bg-card/60'
+                          }`}
+                          aria-current={isCurrent ? 'step' : undefined}
+                        >
+                          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            <span
+                              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition ${
+                                isCompleted
+                                  ? 'border-primary bg-primary text-black'
+                                  : isCurrent
+                                    ? 'border-primary bg-background text-primary'
+                                    : 'border-border/70 bg-card text-muted-foreground'
+                              }`}
+                            >
+                              {isCompleted ? <Check className="h-4 w-4" /> : step.id}
+                            </span>
+                            <span>{step.label}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{step.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -916,7 +1020,7 @@ export default function InvestorPlans() {
                     value={formData.reason}
                     onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                     className={`w-full min-h-[100px] p-3 rounded-md border bg-background ${errors.reason ? 'border-destructive' : 'border-input'}`}
-                    placeholder="Tell us what you're looking for on 0x.ship..."
+                    placeholder="Tell us what you're looking for on Zer0..."
                     required
                   />
                   {errors.reason && (
@@ -1320,8 +1424,12 @@ export default function InvestorPlans() {
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
                 disabled={loading}
               >
-                {loading ? (isEditingPending ? 'Saving...' : 'Submitting...') : currentStep === 6 ? (isEditingPending ? 'Save Profile' : 'Submit Application') : 'Next'}
-                {currentStep < 6 && <ChevronRight className="h-4 w-4" />}
+                {loading
+                  ? (isEditingPending ? 'Saving...' : 'Submitting...')
+                  : currentStep === TOTAL_INVESTOR_STEPS
+                    ? (isEditingPending ? 'Save Profile' : 'Submit Application')
+                    : 'Next'}
+                {currentStep < TOTAL_INVESTOR_STEPS && <ChevronRight className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -1334,10 +1442,33 @@ export default function InvestorPlans() {
   if (checkingStatus) {
     return (
       <div className="min-h-screen bg-background pt-20 px-4 pb-12">
-        <div className="max-w-7xl mx-auto flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-4"></div>
-            <p className="text-muted-foreground">Checking application status...</p>
+        <div className="max-w-7xl mx-auto">
+          {/* Header skeleton */}
+          <div className="text-center mb-12 space-y-4 animate-pulse">
+            <div className="h-10 w-48 bg-secondary rounded-full mx-auto"></div>
+            <div className="h-12 w-64 bg-secondary rounded mx-auto"></div>
+            <div className="h-6 w-96 bg-secondary rounded mx-auto"></div>
+          </div>
+
+          {/* Cards grid skeleton */}
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="relative animate-pulse">
+                <div className="rounded-2xl bg-secondary p-6 border-[3px] border-black shadow-[8px_8px_0_0_#000]">
+                  <div className="space-y-4">
+                    <div className="h-6 w-32 bg-secondary-600 rounded"></div>
+                    <div className="h-8 w-20 bg-secondary-600 rounded"></div>
+                    <div className="h-4 w-40 bg-secondary-600 rounded"></div>
+                    <div className="space-y-2">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="h-4 w-full bg-secondary-600 rounded"></div>
+                      ))}
+                    </div>
+                    <div className="h-10 w-full bg-secondary-600 rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

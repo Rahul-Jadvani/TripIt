@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { leaderboardService } from '@/services/api';
+import { leaderboardService, projectsService } from '@/services/api';
 
 // Transform backend project data
 function transformProject(backendProject: any) {
@@ -75,6 +75,33 @@ export function useBuildersLeaderboard(limit: number = 50) {
     refetchOnMount: true, // Only refetch if stale
 
     // Keep old data during refetch
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useFeaturedLeaderboard(limit: number = 30) {
+  return useQuery({
+    queryKey: ['leaderboard', 'featured-projects', limit],
+    queryFn: async () => {
+      const response = await projectsService.getFeatured(limit);
+      const projects = response.data?.data || response.data || [];
+      return projects.map((p: any, idx: number) => ({
+        id: p.id,
+        rank: idx + 1,
+        title: p.title,
+        tagline: p.tagline || '',
+        score: p.upvotes ?? p.score ?? 0,
+        author: p.creator
+          ? { id: p.creator.id, username: p.creator.username, avatar: p.creator.avatar_url }
+          : { id: p.user_id, username: 'Unknown', avatar: '' },
+      }));
+    },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
     placeholderData: (previousData) => previousData,
   });
 }

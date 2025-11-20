@@ -9,15 +9,7 @@ import { AlertCircle, Award, Loader2, Shield, ExternalLink, Github, Calendar } f
 import { useToast } from '@/hooks/use-toast';
 import CoffeeLoader from '@/components/CoffeeLoader';
 import { formatScore, getProjectScore } from '@/utils/score';
-
-const ADMIN_PASSWORD = 'Admin';
-
-// Helper function to get the backend URL
-const getBackendUrl = (): string => {
-  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-  return isDev ? 'http://localhost:5000' : 'https://discovery-platform.onrender.com';
-};
+import { getBackendUrl } from '@/services/api';
 
 interface Project {
   id: string;
@@ -115,7 +107,7 @@ export default function AdminValidator() {
       }
     } catch (error) {
       setError('Failed to authenticate');
-      console.error('Login error:', error);
+      if (import.meta.env.DEV) console.error('Login error:', error);
     }
   };
 
@@ -132,18 +124,16 @@ export default function AdminValidator() {
       const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/api/projects?sort=newest&per_page=100`);
       const data = await response.json();
-      console.log('API Response:', data);
 
       if (data.status === 'success') {
         // Handle paginated response
         const projectsArray = Array.isArray(data.data) ? data.data : [];
-        console.log('Projects array:', projectsArray);
         setProjects(projectsArray);
       } else {
-        console.error('API returned error', data);
+        if (import.meta.env.DEV) console.error('API returned error', data);
       }
     } catch (err) {
-      console.error('Fetch error:', err);
+      if (import.meta.env.DEV) console.error('Fetch error:', err);
       toast({
         title: 'Error',
         description: 'Failed to fetch projects',
@@ -167,7 +157,7 @@ export default function AdminValidator() {
         setInvestorRequests(data.data);
       }
     } catch (err) {
-      console.error('Failed to fetch investor requests:', err);
+      if (import.meta.env.DEV) console.error('Failed to fetch investor requests:', err);
     }
   };
 

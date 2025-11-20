@@ -234,6 +234,44 @@ def notify_chain_project_request(chain_owner_id, chain, project, requester, mess
     )
 
 
+def notify_validator_added(validator, actor_id=None):
+    """
+    Notify a user when they are promoted to validator.
+    """
+    if not validator:
+        return
+
+    create_notification(
+        user_id=validator.id,
+        notification_type='validator_added',
+        title="You're now a validator",
+        message="Access your validator dashboard to review projects, set preferences, and start validating.",
+        actor_id=actor_id,
+        redirect_url="/validator"
+    )
+
+
+def notify_validator_assignment(validator, project, actor_id=None, priority='normal'):
+    """
+    Notify a validator when a project is assigned to them.
+    """
+    if not validator or not project:
+        return
+
+    priority_label = priority.capitalize() if isinstance(priority, str) else "Normal"
+    message = f"'{project.title}' was assigned to you for review ({priority_label} priority)."
+
+    create_notification(
+        user_id=validator.id,
+        notification_type='validator_assignment',
+        title="New project to review",
+        message=message,
+        project_id=project.id,
+        actor_id=actor_id,
+        redirect_url="/validator"
+    )
+
+
 def notify_project_removed_from_chain(project_owner_id, chain, project, remover_id):
     """
     Notify project owner when their project is removed from a chain
@@ -416,5 +454,61 @@ def notify_comment_reply(comment_author_id, original_comment, reply_comment, rep
         )
     except Exception as e:
         print(f"[Notifications] ERROR in notify_comment_reply: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+def notify_investor_request_approved(user_id, investor_name=None):
+    """
+    Notify user when their investor request is approved
+
+    Args:
+        user_id: ID of user whose request was approved
+        investor_name: Optional name of the investor (for context)
+    """
+    try:
+        print(f"\n[Notifications] notify_investor_request_approved called:")
+        print(f"  User: {user_id}")
+        print(f"  Investor name: {investor_name}")
+
+        create_notification(
+            user_id=user_id,
+            notification_type='investor_request_approved',
+            title="Investor request approved!",
+            message="Congratulations! Your investor profile has been approved and is now active.",
+            redirect_url="/investor/dashboard"
+        )
+    except Exception as e:
+        print(f"[Notifications] ❌ ERROR in notify_investor_request_approved: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+def notify_investor_request_rejected(user_id, reason=None):
+    """
+    Notify user when their investor request is rejected
+
+    Args:
+        user_id: ID of user whose request was rejected
+        reason: Optional rejection reason
+    """
+    try:
+        print(f"\n[Notifications] notify_investor_request_rejected called:")
+        print(f"  User: {user_id}")
+        print(f"  Reason: {reason}")
+
+        message = "Your investor request has been reviewed and unfortunately could not be approved at this time."
+        if reason:
+            message += f" Reason: {reason}"
+
+        create_notification(
+            user_id=user_id,
+            notification_type='investor_request_rejected',
+            title="Investor request status update",
+            message=message,
+            redirect_url="/investor"
+        )
+    except Exception as e:
+        print(f"[Notifications] ❌ ERROR in notify_investor_request_rejected: {str(e)}")
         import traceback
         traceback.print_exc()

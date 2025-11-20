@@ -71,16 +71,16 @@ export default function Feed() {
   // Only load dashboard stats if user is authenticated (prevents 401 errors for guests)
   const { data: dashboard } = useDashboardStats(!!user);
   // Load feed-specific data (cached for 1 hour on backend)
-  const { data: mostRequestedData } = useMostRequestedProjects(20);
-  const { data: recentConnectionsData } = useRecentConnections(20);
-  const { data: featuredData } = useFeaturedProjects(10);
-  const { data: risingStarsData } = useRisingStars(20);
+  const { data: mostRequestedData } = useMostRequestedProjects(30);
+  const { data: recentConnectionsData } = useRecentConnections(30);
+  const { data: featuredData } = useFeaturedProjects(30);
+  const { data: risingStarsData } = useRisingStars(30);
 
   // Dynamic category sections - you can add more categories here
-  const { data: defiData } = useCategoryProjects('DeFi', 20);
-  const { data: aiData } = useCategoryProjects('AI/ML', 20);
-  const { data: gamingData } = useCategoryProjects('Gaming', 20);
-  const { data: saasData } = useCategoryProjects('SaaS', 20);
+  const { data: defiData } = useCategoryProjects('DeFi', 30);
+  const { data: aiData } = useCategoryProjects('AI/ML', 30);
+  const { data: gamingData } = useCategoryProjects('Gaming', 30);
+  const { data: saasData } = useCategoryProjects('SaaS', 30);
 
   const investorsHref = user ? '/investor-directory' : '/investors';
 
@@ -133,26 +133,46 @@ export default function Feed() {
   // Categorize projects
   const categorizedProjects = useMemo(() => {
     return {
-      hot: (hotData?.data || []).slice(0, 20),
-      topScored: (topData?.data || []).slice(0, 10),
-      featured: (featuredData?.data || []).slice(0, 10),
-      risingStars: (risingStarsData?.data || []).slice(0, 20),
-      newLaunches: (newData?.data || []).slice(0, 20),
-      defi: (defiData?.data || []).slice(0, 20),
-      aiMl: (aiData?.data || []).slice(0, 20),
-      gaming: (gamingData?.data || []).slice(0, 20),
-      saas: (saasData?.data || []).slice(0, 20),
-      mostRequested: (mostRequestedData?.data || []).slice(0, 20),
+      hot: (hotData?.data || []).slice(0, 30),
+      topScored: (topData?.data || []).slice(0, 30),
+      featured: (featuredData?.data || []).slice(0, 30),
+      risingStars: (risingStarsData?.data || []).slice(0, 30),
+      newLaunches: (newData?.data || []).slice(0, 30),
+      defi: (defiData?.data || []).slice(0, 30),
+      aiMl: (aiData?.data || []).slice(0, 30),
+      gaming: (gamingData?.data || []).slice(0, 30),
+      saas: (saasData?.data || []).slice(0, 30),
+      mostRequested: (mostRequestedData?.data || []).slice(0, 30),
     };
   }, [hotData, topData, newData, mostRequestedData, featuredData, risingStarsData, defiData, aiData, gamingData, saasData]);
 
+  // Merge all feed projects once to power stats + tag leader without duplicates
+  const visibleFeedProjects = useMemo(() => {
+    const unique = new Map<string, Project>();
+    const addProjects = (projects?: Project[]) => {
+      if (!projects) return;
+      for (const project of projects) {
+        if (!project?.id || unique.has(project.id)) continue;
+        unique.set(project.id, project);
+      }
+    };
+    // Include all sections for total count
+    addProjects(hotData?.data);
+    addProjects(topData?.data);
+    addProjects(newData?.data);
+    addProjects(featuredData?.data);
+    addProjects(risingStarsData?.data);
+    addProjects(defiData?.data);
+    addProjects(aiData?.data);
+    addProjects(gamingData?.data);
+    addProjects(saasData?.data);
+    addProjects(mostRequestedData?.data);
+    return Array.from(unique.values());
+  }, [hotData?.data, topData?.data, newData?.data, featuredData?.data, risingStarsData?.data, defiData?.data, aiData?.data, gamingData?.data, saasData?.data, mostRequestedData?.data]);
+
   // Compute leading tag/category today from all visible datasets
   const leader = useMemo(() => {
-    const all = [
-      ...(hotData?.data || []),
-      ...(topData?.data || []),
-      ...(newData?.data || []),
-    ];
+    const all = visibleFeedProjects;
     const buckets: Record<string, number> = {};
     const push = (key: string) => {
       if (!key) return;
@@ -177,9 +197,19 @@ export default function Feed() {
     }
     const total = Object.values(buckets).reduce((a, b) => a + b, 0) || 1;
     const percent = (count / total) * 100;
-    const iconKey = label.toLowerCase().includes('block') ? 'blockchain' : label.toLowerCase().includes('ai') ? 'ai' : label.toLowerCase().includes('game') ? 'gaming' : label.toLowerCase().includes('fin') ? 'fintech' : label.toLowerCase().includes('saas') ? 'saas' : 'other';
+    const iconKey = label.toLowerCase().includes('block')
+      ? 'blockchain'
+      : label.toLowerCase().includes('ai')
+        ? 'ai'
+        : label.toLowerCase().includes('game')
+          ? 'gaming'
+          : label.toLowerCase().includes('fin')
+            ? 'fintech'
+            : label.toLowerCase().includes('saas')
+              ? 'saas'
+              : 'other';
     return { label, count, percent, icon: iconKey as any };
-  }, [hotData, topData, newData]);
+  }, [visibleFeedProjects]);
 
   // Removed old filter functions - now using real category-based data from backend
 
@@ -207,14 +237,86 @@ export default function Feed() {
 
         {/* Carousels Section */}
         {isLoading ? (
-          <div className="space-y-16">
+          <div className="space-y-12 sm:space-y-16 pb-12">
+            {/* Quick Section Nav Skeleton */}
+            <nav className="feed-quick-nav -mt-6 animate-pulse">
+              <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={idx} className="h-8 w-24 bg-secondary rounded-full flex-shrink-0"></div>
+                ))}
+              </div>
+            </nav>
+
             {/* Top Rated Carousel Skeleton */}
             <div className="flex justify-center">
               <div className="w-full sm:w-[760px] h-[380px]">
                 <TopRatedCarouselSkeleton />
               </div>
             </div>
-            {/* Other carousel skeletons */}
+
+            {/* Stats + Leader skeleton */}
+            <section>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-pulse">
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="card-elevated p-6 space-y-3">
+                    <div className="h-4 w-20 bg-secondary rounded"></div>
+                    <div className="h-10 w-16 bg-secondary rounded"></div>
+                    <div className="h-3 w-24 bg-secondary rounded"></div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Leader Tag Card Skeleton */}
+              <div className="flex justify-center animate-pulse">
+                <div className="card-elevated p-6 w-full sm:w-[400px] h-[140px]">
+                  <div className="space-y-3">
+                    <div className="h-5 w-32 bg-secondary rounded"></div>
+                    <div className="h-8 w-24 bg-secondary rounded"></div>
+                    <div className="h-4 w-40 bg-secondary rounded"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Mini threads skeleton - first set */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
+              {Array.from({ length: 2 }).map((_, idx) => (
+                <div key={idx} className="card-elevated p-5 h-[100px] space-y-2">
+                  <div className="h-5 w-40 bg-secondary rounded"></div>
+                  <div className="h-4 w-full bg-secondary rounded"></div>
+                  <div className="h-3 w-32 bg-secondary rounded"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Carousel skeletons - Trending */}
+            <ProjectCardSkeletonGrid count={5} />
+
+            {/* Mini threads skeleton - second set */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
+              {Array.from({ length: 2 }).map((_, idx) => (
+                <div key={idx} className="card-elevated p-5 h-[100px] space-y-2">
+                  <div className="h-5 w-40 bg-secondary rounded"></div>
+                  <div className="h-4 w-full bg-secondary rounded"></div>
+                  <div className="h-3 w-32 bg-secondary rounded"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* More carousels - Featured, Rising Stars, New Launches, etc */}
+            <ProjectCardSkeletonGrid count={5} />
+            <ProjectCardSkeletonGrid count={5} />
+            <ProjectCardSkeletonGrid count={5} />
+
+            {/* Hero Thread skeleton */}
+            <div className="card-elevated p-5 h-[100px] animate-pulse space-y-2">
+              <div className="h-5 w-40 bg-secondary rounded"></div>
+              <div className="h-4 w-full bg-secondary rounded"></div>
+              <div className="h-3 w-32 bg-secondary rounded"></div>
+            </div>
+
+            {/* More carousels */}
+            <ProjectCardSkeletonGrid count={5} />
             <ProjectCardSkeletonGrid count={5} />
             <ProjectCardSkeletonGrid count={5} />
             <ProjectCardSkeletonGrid count={5} />
@@ -265,7 +367,7 @@ export default function Feed() {
             {/* Stats + Illustration */}
             <section className="mt-2">
               <FeedStatCards
-                projectsCount={(hotData?.data?.length || 0) + (topData?.data?.length || 0) + (newData?.data?.length || 0)}
+                projectsCount={visibleFeedProjects.length}
                 buildersCount={(buildersForCount?.length || topBuilders?.length || 0)}
               />
               <div className="relative mt-6">

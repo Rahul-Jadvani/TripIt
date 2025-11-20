@@ -429,19 +429,23 @@ export default function UserProfile() {
                 value="owned-chains"
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
-                Owned Chains ({ownedChainsData?.chains?.length || 0})
+                Owned layerz ({ownedChainsData?.chains?.length || 0})
               </TabsTrigger>
               <TabsTrigger
                 value="following-chains"
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
-                Following ({followingChainsData?.chains?.length || 0})
+                Following layerz ({followingChainsData?.chains?.length || 0})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="projects">
               {projectsLoading ? (
-                <ProjectCardSkeletonGrid count={3} />
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="h-[520px] bg-secondary rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
               ) : projectsData?.data && projectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {projectsData.data.map((project: any) => (
@@ -462,7 +466,11 @@ export default function UserProfile() {
 
             <TabsContent value="tagged">
               {taggedProjectsLoading ? (
-                <ProjectCardSkeletonGrid count={3} />
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="h-[520px] bg-secondary rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
               ) : taggedProjectsData?.data && taggedProjectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {taggedProjectsData.data.map((project: any) => (
@@ -483,15 +491,31 @@ export default function UserProfile() {
 
             <TabsContent value="owned-chains">
               {ownedChainsLoading ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="card-elevated p-6 animate-pulse">
+                      <div className="flex items-start gap-4">
+                        <div className="h-16 w-16 rounded-full bg-secondary flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="h-6 w-32 bg-secondary rounded"></div>
+                          <div className="h-4 w-full bg-secondary rounded"></div>
+                          <div className="h-4 w-5/6 bg-secondary rounded"></div>
+                          <div className="flex items-center gap-4 text-xs mt-3">
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : ownedChainsData?.chains && ownedChainsData.chains.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {ownedChainsData.chains.map((chain: any) => (
                     <Link
                       key={chain.id}
-                      to={`/chains/${chain.slug}`}
+                      to={`/layerz/${chain.slug}`}
                       className="card-elevated p-6 hover:border-primary transition-all"
                     >
                       <div className="flex items-start gap-4">
@@ -531,9 +555,9 @@ export default function UserProfile() {
                 <div className="card-elevated p-12 text-center">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-bold text-foreground">No chains created yet</p>
+                    <p className="text-lg font-bold text-foreground">No layerz created yet</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.displayName || user.username} hasn't created any chains yet
+                      {user.displayName || user.username} hasn't created any layerz yet
                     </p>
                   </div>
                 </div>
@@ -542,15 +566,31 @@ export default function UserProfile() {
 
             <TabsContent value="following-chains">
               {followingChainsLoading ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="card-elevated p-6 animate-pulse">
+                      <div className="flex items-start gap-4">
+                        <div className="h-16 w-16 rounded-full bg-secondary flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="h-6 w-32 bg-secondary rounded"></div>
+                          <div className="h-4 w-full bg-secondary rounded"></div>
+                          <div className="h-4 w-5/6 bg-secondary rounded"></div>
+                          <div className="flex items-center gap-4 text-xs mt-3">
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                            <div className="h-3 w-16 bg-secondary rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : followingChainsData?.chains && followingChainsData.chains.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {followingChainsData.chains.map((chain: any) => (
                     <Link
                       key={chain.id}
-                      to={`/chains/${chain.slug}`}
+                      to={`/layerz/${chain.slug}`}
                       className="card-elevated p-6 hover:border-primary transition-all"
                     >
                       <div className="flex items-start gap-4">
@@ -590,9 +630,9 @@ export default function UserProfile() {
                 <div className="card-elevated p-12 text-center">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-bold text-foreground">Not following any chains</p>
+                    <p className="text-lg font-bold text-foreground">Not following any layerz</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.displayName || user.username} hasn't followed any chains yet
+                      {user.displayName || user.username} hasn't followed any layerz yet
                     </p>
                   </div>
                 </div>

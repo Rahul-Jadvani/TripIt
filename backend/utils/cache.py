@@ -407,6 +407,16 @@ class CacheService:
         key = f"search:{query}"
         return CacheService.get(key)
 
+    @staticmethod
+    def invalidate_search_results(query: str = None):
+        """Invalidate search results cache for a specific query or all search results"""
+        if query:
+            key = f"search:{query}"
+            CacheService.delete(key)
+        else:
+            # Invalidate all search results with pattern search:*
+            CacheService.clear_pattern("search:*")
+
     # ============================================================================
     # INTRO REQUESTS CACHING
     # ============================================================================

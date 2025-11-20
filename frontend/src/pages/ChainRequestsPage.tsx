@@ -51,7 +51,7 @@ export default function ChainRequestsPage() {
             {!chain ? 'Chain not found' : "You don't have permission to view this page"}
           </p>
           <Button asChild>
-            <Link to="/chains">Back to Chains</Link>
+            <Link to="/layerz">Back to layerz</Link>
           </Button>
         </Card>
       </div>
@@ -98,9 +98,9 @@ export default function ChainRequestsPage() {
       {/* Header */}
       <div className="space-y-4">
         <Button asChild variant="ghost" size="sm">
-          <Link to={`/chains/${slug}`}>
+          <Link to={`/layerz/${slug}`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Chain
+            Back to layerz
           </Link>
         </Button>
 

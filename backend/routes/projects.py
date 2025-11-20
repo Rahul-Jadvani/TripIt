@@ -6,10 +6,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 from datetime import datetime, timedelta
 from sqlalchemy import func, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, load_only
 
 from extensions import db
 from models.project import Project, ProjectScreenshot
+from models.badge import ValidationBadge
 from models.user import User
 from models.investor_request import InvestorRequest
 from schemas.project import ProjectSchema, ProjectCreateSchema, ProjectUpdateSchema
@@ -42,16 +43,32 @@ def list_projects(user_id):
         featured_only = request.args.get('featured', type=lambda v: v.lower() == 'true') if request.args.get('featured') else None
         badge_type = request.args.get('badge', '').strip()
 
-        # Check cache ONLY if no filters (pure feed requests)
-        has_filters = any([search, tech_stack, hackathon, min_score is not None,
-                          has_demo is not None, has_github is not None,
-                          featured_only, badge_type])
+        include_param = request.args.get('include', '')
+        include_parts = {part.strip().lower() for part in include_param.split(',') if part.strip()}
+        include_detailed = 'detailed' in include_parts
+
+        # Treat include=detailed as a filter so we bypass caches/materialized views
+        base_has_filters = any([
+            search,
+            tech_stack,
+            hackathon,
+            min_score is not None,
+            has_demo is not None,
+            has_github is not None,
+            featured_only,
+            badge_type,
+        ])
+        has_filters = base_has_filters or include_detailed
 
         # Check config to see if materialized view usage is enabled (defaults to True with enhanced MV)
         enable_feed_mv = current_app.config.get('ENABLE_FEED_MV', True)
         # We only use the materialized view for pure feed requests with supported sorts
         sorts_using_mv = {'trending', 'hot', 'newest', 'new', 'top-rated', 'top'} if enable_feed_mv else set()
-        use_materialized_view = enable_feed_mv and (not has_filters) and (sort in sorts_using_mv)
+        use_materialized_view = (
+            enable_feed_mv
+            and (not has_filters)
+            and (sort in sorts_using_mv)
+        )
 
         if not has_filters:
             print(f"\n[API] GET /projects: No filters, checking cache... user_id={user_id}, sort={sort}, page={page}")
@@ -153,6 +170,28 @@ def list_projects(user_id):
             # Batch fetch users and projects to avoid N+1 queries
             project_ids = [row.get('id') for row in raw_projects if row.get('id')]
             user_ids = list(set([row.get('user_id') for row in raw_projects if row.get('user_id')]))
+
+            # Prefetch badges for all projects in this page to avoid N+1 queries later
+            badges_by_project = {}
+            if project_ids:
+                badges = ValidationBadge.query.filter(ValidationBadge.project_id.in_(project_ids)).all()
+                for badge in badges:
+                    project_id = badge.project_id
+                    if project_id not in badges_by_project:
+                        badges_by_project[project_id] = []
+                    badges_by_project[project_id].append(badge.to_dict(include_validator=True))
+
+            # Prefetch categories for MV rows so filters work without detailed fetch
+            category_map = {}
+            if project_ids:
+                category_rows = (
+                    Project.query
+                    .options(load_only(Project.id, Project.categories))
+                    .filter(Project.id.in_(project_ids))
+                    .all()
+                )
+                for project in category_rows:
+                    category_map[project.id] = project.categories or []
 
             # Batch fetch users
             users_dict = {}
@@ -263,14 +302,14 @@ def list_projects(user_id):
                         'hackathon_date': None,
                         'hackathons': [],
                         'team_members': [],
-                        'categories': [],
+                        'categories': category_map.get(row.get('id'), []),
                         'verification_score': 0,
                         'community_score': 0,
                         'validation_score': 0,
                         'quality_score': 0,
                         'view_count': 0,
                         'screenshots': [],
-                        'badges': [],
+                        'badges': badges_by_project.get(row.get('id'), []),
                     }
 
                     if project and include_detailed:
@@ -572,7 +611,13 @@ def get_project(user_id, project_id):
             from flask import jsonify
             return jsonify(cached), 200
 
-        project = Project.query.options(joinedload(Project.creator)).get(project_id)
+        # OPTIMIZED: Eager load creator relationship (only non-dynamic relationship)
+        from sqlalchemy.orm import joinedload
+
+        project = Project.query.options(
+            joinedload(Project.creator)
+        ).get(project_id)
+
         if not project or project.is_deleted:
             return error_response('Not found', 'Project not found', 404)
 
@@ -663,6 +708,9 @@ def create_project(user_id):
         project.proof_score = 0  # Will be updated by async task
 
         db.session.commit()
+
+        # Invalidate search cache when a new project is created
+        CacheService.invalidate_search_results()
 
         # Trigger async AI scoring task
         try:

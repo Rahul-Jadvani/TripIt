@@ -60,14 +60,14 @@ export function ChainSelector({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <label className="text-sm font-medium">Publish to Chains (Optional)</label>
+        <label className="text-sm font-medium">Publish to layerz (Optional)</label>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-muted-foreground cursor-help" />
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              <p>Select up to {maxSelections} chains to publish your project in. Some chains may require approval from the chain owner.</p>
+              <p>Select up to {maxSelections} layerz to publish your project in. Some layerz may require approval from the layerz owner.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -109,7 +109,7 @@ export function ChainSelector({
         <PopoverTrigger asChild>
           <Button variant="outline" className="w-full justify-start gap-2">
             <Plus className="h-4 w-4" />
-            Add to chains ({selectedChainIds.length}/{maxSelections})
+            Add to layerz ({selectedChainIds.length}/{maxSelections})
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
@@ -117,7 +117,7 @@ export function ChainSelector({
             <div className="relative">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search chains..."
+                placeholder="Search layerz..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8"
@@ -128,11 +128,11 @@ export function ChainSelector({
           <ScrollArea className="h-[400px]">
             {isLoading ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
-                Loading chains...
+                Loading layerz...
               </div>
             ) : chains.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
-                No chains found
+                No layerz found
               </div>
             ) : (
               <div className="p-2 space-y-4">
@@ -202,7 +202,7 @@ export function ChainSelector({
                 <div className="space-y-1">
                   {filteredRecommendations.length > 0 && (
                     <div className="px-2 py-1">
-                      <span className="text-sm font-semibold text-muted-foreground">All Chains</span>
+                      <span className="text-sm font-semibold text-muted-foreground">All layerz</span>
                     </div>
                   )}
                   {chains.map((chain) => {
@@ -262,12 +262,12 @@ export function ChainSelector({
 
           <div className="p-3 border-t bg-muted/50">
             <Link
-              to="/chains/create"
+              to="/layerz/create"
               className="text-xs text-primary hover:underline flex items-center gap-1"
               onClick={() => setOpen(false)}
             >
               <Plus className="h-3 w-3" />
-              Create new chain
+              Create new layerz
             </Link>
           </div>
         </PopoverContent>
@@ -275,14 +275,14 @@ export function ChainSelector({
 
       {isMaxReached && (
         <p className="text-xs text-muted-foreground">
-          Maximum of {maxSelections} chains reached
+          Maximum of {maxSelections} layerz reached
         </p>
       )}
 
       {selectedChains.some((c) => c.requires_approval) && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <Info className="h-3 w-3" />
-          Some chains require approval from the chain owner
+          Some layerz require approval from the layerz owner
         </p>
       )}
     </div>
