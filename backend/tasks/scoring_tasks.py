@@ -62,6 +62,7 @@ def score_project_task(self, project_id):
             project.verification_score = result['verification_score']
             project.validation_score = result['validation_score']
             project.community_score = result['community_score']
+            project.onchain_score = result['onchain_score']
             project.score_breakdown = result['breakdown']
             project.scoring_status = 'completed'
             project.last_scored_at = datetime.utcnow()

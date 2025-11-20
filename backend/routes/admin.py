@@ -1904,6 +1904,7 @@ def get_scoring_stats(user_id):
                 'verification_score': sum(p.verification_score or 0 for p in completed_projects) / len(completed_projects),
                 'validation_score': sum(p.validation_score or 0 for p in completed_projects) / len(completed_projects),
                 'community_score': sum(p.community_score or 0 for p in completed_projects) / len(completed_projects),
+                'onchain_score': sum(p.onchain_score or 0 for p in completed_projects) / len(completed_projects),
             }
         else:
             stats['average_scores'] = {
@@ -1912,6 +1913,7 @@ def get_scoring_stats(user_id):
                 'verification_score': 0,
                 'validation_score': 0,
                 'community_score': 0,
+                'onchain_score': 0,
             }
 
         # Get recent failures

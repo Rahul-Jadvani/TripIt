@@ -1,352 +1,221 @@
-# Frontend Interactive Features - Implementation Summary
+# Implementation Summary: Community Score Normalization & On-Chain Score
 
-## ✅ Completed Work
+## Overview
+Successfully completed the implementation to normalize community scores to 10 points (down from 30) and add a placeholder on-chain score component worth 20 points (currently defaulting to 0).
 
-### 1. **API Service Layer** (`src/services/api.ts`)
-- Centralized API client with axios
-- Services for: Projects, Voting, Comments, Badges, Users, Wallet, Intros, Search, Leaderboard
-- Request interceptor for JWT authentication
-- Error handling
+## What Was Completed
 
-### 2. **Form Validation** (`src/lib/schemas.ts`)
-- Zod schemas for all forms
-- Type-safe input types via type inference
-- Schemas for: Login, Register, PublishProject, Comments, Badges, Intros, ProfileUpdate
+### Backend Changes
 
-### 3. **Custom Hooks** (in `src/hooks/`)
-- **useProjects.ts** - Project queries and mutations
-- **useVotes.ts** - Voting mutations (upvote, downvote, removeVote)
-- **useComments.ts** - Comments queries and mutations
-- **useBadges.ts** - Badge awarding mutations
-- **useWallet.ts** - Wallet verification and connection
-- **useIntros.ts** - Intro request queries and mutations
-- **useSearch.ts** - Search and leaderboard queries
+#### 1. Database Migration
+- **File Created**: `backend/migrations/005_add_onchain_score.sql`
+- **Action**: Adds `onchain_score` column to the projects table
+- **Status**: ✅ Migration file ready (needs manual execution)
 
-All hooks use React Query for:
-- Automatic caching
-- Real-time updates
-- Optimistic updates
-- Error handling
-- Loading states
+#### 2. Models Updated
+- **File**: `backend/models/project.py`
+  - Added `onchain_score` column with default value 0.0
+  - Updated `calculate_proof_score()` to include onchain_score
+  - Updated `to_dict()` method to include onchain_score in API responses
 
-### 4. **Interactive Components** (in `src/components/`)
+#### 3. Schemas Updated
+- **File**: `backend/schemas/project.py`
+  - Added `onchain_score` field to ProjectSchema
+- **File**: `backend/schemas/scoring.py`
+  - Added `onchain_score` to ScoringWeightsSchema
+  - Updated validation to include onchain_score in weight sum checks
 
-#### VoteButtons Component
-- Upvote/downvote functionality
-- Vote count display
-- Toggle vote state
-- Authentication protection
-- Real-time updates
+#### 4. Scoring Engine Updated
+- **File**: `backend/services/scoring/score_engine.py`
+  - Updated comments: Community Score max is now 10 points (down from 30)
+  - Added On-Chain Score placeholder: 20 points (currently 0)
+  - Updated score calculation to include onchain_score
+  - Added onchain breakdown in response with status 'coming_soon'
+  - Updated `_calculate_community_score()` to normalize to max 10 points
 
-#### CommentSection Component
-- Post comments
-- Delete own comments
-- Vote on comments
-- Display comment author, timestamp
-- Real-time comment loading
+#### 5. Routes Updated
+- **Files**: `backend/routes/projects.py`, `backend/routes/admin.py`
+  - All routes now return onchain_score in project responses
+  - Admin endpoints updated to handle onchain_score
 
-#### BadgeAwarder Component
-- Award Silver/Gold/Platinum badges
-- Admin-only visibility
-- Optional rationale field
-- Dialog UI
+#### 6. Other Backend Files Updated
+- `backend/tasks/scoring_tasks.py` - Updated to handle onchain_score
+- `backend/utils/scoring_helpers.py` - Updated scoring calculations
+- `backend/services/scoring/config_manager.py` - Updated default weights
+- `backend/models/event_listeners.py` - Updated to include onchain_score in score recalculations
 
-#### ConnectWallet Component
-- MetaMask/WalletConnect integration
-- 0xCerts verification
-- Display wallet address
-- Disconnect functionality
+### Frontend Changes
 
-#### IntroRequest Component
-- Send intro requests to builders
-- Message validation (10-1000 chars)
-- Dialog UI
-- Authentication protection
+#### 1. TypeScript Types Updated
+- **File**: `frontend/src/types/index.ts`
+  - Added `onchain` field to ProofScore interface
+  - Added `onchain_score` and `onchainScore` fields to Project interface
 
-### 5. **Updated Pages**
+#### 2. Components Updated
+- **File**: `frontend/src/components/AIScoringBreakdownCard.tsx`
+  - Added "On-Chain Score" section displaying 0/20 with "Coming soon" badge
+  - Includes description: "Reserved for future on-chain verification signals"
 
-#### ProjectDetail Page
-- Integrated VoteButtons
-- Integrated CommentSection
-- Integrated BadgeAwarder
-- Integrated IntroRequest
-- Dynamic action buttons based on user role
+- **File**: `frontend/src/components/AdminScoringConfig.tsx`
+  - Added On-Chain Score weight slider (max 20 points)
+  - Added "Coming soon" label
+  - Updated default weights to include onchain_score: 20
 
-#### Publish Page
-- Form validation using React Hook Form + Zod
-- Tech stack management (add/remove)
-- Error display per field
-- Loading states
-- Success toast notification
-- Redirect to /my-projects on success
+#### 3. Utility Functions Updated
+- **File**: `frontend/src/utils/score.ts`
+  - Added 'onchain' to SCORE_SECTIONS array
+  - Updated score calculation functions to include onchain component
 
-#### Navbar Component
-- Wallet connection button (ConnectWallet)
-- Intros link
-- Enhanced user dropdown menu
-  - Dashboard link
-  - My Projects link
-  - Intro Requests link
-  - Profile link
-  - Settings link
-  - Logout button
-- Responsive design
+#### 4. Pages Updated
+- **File**: `frontend/src/pages/Publish.tsx`
+  - Updated Proof Score info section to show:
+    - Community Score (Max 10 points) - down from 30
+    - On-Chain Score (Max 20 points) - new section
 
-### 6. **Configuration**
+- **File**: `frontend/src/pages/Search.tsx`
+  - Updated project mapping to include onchain_score
 
-#### .env.example
-- API URL configuration
-- Blockchain (Kaia) configuration
-- 0xCerts contract configuration
-- WalletConnect project ID
-- Feature flags
-- Auth token configuration
+- **File**: `frontend/src/pages/AdminRescore.tsx`
+  - No changes needed (uses generic scoring)
 
-### 7. **Documentation**
+- **File**: `frontend/src/pages/AdminValidator.tsx`
+  - Added onchain_score to project type definition
 
-#### INTERACTIVE_FEATURES.md
-- Complete feature overview
-- Component usage examples
-- API service documentation
-- Custom hooks reference
-- Validation schema reference
-- Environment setup
-- Error handling guide
-- Testing instructions
-- Architecture decisions
+#### 5. Hooks Updated
+- `frontend/src/hooks/useProjects.ts` - Updated to handle onchain_score
+- `frontend/src/hooks/useSavedProjects.ts` - Updated project mapping
+- `frontend/src/hooks/useSearch.ts` - Updated project mapping
 
----
+## New Scoring Breakdown (Total: 100 points)
 
-## 📁 Files Created
+| Component | Points | Description |
+|-----------|--------|-------------|
+| **Code Quality** | 20 | GitHub repo analysis, README, code organization |
+| **Team Verification** | 20 | GitHub profile, contributions, reputation |
+| **AI Validation** | 30 | Market fit, competitive analysis, innovation |
+| **Community Score** | 10 | Upvotes (6 pts) + Comment engagement (4 pts) |
+| **On-Chain Score** | 20 | Reserved for future on-chain verification (currently 0) |
 
-### Services
-- `src/services/api.ts` - API client and service methods
+**Previous**: Community Score was 30 points
+**Current**: Community Score is 10 points, On-Chain Score is 20 points (placeholder)
 
-### Validation
-- `src/lib/schemas.ts` - Zod validation schemas
+## What You Need To Do Manually
 
-### Hooks
-- `src/hooks/useProjects.ts`
-- `src/hooks/useVotes.ts`
-- `src/hooks/useComments.ts`
-- `src/hooks/useBadges.ts`
-- `src/hooks/useWallet.ts`
-- `src/hooks/useIntros.ts`
-- `src/hooks/useSearch.ts`
+### 1. Run Database Migration
+You need to apply the database migration to add the `onchain_score` column:
 
-### Components
-- `src/components/VoteButtons.tsx`
-- `src/components/CommentSection.tsx`
-- `src/components/BadgeAwarder.tsx`
-- `src/components/ConnectWallet.tsx`
-- `src/components/IntroRequest.tsx`
+```bash
+# Option 1: Using psql directly
+psql -h localhost -U postgres -d discovery_platform -f backend/migrations/005_add_onchain_score.sql
 
-### Configuration
-- `.env.example`
+# Option 2: Using Python script (if you have direct DB access)
+cd backend
+python -c "
+from extensions import db
+from app import create_app
+app = create_app()
+with app.app_context():
+    db.session.execute('ALTER TABLE projects ADD COLUMN IF NOT EXISTS onchain_score NUMERIC DEFAULT 0.0')
+    db.session.execute('UPDATE projects SET onchain_score = 0 WHERE onchain_score IS NULL')
+    db.session.commit()
+    print('Migration completed!')
+"
+```
 
-### Documentation
-- `INTERACTIVE_FEATURES.md`
-- `IMPLEMENTATION_SUMMARY.md` (this file)
+### 2. Verify Application Works
+After running the migration:
 
----
-
-## 📝 Files Modified
-
-1. **src/pages/ProjectDetail.tsx**
-   - Added interactive components
-   - Action buttons for badge awarding and intros
-   - Comment section integration
-
-2. **src/pages/Publish.tsx**
-   - Complete rewrite with React Hook Form
-   - Zod validation
-   - Form error display
-   - Tech stack management
-   - Loading states
-
-3. **src/components/Navbar.tsx**
-   - Added ConnectWallet component
-   - Added Intros link
-   - Enhanced user dropdown menu
-   - Added My Projects link
-
----
-
-## 🎯 Key Features
-
-### Real-time Updates
-- All mutations automatically invalidate and refetch related data
-- Toast notifications for user feedback
-- Optimistic UI updates
-
-### Authentication
-- Protected routes via AuthContext
-- JWT token management
-- Auto-logout on 401 errors
-- Login required for interactive actions
-
-### Admin Features
-- Badge awarding (admin only)
-- Admin-only badge component visibility
-- Future: moderation dashboard, user management
-
-### Wallet Integration
-- Wagmi support for MetaMask/WalletConnect
-- 0xCerts NFT verification
-- Wallet address connection to user profile
-- Chain: Kaia Kairos Testnet (chain ID 1001)
-
-### Form Handling
-- React Hook Form for lightweight form management
-- Zod for type-safe validation
-- Field-level error messages
-- Required field validation
-- URL validation
-- Character limits
-- Minimum/maximum length validation
-
----
-
-## 🚀 Ready for Integration
-
-The frontend is now ready to integrate with a backend API. All components expect the endpoints defined in `src/services/api.ts`.
-
-### Required Backend Endpoints
-
-**Authentication**
-- `POST /api/auth/login` - Login with email/password
-- `POST /api/auth/register` - Register new user
-- `GET /api/auth/me` - Get current user
-
-**Projects**
-- `GET /api/projects` - List projects with sorting/pagination
-- `GET /api/projects/:id` - Get single project
-- `POST /api/projects` - Create project
-- `PUT /api/projects/:id` - Update project
-- `DELETE /api/projects/:id` - Delete project
-- `GET /api/users/:userId/projects` - Get user's projects
-
-**Voting**
-- `POST /api/projects/:id/upvote` - Upvote project
-- `POST /api/projects/:id/downvote` - Downvote project
-- `DELETE /api/projects/:id/vote` - Remove vote
-
-**Comments**
-- `GET /api/projects/:id/comments` - Get project comments
-- `POST /api/projects/:id/comments` - Create comment
-- `PUT /api/comments/:id` - Update comment
-- `DELETE /api/comments/:id` - Delete comment
-- `POST /api/comments/:id/vote` - Vote on comment
-
-**Badges**
-- `GET /api/projects/:id/badges` - Get project badges
-- `POST /api/projects/:id/badges` - Award badge
-
-**Wallet**
-- `POST /api/blockchain/verify-cert` - Verify 0xCerts
-- `PUT /api/users/:id` - Update user (including wallet)
-
-**Intros**
-- `POST /api/intros` - Create intro request
-- `GET /api/intros/received` - Get received intros
-- `GET /api/intros/sent` - Get sent intros
-- `POST /api/intros/:id/accept` - Accept intro
-- `POST /api/intros/:id/decline` - Decline intro
-
-**Search & Leaderboard**
-- `GET /api/search?q=query` - Search projects/users
-- `GET /api/leaderboard/projects` - Get project leaderboard
-- `GET /api/leaderboard/builders` - Get builders leaderboard
-- `GET /api/leaderboard/featured` - Get featured projects
-
-**Users**
-- `GET /api/users/:id` - Get user
-- `GET /api/users/username/:username` - Get user by username
-- `PUT /api/users/:id` - Update user
-
----
-
-## 🔧 Setup Instructions
-
-1. **Install dependencies**
+1. **Start Backend**:
    ```bash
-   npm install
-   # or
-   bun install
+   cd backend
+   python app.py
    ```
 
-2. **Create .env file**
+2. **Start Frontend**:
    ```bash
-   cp .env.example .env
-   # Then edit .env with your configuration
-   ```
-
-3. **Start development server**
-   ```bash
+   cd frontend
    npm run dev
-   # or
-   bun run dev
    ```
 
-4. **Build for production**
-   ```bash
-   npm run build
-   ```
+3. **Test Key Features**:
+   - ✓ View project details page - should show onchain score (0/20)
+   - ✓ Create new project - should initialize with onchain_score = 0
+   - ✓ View scoring breakdown - should display all 5 components
+   - ✓ Admin scoring config - should show all 5 weight sliders
+   - ✓ Search/filter projects - should work normally
 
----
+### 3. Optional: Rescore Existing Projects
+If you want to update all existing projects with the new scoring logic:
 
-## 📊 Component Architecture
-
-```
-App
-├── AuthProvider
-│   └── BrowserRouter
-│       ├── MainLayout
-│       │   ├── Navbar (with ConnectWallet)
-│       │   ├── Routes
-│       │   │   ├── Feed
-│       │   │   ├── ProjectDetail
-│       │   │   │   ├── VoteButtons
-│       │   │   │   ├── CommentSection
-│       │   │   │   ├── BadgeAwarder
-│       │   │   │   └── IntroRequest
-│       │   │   ├── Publish (with form validation)
-│       │   │   └── ... other pages
-│       │   └── Footer
-│       └── TooltipProvider
+```bash
+# Using admin rescore endpoint
+curl -X POST http://localhost:5000/api/admin/rescore/bulk \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"filter": "all"}'
 ```
 
----
+## Verification Checklist
 
-## 🎓 Learning Resources
+- ✅ Backend models include onchain_score
+- ✅ Backend schemas validate onchain_score
+- ✅ Backend routes return onchain_score
+- ✅ Scoring engine calculates onchain_score (currently 0)
+- ✅ Frontend types include onchain fields
+- ✅ Frontend components display onchain score
+- ✅ Frontend utility functions handle onchain score
+- ✅ Frontend compiles without errors
+- ✅ Backend imports work without errors
+- ⏳ Database migration needs to be run manually
+- ⏳ Application testing after migration
 
-- **React Query**: https://tanstack.com/query/latest
-- **React Hook Form**: https://react-hook-form.com/
-- **Zod**: https://zod.dev/
-- **Wagmi**: https://wagmi.sh/
-- **Shadcn/ui**: https://ui.shadcn.com/
+## Files Modified Summary
 
----
+### Backend (14 files)
+1. `backend/models/project.py`
+2. `backend/models/event_listeners.py`
+3. `backend/schemas/project.py`
+4. `backend/schemas/scoring.py`
+5. `backend/routes/projects.py`
+6. `backend/routes/admin.py`
+7. `backend/services/scoring/score_engine.py`
+8. `backend/services/scoring/config_manager.py`
+9. `backend/tasks/scoring_tasks.py`
+10. `backend/utils/scoring_helpers.py`
+11. `backend/check_db_schema.py`
+12. `backend/test_score_calculation.py`
 
-## ✨ Next Priority Items
+### Frontend (10 files)
+1. `frontend/src/types/index.ts`
+2. `frontend/src/components/AIScoringBreakdownCard.tsx`
+3. `frontend/src/components/AdminScoringConfig.tsx`
+4. `frontend/src/utils/score.ts`
+5. `frontend/src/pages/Publish.tsx`
+6. `frontend/src/pages/Search.tsx`
+7. `frontend/src/pages/AdminRescore.tsx`
+8. `frontend/src/pages/AdminValidator.tsx`
+9. `frontend/src/hooks/useProjects.ts`
+10. `frontend/src/hooks/useSavedProjects.ts`
+11. `frontend/src/hooks/useSearch.ts`
 
-1. **Complete remaining pages** (Dashboard, MyProjects, Search, Leaderboard, etc.)
-2. **Backend API development** - Ensure all endpoints match specifications
-3. **Authentication flow** - Test login/register/logout thoroughly
-4. **Testing** - Unit tests for hooks and components
-5. **Performance** - Add pagination, lazy loading, code splitting
-6. **Error boundaries** - Add error boundaries for better error handling
-7. **Loading states** - Add skeleton loaders for better UX
+### New Files Created
+1. `backend/migrations/005_add_onchain_score.sql` - Migration script
+2. `backend/check_onchain_column.py` - Helper script for migration
+3. `IMPLEMENTATION_SUMMARY.md` - This file
 
----
+## Notes
 
-## 📞 Support
+- The on-chain score is currently a placeholder set to 0 for all projects
+- The feature is clearly marked as "Coming Soon" in the UI
+- All existing projects will default to 0 for onchain_score after migration
+- The total possible score remains 100 points
+- Community score normalization is relative (based on max upvotes/comments across all projects)
+- No data loss - old data will continue to work normally
 
-All components are fully documented in their source files with JSDoc comments and type definitions.
+## Future Implementation
 
-For detailed feature documentation, see: `INTERACTIVE_FEATURES.md`
-
----
-
-**Implementation Date**: October 2025
-**Status**: ✅ Ready for Backend Integration
+When implementing the actual on-chain score feature:
+1. Update `score_engine.py` `score_project()` method
+2. Replace `onchain_score = 0.0` with actual calculation logic
+3. Update the breakdown description from 'coming_soon' to actual metrics
+4. Add necessary on-chain data fetching/verification services

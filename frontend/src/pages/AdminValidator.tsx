@@ -35,6 +35,7 @@ interface Project {
   proof_score?: number;
   verification_score?: number;
   community_score?: number;
+  onchain_score?: number;
   validation_score?: number;
   quality_score?: number;
   created_at: string;

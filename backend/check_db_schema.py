@@ -14,7 +14,7 @@ with engine.connect() as conn:
         SELECT column_name, data_type, numeric_precision, numeric_scale
         FROM information_schema.columns
         WHERE table_name = 'projects'
-        AND column_name IN ('proof_score', 'verification_score', 'community_score', 'validation_score', 'quality_score')
+        AND column_name IN ('proof_score', 'verification_score', 'community_score', 'onchain_score', 'validation_score', 'quality_score')
         ORDER BY column_name
     """))
 

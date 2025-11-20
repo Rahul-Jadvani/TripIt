@@ -11,9 +11,9 @@ def update_project_community_score(project):
     Recalculate and update community score for a project using relative scoring
 
     New Formula:
-    - Upvote Score: (project_upvotes / max_upvotes_in_any_project) × 20
-    - Comment Score: (project_comments / max_comments_in_any_project) × 10
-    - Total: max 30 points
+    - Upvote Score: (project_upvotes / max_upvotes_in_any_project) * 6
+    - Comment Score: (project_comments / max_comments_in_any_project) * 4
+    - Total: max 10 points
 
     Args:
         project: Project instance to update
@@ -33,39 +33,49 @@ def update_project_community_score(project):
         max_upvotes = max_stats.max_upvotes or 0
         max_comments = max_stats.max_comments or 0
 
-        # Calculate upvote score (max 20 points)
+        max_upvote_points = 6
+        max_comment_points = 4
+
+        # Calculate upvote score (max 6 points)
         if max_upvotes > 0:
-            upvote_score = (project.upvotes / max_upvotes) * 20
+            upvote_score = (project.upvotes / max_upvotes) * max_upvote_points
         else:
             upvote_score = 0
 
-        # Calculate comment score (max 10 points)
+        # Calculate comment score (max 4 points)
         if max_comments > 0:
-            comment_score = (project.comment_count / max_comments) * 10
+            comment_score = (project.comment_count / max_comments) * max_comment_points
         else:
             comment_score = 0
 
-        # Total community score (max 30)
+        # Total community score (max 10)
         community_score = upvote_score + comment_score
-        project.community_score = round(min(community_score, 30), 2)
+        project.community_score = round(min(community_score, 10), 2)
+
+        # On-chain placeholder stays at 0 for now
+        project.onchain_score = 0.0
 
         # Recalculate total proof score
         project.proof_score = (
             project.quality_score +
             project.verification_score +
             project.validation_score +
-            project.community_score
+            project.community_score +
+            project.onchain_score
         )
 
     except Exception as e:
         print(f"Error updating community score: {e}")
         # Fallback to 0 if calculation fails
         project.community_score = 0
+        project.onchain_score = 0
         project.proof_score = (
             project.quality_score +
             project.verification_score +
-            project.validation_score
+            project.validation_score +
+            project.onchain_score
         )
+
 
 
 def setup_vote_listeners():

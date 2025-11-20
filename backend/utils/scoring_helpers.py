@@ -85,8 +85,15 @@ def recalculate_validation_score_with_badge(project):
         quality_score = existing_breakdown.get('quality', {}).get('score', 0)
         verification_score = existing_breakdown.get('verification', {}).get('score', 0)
         community_score = existing_breakdown.get('community', {}).get('score', 0)
+        onchain_score = existing_breakdown.get('onchain', {}).get('score', 0)
 
-        proof_score = quality_score + verification_score + new_validation_score + community_score
+        proof_score = (
+            quality_score +
+            verification_score +
+            new_validation_score +
+            community_score +
+            onchain_score
+        )
         proof_score = min(round(proof_score, 2), 100)
 
         return {

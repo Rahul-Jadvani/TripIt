@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { Brain, Github, Users, Trophy, Heart, Save, RotateCcw, Settings } from 'lucide-react';
+import { Brain, Github, Users, Trophy, Heart, Save, RotateCcw, Settings, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminService } from '@/services/api';
 
@@ -13,6 +13,7 @@ interface ScoringWeights {
   verification_score: number;
   validation_score: number;
   community_score: number;
+  onchain_score: number;
 }
 
 interface ScoringConfig {
@@ -27,7 +28,8 @@ const defaultWeights: ScoringWeights = {
   quality_score: 20,
   verification_score: 20,
   validation_score: 30,
-  community_score: 30,
+  community_score: 10,
+  onchain_score: 20,
 };
 
 export function AdminScoringConfig() {
@@ -47,7 +49,13 @@ export function AdminScoringConfig() {
     try {
       const response = await adminService.getScoringConfig();
       if (response.scoring_weights) {
-        setWeights(response.scoring_weights);
+        setWeights({
+          quality_score: response.scoring_weights.quality_score ?? defaultWeights.quality_score,
+          verification_score: response.scoring_weights.verification_score ?? defaultWeights.verification_score,
+          validation_score: response.scoring_weights.validation_score ?? defaultWeights.validation_score,
+          community_score: response.scoring_weights.community_score ?? defaultWeights.community_score,
+          onchain_score: response.scoring_weights.onchain_score ?? defaultWeights.onchain_score,
+        });
       }
       if (response.scoring_config) {
         setMaxRetries(response.scoring_config.max_retries || 10);
@@ -252,6 +260,34 @@ export function AdminScoringConfig() {
             />
             <p className="text-xs text-muted-foreground">
               Upvotes and comment engagement from community
+            </p>
+          </div>
+
+          {/* On-Chain Score */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <div className="flex flex-col">
+                  <span className="inline-flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    On-Chain Score
+                  </span>
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Coming soon
+                  </span>
+                </div>
+              </Label>
+              <span className="text-sm font-bold">{weights.onchain_score}</span>
+            </div>
+            <Slider
+              value={[weights.onchain_score]}
+              onValueChange={(value) => handleWeightChange('onchain_score', value[0])}
+              max={100}
+              step={5}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Reserved for future on-chain verification signals (auto-set to 0 for now)
             </p>
           </div>
         </div>

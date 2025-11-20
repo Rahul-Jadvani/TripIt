@@ -226,7 +226,8 @@ export default function AdminRescore() {
               <li>Code Quality: 0-20 points (GitHub repo analysis)</li>
               <li>Author Verification: 0-20 points (repository owner profile)</li>
               <li>AI Validation: 0-30 points (market fit, innovation, success criteria)</li>
-              <li>Community Score: 0-30 points (upvotes, comments, engagement)</li>
+              <li>Community Score: 0-10 points (upvotes + comments relative to top projects)</li>
+              <li>On-Chain Score: 0-20 points (reserved for upcoming on-chain verification)</li>
             </ul>
           </div>
           <div>

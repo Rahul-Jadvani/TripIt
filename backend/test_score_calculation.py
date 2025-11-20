@@ -39,7 +39,8 @@ def test_score_calculations():
                 project.quality_score +
                 project.verification_score +
                 project.validation_score +
-                project.community_score
+                project.community_score +
+                project.onchain_score
             )
 
             # Compare with actual
@@ -56,6 +57,7 @@ def test_score_calculations():
             print(f"   Verification:  {project.verification_score:6.2f}")
             print(f"   Validation:    {project.validation_score:6.2f}")
             print(f"   Community:     {project.community_score:6.2f}")
+            print(f"   On-Chain:     {project.onchain_score:6.2f}")
             print(f"   ─────────────────────")
             print(f"   Expected Total: {expected_total:6.2f}")
             print(f"   Actual Total:   {actual_total:6.2f}")
@@ -106,16 +108,16 @@ def test_community_score_components():
         for project in projects:
             # Calculate expected community score
             if max_upvotes > 0:
-                upvote_score = (project.upvotes / max_upvotes) * 20
+                upvote_score = (project.upvotes / max_upvotes) * 6
             else:
                 upvote_score = 0
 
             if max_comments > 0:
-                comment_score = (project.comment_count / max_comments) * 10
+                comment_score = (project.comment_count / max_comments) * 4
             else:
                 comment_score = 0
 
-            expected_community = round(min(upvote_score + comment_score, 30), 2)
+            expected_community = round(min(upvote_score + comment_score, 10), 2)
             actual_community = project.community_score
 
             difference = abs(expected_community - actual_community)
@@ -124,8 +126,8 @@ def test_community_score_components():
             status = "✓" if is_correct else "✗"
 
             print(f"{status} {project.title[:40]}")
-            print(f"   Upvotes: {project.upvotes} → Score: {upvote_score:.2f}/20")
-            print(f"   Comments: {project.comment_count} → Score: {comment_score:.2f}/10")
+            print(f"   Upvotes: {project.upvotes} → Score: {upvote_score:.2f}/6")
+            print(f"   Comments: {project.comment_count} → Score: {comment_score:.2f}/4")
             print(f"   Expected Community: {expected_community:.2f}")
             print(f"   Actual Community:   {actual_community:.2f}")
 
@@ -150,8 +152,8 @@ if __name__ == '__main__':
     print("TEST SUMMARY")
     print("="*70)
 
-    print("\n✓ Total Score = Quality + Verification + Validation + Community")
-    print("✓ Community Score = (Upvotes/Max × 20) + (Comments/Max × 10)")
+    print("\n✓ Total Score = Quality + Verification + Validation + Community + On-Chain")
+    print("?o" Community Score = (Upvotes/Max x 6) + (Comments/Max x 4)")
     print("✓ AI Scoring does NOT re-run on vote/comment (only numbers update)")
 
     if total_correct:

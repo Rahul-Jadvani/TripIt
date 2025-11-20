@@ -10,6 +10,7 @@ class ScoringWeightsSchema(Schema):
     verification_score = fields.Integer(required=True, validate=validate.Range(min=0, max=100))
     validation_score = fields.Integer(required=True, validate=validate.Range(min=0, max=100))
     community_score = fields.Integer(required=True, validate=validate.Range(min=0, max=100))
+    onchain_score = fields.Integer(required=True, validate=validate.Range(min=0, max=100))
 
     def validate_sum(self, data):
         """Ensure weights sum to 100"""
@@ -17,7 +18,8 @@ class ScoringWeightsSchema(Schema):
             data.get('quality_score', 0),
             data.get('verification_score', 0),
             data.get('validation_score', 0),
-            data.get('community_score', 0)
+            data.get('community_score', 0),
+            data.get('onchain_score', 0)
         ])
         if total != 100:
             raise ValidationError(f'Scoring weights must sum to 100 (current sum: {total})')

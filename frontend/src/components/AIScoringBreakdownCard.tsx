@@ -1,4 +1,4 @@
-import { Brain, Github, Users, Trophy, Heart, Loader2, AlertCircle, CheckCircle2, Clock, RefreshCw, Info, ChevronDown, ChevronUp, Award } from 'lucide-react';
+import { Brain, Github, Users, Trophy, Heart, Shield, Loader2, AlertCircle, CheckCircle2, Clock, RefreshCw, Info, ChevronDown, ChevronUp, Award } from 'lucide-react';
 import { Project } from '@/types';
 import { useRescoreProject } from '@/hooks/useProjects';
 import { useAuth } from '@/context/AuthContext';
@@ -450,13 +450,35 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                 <span className="text-xs font-bold text-foreground">Community Score</span>
               </div>
               <span className="text-sm font-black text-primary">
-                {(scoreBreakdown?.community?.score || project.proofScore?.community || 0).toFixed(1)}/30
+                {(scoreBreakdown?.community?.score || project.proofScore?.community || 0).toFixed(1)}/10
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground">
-              Upvote ratio and comment engagement
+              Upvote ratio (max 6) + comment engagement (max 4)
             </p>
+          </div>
 
+          {/* On-Chain Score */}
+          <div className="p-3 bg-secondary/30 rounded-lg border border-border">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-bold text-foreground">On-Chain Score</span>
+                  </div>
+                  <p className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                    Coming soon
+                  </p>
+                </div>
+              </div>
+              <span className="text-sm font-black text-primary">
+                {(scoreBreakdown?.onchain?.score || project.proofScore?.onchain || 0).toFixed(1)}/20
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Reserved for upcoming on-chain verification signals.
+            </p>
           </div>
 
           {/* Total Score Summary */}

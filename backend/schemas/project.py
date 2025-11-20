@@ -35,6 +35,7 @@ class ProjectSchema(Schema):
     proof_score = fields.Float()
     verification_score = fields.Float()
     community_score = fields.Float()
+    onchain_score = fields.Float()
     validation_score = fields.Float()
     quality_score = fields.Float()
     score_breakdown = fields.Dict()  # Detailed score breakdown with precise float values

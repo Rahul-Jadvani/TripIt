@@ -804,11 +804,18 @@ export default function Publish() {
                     </ul>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-foreground mb-2">Community Score (Max 30 points)</h3>
+                    <h3 className="text-sm font-bold text-foreground mb-2">Community Score (Max 10 points)</h3>
                     <ul className="space-y-1 text-muted-foreground text-xs">
-                      <li>✓ Upvote ratio: up to 20 points</li>
-                      <li>✓ Comment engagement: up to 10 points</li>
+                      <li>✓ Upvote ratio: up to 6 points</li>
+                      <li>✓ Comment engagement: up to 4 points</li>
                       <li>💡 Encourage community feedback!</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground mb-2">On-Chain Score (Max 20 points)</h3>
+                    <ul className="space-y-1 text-muted-foreground text-xs">
+                      <li>?o" Reserved for future on-chain verification signals</li>
+                      <li>dY'? Currently defaults to 0 until the feature launches</li>
                     </ul>
                   </div>
                   <div>

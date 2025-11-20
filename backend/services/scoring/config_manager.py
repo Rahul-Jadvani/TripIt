@@ -37,12 +37,18 @@ class ScoringConfigManager:
 
     def get_scoring_weights(self):
         """Get main scoring weights"""
-        return self.get_config('scoring_weights', {
+        defaults = {
             'quality_score': 20,
             'verification_score': 20,
             'validation_score': 30,
-            'community_score': 30
-        })
+            'community_score': 10,
+            'onchain_score': 20
+        }
+        weights = self.get_config('scoring_weights', defaults.copy()) or {}
+        # Ensure newly added keys exist even for legacy configs
+        for key, value in defaults.items():
+            weights.setdefault(key, value)
+        return weights
 
     def get_llm_weights(self):
         """Get LLM sub-weights"""

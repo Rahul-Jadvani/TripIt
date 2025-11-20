@@ -82,6 +82,8 @@ export interface Project {
   // Scores and badges
   proofScore: ProofScore;
   proof_score?: ProofScore; // Backend field
+  onchain_score?: number; // Backend field
+  onchainScore?: number;
   badges: Badge[];
   // AI Scoring fields
   scoring_status?: 'pending' | 'processing' | 'completed' | 'failed' | 'retrying'; // Backend field
@@ -133,6 +135,7 @@ export interface ProofScore {
   total: number;
   verification: number;
   community: number;
+  onchain: number;
   validation: number;
   quality: number;
 }

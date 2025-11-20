@@ -49,6 +49,7 @@ class Project(db.Model):
     proof_score = db.Column(db.Float, default=0.0, index=True)
     verification_score = db.Column(db.Float, default=0.0)
     community_score = db.Column(db.Float, default=0.0)
+    onchain_score = db.Column(db.Float, default=0.0)
     validation_score = db.Column(db.Float, default=0.0)
     quality_score = db.Column(db.Float, default=0.0)
     trending_score = db.Column(db.Float, default=0.0, index=True)  # Reddit-style hot score
@@ -94,7 +95,8 @@ class Project(db.Model):
             self.verification_score +
             self.community_score +
             self.validation_score +
-            self.quality_score
+            self.quality_score +
+            self.onchain_score
         )
         return self.proof_score
 
@@ -134,6 +136,7 @@ class Project(db.Model):
             'proof_score': self.proof_score,
             'verification_score': self.verification_score,
             'community_score': self.community_score,
+            'onchain_score': self.onchain_score,
             'validation_score': self.validation_score,
             'quality_score': self.quality_score,
             'trending_score': self.trending_score,

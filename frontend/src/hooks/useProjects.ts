@@ -78,9 +78,12 @@ export function transformProject(backendProject: any) {
       total: backendProject.proof_score || 0,
       verification: backendProject.verification_score || 0,
       community: backendProject.community_score || 0,
+      onchain: backendProject.onchain_score || 0,
       validation: backendProject.validation_score || 0,
       quality: backendProject.quality_score || 0,
     },
+    onchain_score: backendProject.onchain_score || 0,
+    onchainScore: backendProject.onchain_score || 0,
     // AI Scoring fields
     scoring_status: backendProject.scoring_status,
     scoringStatus: backendProject.scoring_status,

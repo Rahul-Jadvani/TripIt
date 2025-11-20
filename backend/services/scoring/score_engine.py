@@ -88,23 +88,34 @@ class ScoringEngine:
             community_result = self._calculate_community_score(project)
             community_score = community_result.get('score', 0)
 
-            # 5. CALCULATE FINAL SCORE
+            # 5. ON-CHAIN SCORE PLACEHOLDER (reserved for future implementation)
+            onchain_score = 0.0
+
+            # 6. CALCULATE FINAL SCORE
             # Component scores are already weighted to their max ranges:
             # - quality_score: 0-20
             # - verification_score: 0-20
             # - validation_score: 0-30
-            # - community_score: 0-30
+            # - community_score: 0-10
+            # - onchain_score: 0-20 (coming soon)
             # Total max: 100
             # Simply sum them (no additional weighting needed)
             scores = {
                 'quality_score': quality_score,
                 'verification_score': verification_score,
                 'validation_score': validation_score,
-                'community_score': community_score
+                'community_score': community_score,
+                'onchain_score': onchain_score
             }
 
             # Calculate total score by summing weighted components
-            proof_score = quality_score + verification_score + validation_score + community_score
+            proof_score = (
+                quality_score +
+                verification_score +
+                validation_score +
+                community_score +
+                onchain_score
+            )
             proof_score = min(round(proof_score, 2), 100)
 
             # 6. BUILD DETAILED BREAKDOWN
@@ -143,7 +154,14 @@ class ScoringEngine:
                     'comment_score': community_result.get('comment_score', 0),
                     'max_upvotes': community_result.get('max_upvotes', 0),
                     'max_comments': community_result.get('max_comments', 0),
-                    'calculation': f"({project.upvotes}/{community_result.get('max_upvotes', 0)})×20 + ({project.comment_count}/{community_result.get('max_comments', 0)})×10"
+                    'calculation': (
+                        f"({project.upvotes}/{community_result.get('max_upvotes', 0)})x6 + ({project.comment_count}/{community_result.get('max_comments', 0)})x4"
+                    )
+                },
+                'onchain': {
+                    'score': onchain_score,
+                    'status': 'coming_soon',
+                    'description': 'Reserved for future on-chain verification score.'
                 },
                 'weights_used': weights,
                 'version': '2.0'
@@ -156,6 +174,7 @@ class ScoringEngine:
                 'verification_score': verification_score,
                 'validation_score': validation_score,
                 'community_score': community_score,
+                'onchain_score': onchain_score,
                 'breakdown': breakdown
             }
 
@@ -168,6 +187,7 @@ class ScoringEngine:
                 'verification_score': 0,
                 'validation_score': 0,
                 'community_score': 0,
+                'onchain_score': 0,
                 'breakdown': {'error': str(e)}
             }
 
@@ -287,9 +307,9 @@ class ScoringEngine:
         Calculate community engagement score using relative scoring
 
         New Formula:
-        - Upvote Score: (project_upvotes / max_upvotes_in_any_project) × 20
-        - Comment Score: (project_comments / max_comments_in_any_project) × 10
-        - Total: max 30 points
+        - Upvote Score: (project_upvotes / max_upvotes_in_any_project) * 6
+        - Comment Score: (project_comments / max_comments_in_any_project) * 4
+        - Total: max 10 points
 
         Returns:
             Dict with score and details
@@ -310,23 +330,26 @@ class ScoringEngine:
             max_upvotes = max_stats.max_upvotes or 0
             max_comments = max_stats.max_comments or 0
 
-            # Calculate upvote score (max 20 points)
+            max_upvote_points = 6
+            max_comment_points = 4
+
+            # Calculate upvote score (max 6 points)
             if max_upvotes > 0:
-                upvote_score = (project.upvotes / max_upvotes) * 20
+                upvote_score = (project.upvotes / max_upvotes) * max_upvote_points
             else:
                 upvote_score = 0
 
-            # Calculate comment score (max 10 points)
+            # Calculate comment score (max 4 points)
             if max_comments > 0:
-                comment_score = (project.comment_count / max_comments) * 10
+                comment_score = (project.comment_count / max_comments) * max_comment_points
             else:
                 comment_score = 0
 
-            # Total community score (max 30)
+            # Total community score (max 10)
             community_score = upvote_score + comment_score
 
             return {
-                'score': round(min(community_score, 30), 2),
+                'score': round(min(community_score, 10), 2),
                 'upvote_score': round(upvote_score, 2),
                 'comment_score': round(comment_score, 2),
                 'max_upvotes': max_upvotes,

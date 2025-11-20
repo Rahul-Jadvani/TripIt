@@ -1,6 +1,6 @@
 import type { Project } from '@/types';
 
-const SCORE_SECTIONS = ['quality', 'verification', 'validation', 'community'] as const;
+const SCORE_SECTIONS = ['quality', 'verification', 'validation', 'community', 'onchain'] as const;
 
 export function formatScore(value?: number | null, digits = 1): string {
   const normalized = Number(value ?? 0);
