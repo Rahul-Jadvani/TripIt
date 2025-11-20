@@ -9,6 +9,7 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -23,9 +24,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Build arguments
+ARG BUILD_ENV=production
+
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies from builder
@@ -34,17 +39,34 @@ COPY --from=builder /root/.local /root/.local
 # Set environment variables
 ENV PATH=/root/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    BUILD_ENV=${BUILD_ENV}
 
 # Copy application code
 COPY . .
 
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads && \
+    chmod 755 /app/logs /app/uploads
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5000/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:5000/health', timeout=5)" || exit 1
 
 # Expose port
 EXPOSE 5000
 
-# Run Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--worker-class", "sync", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:create_app()"]
+# Run Gunicorn with eventlet for Socket.IO support
+CMD ["gunicorn", \
+     "--bind", "0.0.0.0:5000", \
+     "--workers", "1", \
+     "--worker-class", "eventlet", \
+     "--worker-connections", "1000", \
+     "--timeout", "120", \
+     "--keep-alive", "5", \
+     "--max-requests", "1000", \
+     "--max-requests-jitter", "100", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info", \
+     "app:app"]
