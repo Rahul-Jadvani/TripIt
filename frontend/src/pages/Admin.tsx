@@ -1206,15 +1206,22 @@ export default function Admin() {
 
     setBulkAssigningValidatorId(validatorId);
     try {
-      const response = await adminService.bulkAssignProjects({
-        validator_id: validatorId,
-        category_filter: category,
-        priority,
-        limit,
-      });
-
-      const assignedCount = response.data?.data?.count ?? 0;
-      toast.success(`${assignedCount} project${assignedCount === 1 ? '' : 's'} assigned successfully!`);
+      const response = await toast.promise(
+        adminService.bulkAssignProjects({
+          validator_id: validatorId,
+          category_filter: category,
+          priority,
+          limit,
+        }),
+        {
+          loading: 'Assigning projects...',
+          success: (res) => {
+            const assignedCount = res?.data?.data?.count ?? 0;
+            return `${assignedCount} project${assignedCount === 1 ? '' : 's'} assigned successfully!`;
+          },
+          error: (err) => err?.response?.data?.message || 'Failed to assign projects',
+        }
+      );
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
@@ -1231,26 +1238,29 @@ export default function Admin() {
 
   const handleAssignSelectedProjects = async () => {
     if (!currentValidatorForAssignment || selectedProjects.length === 0) {
-      showToast({ title: 'Error', description: 'Select projects and validator', variant: 'destructive' });
+      toast.error('Select projects and validator');
       return;
     }
 
     setAssigningSelectedValidatorId(currentValidatorForAssignment);
 
     try {
-      const promises = selectedProjects.map(projectId =>
-        adminService.assignProjectToValidator({
-          validator_id: currentValidatorForAssignment,
-          project_id: projectId,
-          priority: 'normal'
-        })
+      await toast.promise(
+        Promise.all(
+          selectedProjects.map(projectId =>
+            adminService.assignProjectToValidator({
+              validator_id: currentValidatorForAssignment,
+              project_id: projectId,
+              priority: 'normal'
+            })
+          )
+        ),
+        {
+          loading: 'Assigning projects...',
+          success: `${selectedProjects.length} project${selectedProjects.length === 1 ? '' : 's'} assigned successfully`,
+          error: (err) => err?.response?.data?.message || 'Failed to assign some projects',
+        }
       );
-
-      await Promise.all(promises);
-      showToast({
-        title: 'Success',
-        description: `${selectedProjects.length} project(s) assigned successfully!`
-      });
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
@@ -1260,12 +1270,8 @@ export default function Admin() {
       setSelectedProjects([]);
       setCurrentValidatorForAssignment('');
     } catch (error: any) {
-      const message = error?.response?.data?.message || 'Failed to assign some projects';
-      showToast({
-        title: 'Error',
-        description: message,
-        variant: 'destructive'
-      });
+      // toast.promise already surfaced the error; keep a fallback log
+      console.error('Assign projects failed', error);
     } finally {
       setAssigningSelectedValidatorId(null);
     }

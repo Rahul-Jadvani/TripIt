@@ -415,7 +415,7 @@ class CacheService:
             CacheService.delete(key)
         else:
             # Invalidate all search results with pattern search:*
-            CacheService.delete_pattern("search:*")
+            CacheService.clear_pattern("search:*")
 
     # ============================================================================
     # INTRO REQUESTS CACHING

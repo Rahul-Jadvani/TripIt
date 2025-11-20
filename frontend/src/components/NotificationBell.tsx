@@ -41,11 +41,18 @@ export function NotificationBell() {
     markAsReadMutation.mutate(id);
   };
 
-  const handleMarkAllAsRead = () => {
-    markAllAsReadMutation.mutate();
+  const handleMarkAllAsRead = async () => {
+    return new Promise<void>((resolve, reject) => {
+      markAllAsReadMutation.mutate(undefined, {
+        onSuccess: () => resolve(),
+        onError: (error) => reject(error),
+      });
+    });
   };
 
-  const handleClearAll = () => clearAllMutation.mutateAsync();
+  const handleClearAll = async () => {
+    return clearAllMutation.mutateAsync();
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -69,7 +76,7 @@ export function NotificationBell() {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[95vw] sm:w-[420px] p-0 border border-border/60 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.15),_rgba(2,6,23,0.95))] text-card-foreground shadow-2xl shadow-primary/25 backdrop-blur-xl overflow-hidden"
+        className="w-[95vw] sm:w-[420px] p-0 border border-border/60 bg-background text-card-foreground shadow-2xl backdrop-blur-xl overflow-hidden"
         align="end"
       >
         {/* Header */}

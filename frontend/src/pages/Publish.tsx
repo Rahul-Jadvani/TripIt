@@ -725,6 +725,57 @@ export default function Publish() {
               ))}
             </div>
 
+            {/* GitHub Connection - Outside Form */}
+            <div className="mt-6 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">GitHub Connection</p>
+                  <p className="text-xs text-muted-foreground">Connect your GitHub to enable AI analysis of your code and team credentials</p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  {user?.github_connected ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGithubDisconnect}
+                        disabled={githubActionLoading}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        {githubActionLoading ? 'Working...' : 'Disconnect'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleGithubConnect}
+                        disabled={githubActionLoading}
+                      >
+                        <Github className="h-3.5 w-3.5" />
+                        Reconnect
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleGithubConnect}
+                      disabled={githubActionLoading}
+                    >
+                      <Github className="h-3.5 w-3.5" />
+                      {githubActionLoading ? 'Opening...' : 'Connect GitHub'}
+                    </Button>
+                  )}
+                </div>
+                {user?.github_connected && (
+                  <span className="text-xs text-primary font-medium inline-flex items-center gap-1">
+                    <Github className="h-3 w-3" />
+                    @{user.github_username}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Proof Score Info - Collapsible */}
             {showProofScoreInfo && (
               <div className="bg-primary/10 border-4 border-primary rounded-[15px] p-6 mt-6 animate-in slide-in-from-top-2">
@@ -1211,46 +1262,9 @@ export default function Publish() {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Label htmlFor="githubUrl">
-                        GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {user?.github_connected ? (
-                          <>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleGithubDisconnect}
-                              disabled={githubActionLoading}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              {githubActionLoading ? 'Working...' : 'Disconnect'}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={handleGithubConnect}
-                              disabled={githubActionLoading}
-                            >
-                              <Github className="h-3.5 w-3.5" />
-                              Reconnect
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleGithubConnect}
-                            disabled={githubActionLoading}
-                          >
-                            <Github className="h-3.5 w-3.5" />
-                            {githubActionLoading ? 'Opening...' : 'Connect GitHub'}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <Label htmlFor="githubUrl">
+                      GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
+                    </Label>
                     <Input
                       id="githubUrl"
                       type="url"
@@ -1285,15 +1299,7 @@ export default function Publish() {
                         <p className={`text-xs font-semibold text-black`}>{githubUrlWarning}</p>
                       </div>
                     )}
-                    <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
-                      <span>GitHub repo required for AI to analyze code quality and team credentials.</span>
-                      {user?.github_connected && (
-                        <span className="text-primary font-medium inline-flex items-center gap-1">
-                          <Github className="h-3 w-3" />
-                          Connected as @{user.github_username}
-                        </span>
-                      )}
-                    </p>
+                    <p className="text-xs text-muted-foreground">GitHub repo required for AI to analyze code quality and team credentials.</p>
                   </div>
                 </div>
               </div>
