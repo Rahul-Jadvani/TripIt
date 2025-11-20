@@ -56,6 +56,7 @@ def search(user_id):
             or_(
                 User.username.ilike(search_pattern),
                 User.display_name.ilike(search_pattern),
+                User.email.ilike(search_pattern),
                 User.bio.ilike(search_pattern)
             )
         ).order_by(User.created_at.desc())

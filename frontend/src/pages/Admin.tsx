@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -1015,7 +1016,8 @@ function FeedbackManagement() {
 }
 
 export default function Admin() {
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('analytics');
   const [validatorTab, setValidatorTab] = useState('current');
   const [investorTab, setInvestorTab] = useState('current');
@@ -1035,6 +1037,8 @@ export default function Admin() {
   });
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [currentValidatorForAssignment, setCurrentValidatorForAssignment] = useState<string>('');
+  const [bulkAssigningValidatorId, setBulkAssigningValidatorId] = useState<string | null>(null);
+  const [assigningSelectedValidatorId, setAssigningSelectedValidatorId] = useState<string | null>(null);
 
   // Add validator by search state
   const [validatorSearchQuery, setValidatorSearchQuery] = useState('');
@@ -1111,12 +1115,12 @@ export default function Admin() {
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: 'Copied!', description: `${label} copied to clipboard` });
+    showToast({ title: 'Copied!', description: `${label} copied to clipboard` });
   };
 
   const handleAddValidator = () => {
     if (!newValidatorEmail.trim()) {
-      toast({ title: 'Error', description: 'Email is required', variant: 'destructive' });
+      showToast({ title: 'Error', description: 'Email is required', variant: 'destructive' });
       return;
     }
     addValidatorMutation.mutate(newValidatorEmail, {
@@ -1168,7 +1172,7 @@ export default function Admin() {
 
   const handleAwardCustomBadge = () => {
     if (!customBadgeProjectId || !customBadgeName || !customBadgeRationale) {
-      toast({ title: 'Error', description: 'All fields required', variant: 'destructive' });
+      showToast({ title: 'Error', description: 'All fields required', variant: 'destructive' });
       return;
     }
     awardCustomBadgeMutation.mutate({
@@ -1193,11 +1197,45 @@ export default function Admin() {
     deleteProjectMutation.mutate(projectId);
   };
 
+  const handleBulkAssignProjects = async (validatorId: string) => {
+    const category = (document.getElementById(`category-${validatorId}`) as HTMLSelectElement | null)?.value || 'all';
+    const limitValue = (document.getElementById(`limit-${validatorId}`) as HTMLInputElement | null)?.value || '50';
+    const parsedLimit = parseInt(limitValue, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50;
+    const priority = (document.getElementById(`priority-${validatorId}`) as HTMLSelectElement | null)?.value || 'normal';
+
+    setBulkAssigningValidatorId(validatorId);
+    try {
+      const response = await adminService.bulkAssignProjects({
+        validator_id: validatorId,
+        category_filter: category,
+        priority,
+        limit,
+      });
+
+      const assignedCount = response.data?.data?.count ?? 0;
+      toast.success(`${assignedCount} project${assignedCount === 1 ? '' : 's'} assigned successfully!`);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects', 'infinite'] }),
+      ]);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to assign projects';
+      toast.error(message);
+    } finally {
+      setBulkAssigningValidatorId(null);
+    }
+  };
+
   const handleAssignSelectedProjects = async () => {
     if (!currentValidatorForAssignment || selectedProjects.length === 0) {
-      toast({ title: 'Error', description: 'Select projects and validator', variant: 'destructive' });
+      showToast({ title: 'Error', description: 'Select projects and validator', variant: 'destructive' });
       return;
     }
+
+    setAssigningSelectedValidatorId(currentValidatorForAssignment);
 
     try {
       const promises = selectedProjects.map(projectId =>
@@ -1209,18 +1247,27 @@ export default function Admin() {
       );
 
       await Promise.all(promises);
-      toast({
+      showToast({
         title: 'Success',
         description: `${selectedProjects.length} project(s) assigned successfully!`
       });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'projects', 'infinite'] }),
+      ]);
       setSelectedProjects([]);
       setCurrentValidatorForAssignment('');
-    } catch (error) {
-      toast({
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to assign some projects';
+      showToast({
         title: 'Error',
-        description: 'Failed to assign some projects',
+        description: message,
         variant: 'destructive'
       });
+    } finally {
+      setAssigningSelectedValidatorId(null);
     }
   };
 
@@ -1653,27 +1700,17 @@ export default function Admin() {
                               </div>
                               <Button
                                 className="w-full"
-                                onClick={() => {
-                                  const category = (document.getElementById(`category-${validator.id}`) as HTMLSelectElement)?.value;
-                                  const limit = parseInt((document.getElementById(`limit-${validator.id}`) as HTMLInputElement)?.value || '50');
-                                  const priority = (document.getElementById(`priority-${validator.id}`) as HTMLSelectElement)?.value;
-
-                                  toast.promise(
-                                    adminService.bulkAssignProjects({
-                                      validator_id: validator.id,
-                                      category_filter: category,
-                                      priority,
-                                      limit
-                                    }),
-                                    {
-                                      loading: 'Assigning projects...',
-                                      success: (res) => `${res.data.data.count} projects assigned successfully!`,
-                                      error: 'Failed to assign projects'
-                                    }
-                                  );
-                                }}
+                                onClick={() => handleBulkAssignProjects(validator.id)}
+                                disabled={bulkAssigningValidatorId === validator.id}
                               >
-                                Assign Projects
+                                {bulkAssigningValidatorId === validator.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Assigning...
+                                  </>
+                                ) : (
+                                  'Assign Projects'
+                                )}
                               </Button>
                             </div>
                           </DialogContent>
@@ -1754,9 +1791,16 @@ export default function Admin() {
                               <Button
                                 className="w-full"
                                 onClick={handleAssignSelectedProjects}
-                                disabled={selectedProjects.length === 0}
+                                disabled={selectedProjects.length === 0 || assigningSelectedValidatorId === currentValidatorForAssignment}
                               >
-                                Assign Selected Projects
+                                {assigningSelectedValidatorId === currentValidatorForAssignment ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Assigning...
+                                  </>
+                                ) : (
+                                  'Assign Selected Projects'
+                                )}
                               </Button>
                             </div>
                           </DialogContent>

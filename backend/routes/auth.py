@@ -18,6 +18,7 @@ from utils.validators import validate_email, validate_username, validate_passwor
 from utils.helpers import success_response, error_response
 from utils.decorators import token_required
 from utils.init_admins import check_and_promote_admin
+from utils.cache import CacheService
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -63,6 +64,9 @@ def register():
 
         db.session.add(user)
         db.session.commit()
+
+        # Invalidate search cache when a new user is created
+        CacheService.invalidate_search_results()
 
         # Generate tokens
         access_token = create_access_token(identity=user.id)
@@ -315,6 +319,9 @@ def google_callback():
             user.set_password(secrets.token_urlsafe(32))
             db.session.add(user)
             db.session.commit()
+
+            # Invalidate search cache when a new user is created via OAuth
+            CacheService.invalidate_search_results()
 
         if not user.is_active:
             return redirect(f"{frontend_url}/login?google_error=account_disabled")

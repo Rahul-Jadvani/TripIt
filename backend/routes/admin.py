@@ -13,7 +13,13 @@ from models.chain import Chain, ChainModerationLog
 from models.admin_scoring_config import AdminScoringConfig
 from utils.decorators import admin_required
 from utils.cache import CacheService
-from utils.notifications import notify_investor_request_approved, notify_investor_request_rejected
+from utils.notifications import (
+    notify_investor_request_approved,
+    notify_investor_request_rejected,
+    notify_validator_added,
+    notify_validator_assignment,
+)
+from services.email_service import EmailService
 from services.socket_service import SocketService
 from schemas.scoring import UpdateConfigSchema
 from tasks.scoring_tasks import score_project_task
@@ -120,6 +126,9 @@ def toggle_user_active(admin_id, user_id):
 
         user.is_active = not user.is_active
         db.session.commit()
+
+        # Invalidate search cache when user's active status changes
+        CacheService.invalidate_search_results()
 
         action = 'activated' if user.is_active else 'banned'
         return jsonify({
@@ -302,6 +311,17 @@ def add_validator_by_email(user_id):
         )
         db.session.add(permissions)
         db.session.commit()
+
+        # Notify user in-app and via email
+        try:
+            notify_validator_added(user, actor_id=user_id)
+        except Exception as notify_err:
+            print(f"[Admin] Warning: failed to create validator notification: {notify_err}")
+
+        try:
+            EmailService.send_validator_added_email(validator=user)
+        except Exception as email_err:
+            print(f"[Admin] Warning: failed to send validator email: {email_err}")
 
         return jsonify({
             'status': 'success',
@@ -783,6 +803,21 @@ def assign_project_to_validator(admin_id):
         db.session.add(assignment)
         db.session.commit()
 
+        # Notify the validator (in-app + email)
+        try:
+            notify_validator_assignment(validator, project, actor_id=admin_id, priority=priority)
+        except Exception as notify_err:
+            print(f"[Admin] Warning: failed to create assignment notification: {notify_err}")
+
+        try:
+            EmailService.send_validator_assignment_email(
+                validator=validator,
+                project=project,
+                priority=priority
+            )
+        except Exception as email_err:
+            print(f"[Admin] Warning: failed to send assignment email: {email_err}")
+
         return jsonify({
             'status': 'success',
             'message': 'Project assigned to validator successfully',
@@ -839,6 +874,7 @@ def bulk_assign_projects(admin_id):
 
         # Create assignments
         assignments_created = 0
+        created_projects = []
         for project in projects:
             assignment = ValidatorAssignment(
                 id=str(uuid4()),
@@ -851,8 +887,21 @@ def bulk_assign_projects(admin_id):
             )
             db.session.add(assignment)
             assignments_created += 1
+            created_projects.append(project)
 
         db.session.commit()
+
+        # Notify the validator (in-app + email for each project)
+        try:
+            for project in created_projects:
+                notify_validator_assignment(validator, project, actor_id=admin_id, priority=priority)
+                EmailService.send_validator_assignment_email(
+                    validator=validator,
+                    project=project,
+                    priority=priority
+                )
+        except Exception as notify_err:
+            print(f"[Admin] Warning: notification/email failed for bulk assignment: {notify_err}")
 
         return jsonify({
             'status': 'success',

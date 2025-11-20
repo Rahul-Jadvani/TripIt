@@ -611,15 +611,11 @@ def get_project(user_id, project_id):
             from flask import jsonify
             return jsonify(cached), 200
 
-        # OPTIMIZED: Eager load all relationships to prevent lazy loading
-        from sqlalchemy.orm import joinedload, contains_eager
-        from models.validation_badge import ValidationBadge
+        # OPTIMIZED: Eager load creator relationship (only non-dynamic relationship)
+        from sqlalchemy.orm import joinedload
 
         project = Project.query.options(
-            joinedload(Project.creator),
-            joinedload(Project.screenshots),
-            joinedload(Project.badges).joinedload(ValidationBadge.validator),
-            joinedload(Project.chain_memberships).joinedload('chain')
+            joinedload(Project.creator)
         ).get(project_id)
 
         if not project or project.is_deleted:
@@ -712,6 +708,9 @@ def create_project(user_id):
         project.proof_score = 0  # Will be updated by async task
 
         db.session.commit()
+
+        # Invalidate search cache when a new project is created
+        CacheService.invalidate_search_results()
 
         # Trigger async AI scoring task
         try:
