@@ -420,7 +420,6 @@ def list_projects(user_id):
 
         # Badge filter
         if badge_type:
-            from models.badge import ValidationBadge
             query = query.join(ValidationBadge).filter(
                 ValidationBadge.badge_type == badge_type.lower()
             )
