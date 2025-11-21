@@ -1,6 +1,6 @@
 import { useBadges } from '@/hooks/useBadges';
 import { Award, Shield, Star, Gem, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { format } from '@/utils/date';
 
 interface ProjectBadgesProps {
   projectId: string;

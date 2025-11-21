@@ -28,7 +28,7 @@ interface BadgeAwarderProps {
 export function BadgeAwarder({ projectId }: BadgeAwarderProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [badgeType, setBadgeType] = useState<'silver' | 'gold' | 'platinum'>('silver');
+  const [badgeType, setBadgeType] = useState<'stone' | 'silver' | 'gold' | 'platinum' | 'demerit'>('stone');
   const [rationale, setRationale] = useState('');
 
   // Fetch existing badges for this project
@@ -42,7 +42,7 @@ export function BadgeAwarder({ projectId }: BadgeAwarderProps) {
         rationale: rationale || undefined,
       });
 
-      setBadgeType('silver');
+      setBadgeType('stone');
       setRationale('');
       setIsOpen(false);
     } catch (error) {
@@ -107,6 +107,9 @@ export function BadgeAwarder({ projectId }: BadgeAwarderProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="stone">
+                  🪨 Stone - 5 points
+                </SelectItem>
                 <SelectItem value="silver">
                   🥈 Silver - 10 points
                 </SelectItem>
@@ -115,6 +118,9 @@ export function BadgeAwarder({ projectId }: BadgeAwarderProps) {
                 </SelectItem>
                 <SelectItem value="platinum">
                   💎 Platinum - 20 points
+                </SelectItem>
+                <SelectItem value="demerit">
+                  ⚠️ Demerit - -10 points
                 </SelectItem>
               </SelectContent>
             </Select>

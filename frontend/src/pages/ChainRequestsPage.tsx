@@ -17,7 +17,7 @@ import {
 import { ArrowLeft, Loader2, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '@/utils/date';
 
 export default function ChainRequestsPage() {
   const { slug } = useParams<{ slug: string }>();

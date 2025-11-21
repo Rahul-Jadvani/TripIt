@@ -1,6 +1,6 @@
 import { Notification } from '@/types';
 import { Link } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '@/utils/date';
 import {
   Bell,
   CheckCircle,

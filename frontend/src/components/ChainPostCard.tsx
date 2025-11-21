@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from '@/utils/date';
 import { useTogglePinPost, useToggleLockPost, useDeleteChainPost, useChainPostReplies } from '@/hooks/useChainPosts';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';

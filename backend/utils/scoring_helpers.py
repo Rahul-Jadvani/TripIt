@@ -18,7 +18,16 @@ def recalculate_validation_score_with_badge(project):
     """
     try:
         # Get existing AI validation score (0-30 range)
+        import json
         existing_breakdown = project.score_breakdown or {}
+
+        # Handle case where score_breakdown is stored as JSON string instead of dict
+        if isinstance(existing_breakdown, str):
+            try:
+                existing_breakdown = json.loads(existing_breakdown)
+            except:
+                existing_breakdown = {}
+
         existing_validation = existing_breakdown.get('validation', {})
         existing_ai_score = existing_validation.get('score', 0)  # 0-30
 
