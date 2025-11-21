@@ -32,11 +32,10 @@ def request_otp():
         # Check if email is registered as admin
         admin_user = AdminUser.query.filter_by(email=email, is_active=True).first()
         if not admin_user:
-            # Security: Don't reveal if email exists or not
             return jsonify({
-                'status': 'success',
-                'message': 'If this email is registered as admin, you will receive an OTP code shortly'
-            }), 200
+                'status': 'error',
+                'message': 'This email is not registered as an admin. Please contact a root admin to add your email.'
+            }), 403
 
         # Invalidate any existing unused OTPs for this email
         old_otps = AdminOTP.query.filter_by(email=email, is_used=False).all()
