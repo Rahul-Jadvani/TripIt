@@ -31,10 +31,10 @@ from psycopg2 import sql
 # OLD DATABASE (Source) - Your existing Neon database
 OLD_DB_URL = "postgresql://neondb_owner:npg_kgiQyc4dJA6C@ep-falling-dust-ad4x9ty7-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=10&keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=5"
 
-# NEW DATABASE (Target) - Your new local PostgreSQL in Docker
+# NEW DATABASE (Target) - Your new PostgreSQL in Docker
 # Use 'postgres' (Docker service name) when running inside Docker container
 # Use 'localhost' when running migration script directly on host
-NEW_DB_URL = "postgresql://zer0_user:zer0_local_password_change_me@postgres:5432/zer0_discovery?sslmode=disable&connect_timeout=10&keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=5"
+NEW_DB_URL = "postgresql://zer0_prod_user:postgres@postgres:5432/zer0_discovery_prod?sslmode=disable&connect_timeout=10&keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=5"
 # ============================================================================
 
 
