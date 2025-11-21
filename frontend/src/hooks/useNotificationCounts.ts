@@ -18,7 +18,7 @@ export function useNotificationCounts() {
     queryKey: ['messages', 'count'],
     queryFn: async () => {
       const backendUrl = typeof window !== 'undefined'
-        ? (window.location.hostname.includes('localhost') ? 'http://localhost:5000' : 'https://discovery-platform.onrender.com')
+        ? (window.location.hostname.includes('localhost') ? 'http://localhost:5000' : 'https://backend.zer0.pro')
         : 'http://localhost:5000';
 
       const response = await fetch(`${backendUrl}/api/messages/unread-count`, {
@@ -44,7 +44,7 @@ export function useNotificationCounts() {
     queryKey: ['intro-requests', 'count'],
     queryFn: async () => {
       const backendUrl = typeof window !== 'undefined'
-        ? (window.location.hostname.includes('localhost') ? 'http://localhost:5000' : 'https://discovery-platform.onrender.com')
+        ? (window.location.hostname.includes('localhost') ? 'http://localhost:5000' : 'https://backend.zer0.pro')
         : 'http://localhost:5000';
 
       const response = await fetch(`${backendUrl}/api/intro-requests/pending-count`, {

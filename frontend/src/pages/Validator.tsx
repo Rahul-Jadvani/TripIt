@@ -17,7 +17,7 @@ import { formatScore, getProjectScore } from '@/utils/score';
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
   const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-  return isDev ? 'http://localhost:5000' : 'https://discovery-platform.onrender.com';
+  return isDev ? 'http://localhost:5000' : 'https://backend.zer0.pro';
 };
 
 interface Project {

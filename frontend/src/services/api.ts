@@ -10,7 +10,7 @@ export const getBackendUrl = (): string => {
     if (isDev) {
       baseUrl = 'http://localhost:5000';
     } else {
-      baseUrl = 'https://discovery-platform.onrender.com';
+      baseUrl = 'https://backend.zer0.pro';
     }
   }
 
