@@ -188,7 +188,8 @@ def create_app(config_name=None):
 
         # PERFORMANCE: Start background MV refresh worker
         # Skip if disabled (e.g., during testing or when running standalone worker)
-        if not app.config.get('TESTING') and not os.environ.get('DISABLE_MV_WORKER'):
+        disable_mv_worker = os.environ.get('DISABLE_MV_WORKER', 'false').lower() in ('true', '1', 'yes')
+        if not app.config.get('TESTING') and not disable_mv_worker:
             from workers.mv_refresh_worker import MVRefreshWorker
             # Start background worker (processes MV refresh queue every 2 seconds)
             MVRefreshWorker.start_background_worker(app, poll_interval=2, max_workers=3)
