@@ -19,7 +19,7 @@ web3==6.11.2
 eth-keys==0.5.1
 
 # Caching
-redis==5.0.1
+redis==4.6.0
 
 # WebSockets (Real-time updates)
 flask-socketio==5.3.6
@@ -37,6 +37,8 @@ PyJWT==2.10.1
 requests==2.31.0
 python-dateutil==2.8.2
 setuptools>=65.5.1
+PyGithub==2.1.1
+openai==1.12.0
 
 # Email (Optional)
 Flask-Mail==0.9.1
@@ -47,3 +49,7 @@ pytest-flask==1.3.0
 
 # Production
 gunicorn==21.2.0
+eventlet==0.33.3
+
+# Task Queue & Background Jobs
+celery[redis]==5.3.4

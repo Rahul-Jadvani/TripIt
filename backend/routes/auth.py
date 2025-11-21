@@ -418,8 +418,11 @@ def github_callback():
         state = request.args.get('state')
         error = request.args.get('error')
 
+        print(f"[GitHub Callback] Received callback - code: {code[:10] if code else None}..., state: {state[:20] if state else None}...")
+
         # Handle error from GitHub
         if error:
+            print(f"[GitHub Callback] ERROR from GitHub: {error}")
             frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
             return redirect(f"{frontend_url}/publish?github_error={error}")
 
@@ -427,6 +430,7 @@ def github_callback():
             return error_response('Error', 'No authorization code provided', 400)
 
         # Exchange code for access token
+        print(f"[GitHub Callback] Exchanging code for access token...")
         token_response = requests.post(
             'https://github.com/login/oauth/access_token',
             headers={'Accept': 'application/json'},
@@ -435,6 +439,7 @@ def github_callback():
                 'client_secret': current_app.config['GITHUB_CLIENT_SECRET'],
                 'code': code,
             },
+            timeout=10
         )
 
         token_data = token_response.json()
@@ -444,18 +449,21 @@ def github_callback():
             # Log the error for debugging
             error_msg = token_data.get('error', 'unknown')
             error_desc = token_data.get('error_description', 'No description')
-            print(f"GitHub OAuth Error: {error_msg} - {error_desc}")
-            print(f"Full response: {token_data}")
+            print(f"[GitHub Callback] ERROR getting access token: {error_msg} - {error_desc}")
+            print(f"[GitHub Callback] Full response: {token_data}")
             frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
             return redirect(f"{frontend_url}/login?github_error=token_failed&details={error_msg}")
 
+        print(f"[GitHub Callback] Got access token, fetching user info...")
         # Get user info from GitHub
         user_response = requests.get(
             'https://api.github.com/user',
             headers={'Authorization': f'token {access_token}'},
+            timeout=10
         )
         github_data = user_response.json()
         github_username = github_data.get('login')
+        print(f"[GitHub Callback] Got GitHub username: {github_username}")
 
         if not github_username:
             frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
@@ -485,6 +493,7 @@ def github_callback():
                 emails_resp = requests.get(
                     'https://api.github.com/user/emails',
                     headers={'Authorization': f'token {access_token}'},
+                    timeout=10
                 )
                 emails_data = emails_resp.json() if emails_resp.ok else []
                 primary = next((e for e in emails_data if e.get('primary') and e.get('verified')), None)
@@ -544,23 +553,38 @@ def github_callback():
             return redirect(f"{frontend_url}/auth/callback?provider=github&access={access}&refresh={refresh}")
 
         # Connect flow: update existing user
+        print(f"[GitHub Connect] Connecting GitHub for user_id: {user_id}")
         user = User.query.get(user_id)
         if not user:
+            print(f"[GitHub Connect] ERROR: User not found for user_id: {user_id}")
             return error_response('Error', 'User not found', 404)
 
+        print(f"[GitHub Connect] Found user: {user.username}, updating with GitHub username: {github_username}")
         user.github_username = github_username
         user.github_connected = True
         user.github_access_token = access_token  # Store token for AI scoring
-        db.session.commit()
+
+        try:
+            db.session.commit()
+            print(f"[GitHub Connect] SUCCESS: GitHub connected for {user.username}")
+        except Exception as commit_error:
+            print(f"[GitHub Connect] ERROR during commit: {commit_error}")
+            db.session.rollback()
+            raise
 
         # Redirect back to frontend with success
         frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
-        return redirect(f"{frontend_url}/publish?github_success=true&github_username={github_username}")
+        redirect_url = f"{frontend_url}/publish?github_success=true&github_username={github_username}"
+        print(f"[GitHub Connect] Redirecting to: {redirect_url}")
+        return redirect(redirect_url)
 
     except Exception as e:
+        import traceback
+        print(f"[GitHub Callback] EXCEPTION: {str(e)}")
+        print(f"[GitHub Callback] Traceback: {traceback.format_exc()}")
         db.session.rollback()
         frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
-        return redirect(f"{frontend_url}/publish?github_error=connection_failed")
+        return redirect(f"{frontend_url}/publish?github_error=connection_failed&details={str(e)[:100]}")
 
 
 @auth_bp.route('/github/disconnect', methods=['POST'])

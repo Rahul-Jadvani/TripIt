@@ -1,0 +1,179 @@
+# Docker Compose for Production Deployment
+# 0x.ship Discovery Platform - Zer0.pro
+# Usage: docker compose -f docker-compose.prod.yml up -d --build
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database (Production)
+  postgres:
+    image: postgres:16-alpine
+    container_name: zer0_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: zer0_prod_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
+      POSTGRES_DB: zer0_discovery_prod
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"  # Expose on 5433 to avoid conflicts
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./backend/migrations:/migrations:ro  # Mount migrations for easy access
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zer0_prod_user -d zer0_discovery_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zer0_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Cache (Production)
+  redis:
+    image: redis:7-alpine
+    container_name: zer0_redis_prod
+    restart: always
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    ports:
+      - "6380:6379"  # Expose on 6380 to avoid conflict with existing redis
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - zer0_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Backend (Flask + Gunicorn + Celery)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: production
+    container_name: zer0_backend_prod
+    restart: always
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    links:
+      - redis:redis
+      - postgres:postgres
+    env_file:
+      - ./backend/.env.prod
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://zer0_prod_user:${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}@postgres:5432/zer0_discovery_prod
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - RATELIMIT_STORAGE_URL=redis://redis:6379/1
+      - CORS_ORIGINS=https://zer0.pro,https://www.zer0.pro,https://backend.zer0.pro
+      # Production workers enabled
+      - DISABLE_CACHE_WARMER=false
+      - DISABLE_MV_WORKER=false
+      - DISABLE_RECONCILIATION=false
+      - DISABLE_CELERY=false
+      - IN_DEV=false
+    ports:
+      - "8005:5000"  # Backend API on port 8005
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend_logs_prod:/app/logs
+      - backend_uploads_prod:/app/uploads
+    networks:
+      - zer0_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # Frontend (React + Vite + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: https://backend.zer0.pro
+        BUILD_ENV: production
+    container_name: zer0_frontend_prod
+    restart: always
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3005:80"  # Frontend on port 3005
+    depends_on:
+      - backend
+    networks:
+      - zer0_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_prod_data:
+    name: zer0_postgres_prod_data
+  redis_prod_data:
+    name: zer0_redis_prod_data
+  backend_logs_prod:
+    name: zer0_backend_logs_prod
+  backend_uploads_prod:
+    name: zer0_backend_uploads_prod
+
+networks:
+  zer0_network:
+    name: zer0_prod_network
+    driver: bridge
