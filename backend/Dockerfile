@@ -56,17 +56,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Expose port
 EXPOSE 5000
 
-# Run Gunicorn with eventlet for Socket.IO support
-CMD ["gunicorn", \
-     "--bind", "0.0.0.0:5000", \
-     "--workers", "1", \
-     "--worker-class", "eventlet", \
-     "--worker-connections", "1000", \
-     "--timeout", "120", \
-     "--keep-alive", "5", \
-     "--max-requests", "1000", \
-     "--max-requests-jitter", "100", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info", \
-     "app:app"]
+# Run Gunicorn with custom config (fixes eventlet DNS issues)
+CMD ["gunicorn", "--config", "gunicorn_config.py", "app:app"]
