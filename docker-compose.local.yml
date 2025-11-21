@@ -100,6 +100,88 @@ services:
       retries: 3
       start_period: 40s
 
+  # Celery Worker (Background Tasks - Scoring, Votes, etc.)
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: local
+    container_name: zer0_celery_worker_local
+    restart: unless-stopped
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=2
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    dns_opt:
+      - ndots:0
+      - timeout:2
+      - attempts:3
+    dns_search: []
+    links:
+      - redis:redis
+      - postgres:postgres
+    env_file:
+      - ./backend/.env.local
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://zer0_user:zer0_local_password_change_me@postgres:5432/zer0_discovery
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - IN_DEV=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app  # Mount for hot reload
+      - backend_logs_local:/app/logs
+    networks:
+      - zer0_network
+
+  # Celery Beat (Periodic Tasks Scheduler)
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: local
+    container_name: zer0_celery_beat_local
+    restart: unless-stopped
+    command: celery -A celery_app.celery beat --loglevel=info
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    dns_opt:
+      - ndots:0
+      - timeout:2
+      - attempts:3
+    dns_search: []
+    links:
+      - redis:redis
+      - postgres:postgres
+    env_file:
+      - ./backend/.env.local
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://zer0_user:zer0_local_password_change_me@postgres:5432/zer0_discovery
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - IN_DEV=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app  # Mount for hot reload
+      - backend_logs_local:/app/logs
+    networks:
+      - zer0_network
+
   # Frontend (Vite Dev Server)
   frontend:
     build:

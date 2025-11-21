@@ -38,7 +38,8 @@ requests==2.31.0
 python-dateutil==2.8.2
 setuptools>=65.5.1
 PyGithub==2.1.1
-openai==1.12.0
+openai==1.54.5
+httpx<0.28.0  # Compatible with openai 1.54.5 (0.28+ breaks with 'proxies' arg)
 
 # Email (Optional)
 Flask-Mail==0.9.1

@@ -194,6 +194,12 @@ def create_app(config_name=None):
             MVRefreshWorker.start_background_worker(app, poll_interval=2, max_workers=3)
             print("[PERFORMANCE] MV refresh worker started - processing queue every 2s")
 
+        # REAL-TIME: Start Redis pub/sub listener for Celery scoring events
+        # Bridges Celery → Redis → Flask → Socket.IO for instant score updates
+        if not app.config.get('TESTING'):
+            from services.scoring_events_subscriber import ScoringEventsSubscriber
+            ScoringEventsSubscriber.start_subscriber(app)
+
         # PERFORMANCE: Start daily reconciliation scheduler
         # Skip if disabled (e.g., during testing)
         if not app.config.get('TESTING') and not os.environ.get('DISABLE_RECONCILIATION'):

@@ -14,6 +14,16 @@ from .notification import Notification
 from .user_stats import UserDashboardStats
 from .admin_user import AdminUser
 from .admin_otp import AdminOTP
+from .event import Event, EventSubscriber
+from .saved_project import SavedProject
+from .intro_request import IntroRequest
+from .direct_message import DirectMessage
+from .project_update import ProjectUpdate
+from .project_view import ProjectView
+from .validator_assignment import ValidatorAssignment
+from .validator_permissions import ValidatorPermissions
+from .investor_request import InvestorRequest
+from .admin_scoring_config import AdminScoringConfig
 
 __all__ = [
     'User',
@@ -34,5 +44,16 @@ __all__ = [
     'Notification',
     'UserDashboardStats',
     'AdminUser',
-    'AdminOTP'
+    'AdminOTP',
+    'Event',
+    'EventSubscriber',
+    'SavedProject',
+    'IntroRequest',
+    'DirectMessage',
+    'ProjectUpdate',
+    'ProjectView',
+    'ValidatorAssignment',
+    'ValidatorPermissions',
+    'InvestorRequest',
+    'AdminScoringConfig'
 ]

@@ -137,6 +137,102 @@ services:
         max-size: "50m"
         max-file: "5"
 
+  # Celery Worker (Background Tasks - Scoring, Votes, Cache, etc.)
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: production
+    container_name: zer0_celery_worker_prod
+    restart: always
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=4
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    dns_opt:
+      - ndots:0
+      - timeout:2
+      - attempts:3
+    dns_search: []
+    links:
+      - redis:redis
+      - postgres:postgres
+    env_file:
+      - ./backend/.env.prod
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://zer0_prod_user:${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}@postgres:5432/zer0_discovery_prod
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - IN_DEV=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend_logs_prod:/app/logs
+    networks:
+      - zer0_network
+    healthcheck:
+      test: ["CMD", "celery", "-A", "celery_app.celery", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # Celery Beat (Periodic Tasks Scheduler - Vote Sync, Cache Refresh, etc.)
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: production
+    container_name: zer0_celery_beat_prod
+    restart: always
+    command: celery -A celery_app.celery beat --loglevel=info
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    dns_opt:
+      - ndots:0
+      - timeout:2
+      - attempts:3
+    dns_search: []
+    links:
+      - redis:redis
+      - postgres:postgres
+    env_file:
+      - ./backend/.env.prod
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://zer0_prod_user:${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}@postgres:5432/zer0_discovery_prod
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - IN_DEV=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend_logs_prod:/app/logs
+    networks:
+      - zer0_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
   # Frontend (React + Vite + Nginx)
   frontend:
     build:

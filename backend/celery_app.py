@@ -8,13 +8,21 @@ import os
 
 def make_celery(app=None):
     """Create Celery instance with Flask app context"""
-    
+
     # If no app provided, create minimal Flask app for config
     if app is None:
         app = Flask(__name__)
         env = os.getenv("FLASK_ENV", "development")
         app.config.from_object(config[env])
-    
+
+        # Initialize database extension for Celery workers
+        from extensions import db
+        db.init_app(app)
+
+        # Import all models to initialize SQLAlchemy mappers
+        with app.app_context():
+            import models  # This loads all models from models/__init__.py
+
     celery = Celery(
         app.import_name,
         broker=app.config["CELERY_BROKER_URL"],

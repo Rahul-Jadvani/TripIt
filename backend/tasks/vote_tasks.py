@@ -2,7 +2,6 @@
 Celery Tasks for Async Vote Processing
 Handles durable database writes and reconciliation
 """
-from celery import Task
 from celery_app import celery
 from extensions import db
 from models.vote import Vote
@@ -14,15 +13,7 @@ import traceback
 import time
 
 
-class CallbackTask(Task):
-    """Base task with Flask app context - reuses existing app instance"""
-    def __call__(self, *args, **kwargs):
-        from app import app  # Import existing app instance instead of creating new one
-        with app.app_context():
-            return self.run(*args, **kwargs)
-
-
-@celery.task(bind=True, base=CallbackTask, max_retries=3, default_retry_delay=5)
+@celery.task(bind=True, max_retries=3, default_retry_delay=5)
 def process_vote_event(
     self,
     request_id: str,
@@ -177,7 +168,7 @@ def process_vote_event(
         }
 
 
-@celery.task(bind=True, base=CallbackTask, name='sync_votes_to_db')
+@celery.task(bind=True, name='sync_votes_to_db')
 def sync_votes_to_db(self):
     """
     Periodic task to sync Redis vote counts to PostgreSQL
@@ -280,7 +271,7 @@ def sync_votes_to_db(self):
         }
 
 
-@celery.task(bind=True, base=CallbackTask)
+@celery.task(bind=True)
 def batch_invalidate_caches(self, project_ids=None, user_ids=None):
     """
     Batch cache invalidation task - debounced to reduce DB load
@@ -327,7 +318,7 @@ def batch_invalidate_caches(self, project_ids=None, user_ids=None):
         return {'success': False, 'error': str(e)}
 
 
-@celery.task(bind=True, base=CallbackTask)
+@celery.task(bind=True)
 def get_vote_metrics(self):
     """Get vote service metrics for monitoring dashboard"""
     try:
@@ -338,7 +329,7 @@ def get_vote_metrics(self):
         return {}
 
 
-@celery.task(bind=True, base=CallbackTask, name='reconcile_all_vote_counts')
+@celery.task(bind=True, name='reconcile_all_vote_counts')
 def reconcile_all_vote_counts(self, batch_size=100):
     """
     Full reconciliation task - Recalculates ALL project vote counts from votes table

@@ -1,7 +1,6 @@
 """
 Celery Tasks for Async Project Scoring
 """
-from celery import Task
 from celery_app import celery
 from extensions import db
 from models.project import Project
@@ -12,15 +11,7 @@ from flask import current_app
 import traceback
 
 
-class CallbackTask(Task):
-    """Base task with Flask app context - reuses existing app instance"""
-    def __call__(self, *args, **kwargs):
-        from app import app  # Import existing app instance instead of creating new one
-        with app.app_context():
-            return self.run(*args, **kwargs)
-
-
-@celery.task(bind=True, base=CallbackTask, max_retries=10, default_retry_delay=300)
+@celery.task(bind=True, max_retries=10, default_retry_delay=300)
 def score_project_task(self, project_id):
     """
     Async task to score a project
@@ -75,6 +66,30 @@ def score_project_task(self, project_id):
             CacheService.invalidate_project_feed()  # Feed rankings may change
             CacheService.invalidate_leaderboard()   # Leaderboard may change
 
+            # Publish scoring completion event to Redis pub/sub
+            # Flask app will subscribe and emit Socket.IO event for real-time updates
+            try:
+                import redis
+                import json
+                import os
+
+                # Get Redis client from REDIS_URL
+                redis_client = redis.from_url(os.getenv('REDIS_URL', 'redis://redis:6379/0'))
+
+                message = {
+                    'event': 'project:scored',
+                    'project_id': project.id,
+                    'proof_score': float(project.proof_score),
+                    'quality_score': float(project.quality_score),
+                    'verification_score': float(project.verification_score),
+                    'validation_score': float(project.validation_score),
+                    'community_score': float(project.community_score)
+                }
+                redis_client.publish('scoring_events', json.dumps(message))
+                print(f"[Redis Pub/Sub] Published scoring event for project {project.id}")
+            except Exception as pubsub_err:
+                print(f"Failed to publish scoring event to Redis: {pubsub_err}")
+
             return {
                 'success': True,
                 'project_id': project_id,
@@ -126,7 +141,7 @@ def score_project_task(self, project_id):
                 raise self.retry(exc=e, countdown=retry_delay)
 
 
-@celery.task(base=CallbackTask)
+@celery.task
 def batch_score_projects(project_ids):
     """
     Score multiple projects in batch
@@ -154,7 +169,7 @@ def batch_score_projects(project_ids):
     return results
 
 
-@celery.task(base=CallbackTask)
+@celery.task
 def retry_failed_scores():
     """
     Retry all projects with failed scoring status
@@ -193,7 +208,7 @@ def retry_failed_scores():
         return {'error': str(e)}
 
 
-@celery.task(base=CallbackTask)
+@celery.task
 def check_rate_limit(user_id):
     """
     Check if user can submit a new project (rate limiting)

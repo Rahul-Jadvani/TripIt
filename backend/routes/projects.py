@@ -610,8 +610,16 @@ def get_project(user_id, project_id):
                 vote = Vote.query.filter_by(user_id=user_id, project_id=project_id).first()
                 cached['data']['user_vote'] = vote.vote_type if vote else None
 
-            from flask import jsonify
-            return jsonify(cached), 200
+            from flask import jsonify, make_response
+            response = make_response(jsonify(cached), 200)
+
+            # If cached data shows scoring in progress, add no-cache headers
+            if cached.get('data', {}).get('scoring_status') in ['pending', 'processing', 'retrying']:
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+
+            return response
 
         # OPTIMIZED: Eager load creator relationship (only non-dynamic relationship)
         from sqlalchemy.orm import joinedload
@@ -648,11 +656,21 @@ def get_project(user_id, project_id):
             'data': project_data
         }
 
-        # Cache for 5 minutes
-        CacheService.cache_project(project_id, response_data, ttl=3600)  # 1 hour cache (auto-invalidates on changes)
+        # Cache for 1 hour ONLY if scoring is complete
+        # Don't cache projects that are still being scored (prevents showing score=0 for 1 hour)
+        if project.scoring_status not in ['pending', 'processing', 'retrying']:
+            CacheService.cache_project(project_id, response_data, ttl=3600)  # 1 hour cache (auto-invalidates on changes)
 
-        from flask import jsonify
-        return jsonify(response_data), 200
+        from flask import jsonify, make_response
+        response = make_response(jsonify(response_data), 200)
+
+        # If scoring is in progress, add no-cache headers to prevent browser caching
+        if project.scoring_status in ['pending', 'processing', 'retrying']:
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+
+        return response
     except Exception as e:
         return error_response('Error', str(e), 500)
 
