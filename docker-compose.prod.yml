@@ -86,6 +86,13 @@ services:
         BUILD_ENV: production
     container_name: zer0_backend_prod
     restart: always
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    links:
+      - redis:redis
+      - postgres:postgres
     env_file:
       - ./backend/.env.prod
     environment:

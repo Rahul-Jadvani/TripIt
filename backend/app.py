@@ -43,17 +43,31 @@ def initialize_root_admins():
     ]
 
     try:
-        from models.user import User
+        from sqlalchemy import text
 
-        # Update registered users to admin
+        # Temporarily disable triggers to avoid mv_refresh_queue errors
+        db.session.execute(text("SET session_replication_role = replica;"))
+
+        # Update registered users to admin using raw SQL
         updated_count = 0
         for email in ROOT_ADMIN_EMAILS:
-            user = User.query.filter_by(email=email).first()
-            if user and not user.is_admin:
-                user.is_admin = True
-                db.session.add(user)
-                updated_count += 1
-                print(f"[ADMIN] Set {email} as root admin")
+            result = db.session.execute(
+                text("SELECT id, is_admin FROM users WHERE email = :email"),
+                {"email": email}
+            ).fetchone()
+
+            if result:
+                user_id, is_admin = result
+                if not is_admin:
+                    db.session.execute(
+                        text("UPDATE users SET is_admin = true, updated_at = NOW() WHERE email = :email"),
+                        {"email": email}
+                    )
+                    updated_count += 1
+                    print(f"[ADMIN] Set {email} as root admin")
+
+        # Re-enable triggers
+        db.session.execute(text("SET session_replication_role = DEFAULT;"))
 
         if updated_count > 0:
             db.session.commit()
@@ -133,7 +147,10 @@ def create_app(config_name=None):
             redis_url = os.getenv('REDIS_URL')
             if redis_url:
                 from services.redis_cache_service import RedisUserCache
+                from utils.cache import CacheService
+
                 RedisUserCache.initialize(redis_url)
+                CacheService.initialize(redis_url)
                 print("[App] Redis cache initialized successfully")
             else:
                 print("[App] WARNING: REDIS_URL not set in environment")

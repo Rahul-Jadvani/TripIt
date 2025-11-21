@@ -54,6 +54,13 @@ services:
         BUILD_ENV: local
     container_name: zer0_backend_local
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    links:
+      - redis:redis
+      - postgres:postgres
     env_file:
       - ./backend/.env.local
     environment:

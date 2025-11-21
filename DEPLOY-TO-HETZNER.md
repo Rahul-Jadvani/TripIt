@@ -90,6 +90,9 @@ backend.zer0.pro (Backend)  → Nginx → localhost:8005 → Docker Container (F
    # Run database migration to create schema
    docker exec -it zer0_backend_prod python /app/migrations/migrate_schema.py
 
+   # Create admin users for admin panel access
+   docker exec -it zer0_backend_prod python /app/scripts/add_admin_users.py
+
    # Add nginx config for new domains
    # Upload nginx-zer0-config.conf or create manually (see below)
    nano /etc/nginx/sites-available/zer0pro
@@ -365,6 +368,52 @@ docker exec -it zer0_postgres_prod psql -U zer0_prod_user -d zer0_discovery_prod
 
 # You should see all your application tables
 # Exit with \q
+```
+
+### Step 8.5: Create Admin Users
+
+**Run the admin user creation script:**
+
+```bash
+# Create root admin users for admin panel access
+docker exec -it zer0_backend_prod python /app/scripts/add_admin_users.py
+
+# You should see output like:
+# ✅ Created admin: sameerkatte@gmail.com
+# ✅ Created admin: saijadhav148@gmail.com
+# ✅ Created admin: sarankumar.0x@gmail.com
+# ✅ Created admin: zer0@z-0.io
+```
+
+**Verify admin users were created:**
+
+```bash
+docker exec -it zer0_postgres_prod psql -U zer0_prod_user -d zer0_discovery_prod -c "SELECT email, is_root, is_active FROM admin_users;"
+
+# Should show:
+#          email         | is_root | is_active
+# -----------------------+---------+-----------
+#  sameerkatte@gmail.com | t       | t
+#  saijadhav148@gmail.com| t       | t
+#  ...
+```
+
+**To login to admin panel:**
+
+1. Go to `https://zer0.pro/admin` (or your admin panel URL)
+2. Enter one of the admin emails
+3. Click "Request OTP"
+4. Check your email for the OTP code
+5. Enter the OTP to login
+
+**Troubleshooting: If OTP email doesn't arrive:**
+
+```bash
+# Check if email was sent
+docker compose -f docker-compose.prod.yml logs backend | grep -i "admin OTP"
+
+# Check OTP code directly from database (if needed)
+docker exec -it zer0_postgres_prod psql -U zer0_prod_user -d zer0_discovery_prod -c "SELECT email, otp_code, created_at, expires_at FROM admin_otps ORDER BY created_at DESC LIMIT 5;"
 ```
 
 ### Step 9: Configure Nginx (Add to Existing Setup)
