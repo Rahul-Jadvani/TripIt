@@ -355,6 +355,45 @@ curl http://localhost:3005
 docker exec -it zer0_backend_prod python /app/migrations/migrate_schema.py
 
 # Check the output - should show all tables, indexes, etc. being created
+# This script will also automatically add all unique constraints from source database
+```
+
+**IMPORTANT: Fix Missing Unique Constraints (Critical)**
+
+The migration script automatically detects and adds all unique constraints from the source database. However, if you're deploying to a fresh database without a source, you need to manually add the required unique constraints:
+
+```bash
+# Option 1: Run the standalone constraint fixer (RECOMMENDED)
+docker exec -it zer0_backend_prod python /app/migrations/add_missing_constraints.py
+
+# Option 2: Add constraints manually via PostgreSQL
+docker exec -it zer0_postgres_prod psql -U zer0_prod_user -d zer0_discovery_prod
+
+# Inside PostgreSQL, run:
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_refresh_queue_view_name ON mv_refresh_queue(view_name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_dashboard_stats_user_id ON user_dashboard_stats(user_id);
+
+# Exit PostgreSQL
+\q
+```
+
+**Why is this needed?**
+- These unique constraints are required for `ON CONFLICT` operations in triggers
+- Without them, you'll get errors when:
+  - Connecting GitHub in the publish form
+  - Publishing new projects
+  - Updating user dashboard stats
+
+**Verify constraints were added:**
+
+```bash
+# Check mv_refresh_queue constraint
+docker exec -it zer0_postgres_prod psql -U zer0_prod_user -d zer0_discovery_prod -c "\d mv_refresh_queue"
+# Should show: idx_mv_refresh_queue_view_name UNIQUE btree (view_name)
+
+# Check user_dashboard_stats constraint
+docker exec -it zer0_postgres_prod psql -U zer0_prod_user -d zer0_discovery_prod -c "\d user_dashboard_stats"
+# Should show: idx_user_dashboard_stats_user_id UNIQUE btree (user_id)
 ```
 
 **Verify database is working:**

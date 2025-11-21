@@ -6,10 +6,13 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 from marshmallow import ValidationError
 from datetime import datetime, timedelta
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from urllib.parse import urlencode
 import secrets
 import random
 import os
+import time
 
 from extensions import db
 from models.user import User
@@ -24,8 +27,64 @@ auth_bp = Blueprint('auth', __name__)
 # In-memory OTP storage (use Redis in production)
 otp_storage = {}
 
-# In-memory OAuth state storage for CSRF protection (use Redis in production)
-oauth_state = {}
+# OAuth state storage - use Redis for multi-worker environments
+def _get_redis_client():
+    """Get Redis client for OAuth state storage"""
+    from redis import Redis
+    from flask import current_app
+    redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
+    return Redis.from_url(redis_url, decode_responses=True)
+
+def store_oauth_state(state, data, ttl=300):
+    """Store OAuth state in Redis with TTL (default 5 minutes)"""
+    try:
+        import json
+        redis = _get_redis_client()
+        redis.setex(f"oauth_state:{state}", ttl, json.dumps(data))
+    except Exception as e:
+        print(f"[OAuth] Error storing state in Redis: {e}")
+
+def get_oauth_state(state):
+    """Get and delete OAuth state from Redis"""
+    try:
+        import json
+        redis = _get_redis_client()
+        key = f"oauth_state:{state}"
+        data = redis.get(key)
+        if data:
+            redis.delete(key)  # One-time use
+            return json.loads(data) if data else None
+        return None
+    except Exception as e:
+        print(f"[OAuth] Error getting state from Redis: {e}")
+        return None
+
+
+def get_retry_session(retries=3, backoff_factor=0.5, status_forcelist=(500, 502, 503, 504)):
+    """
+    Create a requests session with retry logic for handling DNS and network issues.
+
+    Args:
+        retries: Number of retry attempts
+        backoff_factor: Multiplier for exponential backoff (0.5 = 0.5s, 1s, 2s delays)
+        status_forcelist: HTTP status codes to retry on
+
+    Returns:
+        requests.Session configured with retry adapter
+    """
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+        allowed_methods=["GET", "POST"],  # Retry on both GET and POST
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
 
 
 @auth_bp.route('/register', methods=['POST'])
@@ -256,9 +315,7 @@ def github_login():
     """Initiate GitHub OAuth flow for login (no existing session required)"""
     try:
         state = secrets.token_urlsafe(32)
-        oauth_state[state] = {
-            'expires_at': datetime.utcnow() + timedelta(minutes=5)
-        }
+        store_oauth_state(state, {'created_at': datetime.utcnow().isoformat()})
 
         github_auth_url = (
             f"https://github.com/login/oauth/authorize"
@@ -281,9 +338,7 @@ def google_login():
     """Initiate Google OAuth flow for user login"""
     try:
         state = secrets.token_urlsafe(32)
-        oauth_state[state] = {
-            'expires_at': datetime.utcnow() + timedelta(minutes=5)
-        }
+        store_oauth_state(state, {'created_at': datetime.utcnow().isoformat()})
 
         params = {
             'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
@@ -319,15 +374,14 @@ def google_callback():
         if not code or not state:
             return redirect(f"{frontend_url}/login?google_error=missing_code_or_state")
 
-        # Validate state
-        stored = oauth_state.get(state)
-        if not stored or datetime.utcnow() > stored['expires_at']:
+        # Validate state (get_oauth_state deletes it automatically)
+        stored = get_oauth_state(state)
+        if not stored:
             return redirect(f"{frontend_url}/login?google_error=invalid_state")
-        # One-time use
-        del oauth_state[state]
 
         # Exchange code for tokens
-        token_response = requests.post(
+        session = get_retry_session(retries=3, backoff_factor=1.0)
+        token_response = session.post(
             'https://oauth2.googleapis.com/token',
             data={
                 'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
@@ -336,7 +390,8 @@ def google_callback():
                 'grant_type': 'authorization_code',
                 'redirect_uri': current_app.config.get('GOOGLE_REDIRECT_URI'),
             },
-            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            timeout=30  # Increased timeout for DNS resolution in Docker
         )
 
         token_data = token_response.json()
@@ -347,9 +402,10 @@ def google_callback():
             return redirect(f"{frontend_url}/login?google_error={err}")
 
         # Get user info
-        userinfo_resp = requests.get(
+        userinfo_resp = session.get(
             'https://www.googleapis.com/oauth2/v3/userinfo',
-            headers={'Authorization': f'Bearer {access_token}'}
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=30  # Increased timeout for DNS resolution in Docker
         )
         profile = userinfo_resp.json()
 
@@ -431,7 +487,8 @@ def github_callback():
 
         # Exchange code for access token
         print(f"[GitHub Callback] Exchanging code for access token...")
-        token_response = requests.post(
+        session = get_retry_session(retries=3, backoff_factor=1.0)
+        token_response = session.post(
             'https://github.com/login/oauth/access_token',
             headers={'Accept': 'application/json'},
             data={
@@ -439,7 +496,7 @@ def github_callback():
                 'client_secret': current_app.config['GITHUB_CLIENT_SECRET'],
                 'code': code,
             },
-            timeout=10
+            timeout=30  # Increased timeout for DNS resolution in Docker
         )
 
         token_data = token_response.json()
@@ -456,10 +513,10 @@ def github_callback():
 
         print(f"[GitHub Callback] Got access token, fetching user info...")
         # Get user info from GitHub
-        user_response = requests.get(
+        user_response = session.get(
             'https://api.github.com/user',
             headers={'Authorization': f'token {access_token}'},
-            timeout=10
+            timeout=30  # Increased timeout for DNS resolution in Docker
         )
         github_data = user_response.json()
         github_username = github_data.get('login')
@@ -469,15 +526,13 @@ def github_callback():
             frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
             return redirect(f"{frontend_url}/login?github_error=user_fetch_failed")
 
-        # Determine flow: connect (state includes user_id) or login (state stored in oauth_state)
+        # Determine flow: connect (state includes user_id) or login (state stored in Redis)
         login_flow = ':' not in state
         if login_flow:
-            stored = oauth_state.get(state)
-            if not stored or datetime.utcnow() > stored.get('expires_at', datetime.utcnow()):
+            stored = get_oauth_state(state)
+            if not stored:
                 frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
                 return redirect(f"{frontend_url}/login?github_error=invalid_state")
-            # one-time use
-            del oauth_state[state]
         else:
             try:
                 _, encoded_user = state.split(':', 1)
@@ -490,10 +545,10 @@ def github_callback():
         primary_email = github_data.get('email')
         if not primary_email:
             try:
-                emails_resp = requests.get(
+                emails_resp = session.get(
                     'https://api.github.com/user/emails',
                     headers={'Authorization': f'token {access_token}'},
-                    timeout=10
+                    timeout=30  # Increased timeout for DNS resolution in Docker
                 )
                 emails_data = emails_resp.json() if emails_resp.ok else []
                 primary = next((e for e in emails_data if e.get('primary') and e.get('verified')), None)

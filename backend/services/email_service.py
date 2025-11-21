@@ -8,6 +8,8 @@ from textwrap import shorten
 from typing import Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from flask import current_app
 
 
@@ -19,6 +21,23 @@ class EmailService:
     BRAND_GRADIENT_START = "#FACC15"  # yellow
     BRAND_GRADIENT_END = "#F59E0B"    # amber
     ACCENT_TEXT = "#FDE68A"
+
+    @staticmethod
+    def _get_retry_session(retries=3, backoff_factor=1.0):
+        """Create a requests session with retry logic for handling DNS and network issues."""
+        session = requests.Session()
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=(500, 502, 503, 504),
+            allowed_methods=["POST"],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        return session
 
     @staticmethod
     def is_enabled() -> bool:
@@ -104,8 +123,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -176,8 +196,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -259,8 +280,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -611,8 +633,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -690,8 +713,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -769,8 +793,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -844,8 +869,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -925,8 +951,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -1000,8 +1027,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -1066,8 +1094,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -1131,8 +1160,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -1197,8 +1227,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -1272,8 +1303,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -1347,8 +1379,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True
@@ -1409,8 +1442,9 @@ class EmailService:
         }
 
         try:
-            response = requests.post(
-                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=10
+            session = cls._get_retry_session()
+            response = session.post(
+                config["ZEPTO_ENDPOINT"], json=payload, headers=headers, timeout=30
             )
             response.raise_for_status()
             return True

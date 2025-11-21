@@ -34,7 +34,7 @@ OLD_DB_URL = "postgresql://neondb_owner:npg_kgiQyc4dJA6C@ep-falling-dust-ad4x9ty
 # NEW DATABASE (Target) - Your new PostgreSQL in Docker
 # Use 'postgres' (Docker service name) when running inside Docker container
 # Use 'localhost' when running migration script directly on host
-NEW_DB_URL = "postgresql://zer0_prod_user:postgres@postgres:5432/zer0_discovery_prod?sslmode=disable&connect_timeout=10&keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=5"
+NEW_DB_URL = "postgresql://postgres:postgres@localhost:5432/Zer0?sslmode=disable&connect_timeout=10&keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=5"
 # ============================================================================
 
 
@@ -806,6 +806,111 @@ def migrate_comments(old_conn, new_conn, tables):
     print()
 
 
+def get_all_unique_indexes_from_source(old_conn):
+    """
+    Get all unique indexes from source database.
+    This includes both unique constraints and unique indexes.
+    """
+    query = """
+    SELECT
+        schemaname,
+        tablename,
+        indexname,
+        indexdef
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+    AND indexdef LIKE '%UNIQUE%'
+    ORDER BY tablename, indexname;
+    """
+    return execute_sql(old_conn, query, fetch=True)
+
+
+def add_missing_unique_constraints(old_conn, new_conn):
+    """
+    Add ALL missing unique constraints from source to target database.
+    This fixes database errors when inserting/updating data with ON CONFLICT.
+
+    Automatically detects all unique indexes from source and ensures they exist in target.
+    """
+    print("🔒 Synchronizing unique constraints from source database...")
+    print()
+
+    # Get all unique indexes from source
+    source_unique_indexes = get_all_unique_indexes_from_source(old_conn)
+
+    if not source_unique_indexes:
+        print("  ⚠️  No unique indexes found in source database")
+        print()
+        return
+
+    print(f"  📊 Found {len(source_unique_indexes)} unique index(es) in source database")
+    print()
+
+    added_count = 0
+    exists_count = 0
+    failed_count = 0
+
+    for schema, table, index_name, index_def in source_unique_indexes:
+        print(f"  📋 Checking {table}.{index_name}...")
+
+        # Check if table exists in target (includes both regular tables and materialized views)
+        check_table = f"""
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_schema = '{schema}'
+            AND table_name = '{table}'
+        ) OR EXISTS (
+            SELECT FROM pg_matviews
+            WHERE schemaname = '{schema}'
+            AND matviewname = '{table}'
+        );
+        """
+        table_exists = execute_sql(new_conn, check_table, fetch=True)
+
+        if not table_exists or not table_exists[0][0]:
+            print(f"    ⚠️  Table '{table}' does not exist in target - skipping")
+            print()
+            continue
+
+        # Check if unique index already exists in target
+        check_index = f"""
+        SELECT EXISTS (
+            SELECT 1 FROM pg_indexes
+            WHERE schemaname = '{schema}'
+            AND tablename = '{table}'
+            AND indexname = '{index_name}'
+        );
+        """
+        index_exists = execute_sql(new_conn, check_index, fetch=True)
+
+        if index_exists and index_exists[0][0]:
+            print(f"    ✅ Already exists")
+            exists_count += 1
+            print()
+            continue
+
+        # Create the unique index in target using the exact definition from source
+        result = execute_sql(new_conn, index_def)
+
+        if result is True:
+            print(f"    ✅ Added unique constraint")
+            print(f"       Definition: {index_def[:80]}...")
+            added_count += 1
+        else:
+            print(f"    ❌ Failed: {result}")
+            failed_count += 1
+
+        print()
+
+    print("=" * 70)
+    print(f"  ✅ Added: {added_count}")
+    print(f"  ℹ️  Already existed: {exists_count}")
+    if failed_count > 0:
+        print(f"  ❌ Failed: {failed_count}")
+    print("=" * 70)
+    print()
+
+
 def configure_database_settings(conn):
     """Configure database settings for production performance"""
     print("⚙️  Configuring database settings...")
@@ -937,6 +1042,14 @@ def main():
         migrate_triggers(old_conn, new_conn, tables)
 
     migrate_materialized_views(old_conn, new_conn)
+
+    # FINAL STEP: Verify all unique constraints are present (includes MVs)
+    # This catches any missing constraints that the migration missed
+    print("=" * 90)
+    print("FINAL CHECK: Verifying all unique constraints from source")
+    print("=" * 90)
+    print()
+    add_missing_unique_constraints(old_conn, new_conn)
 
     # Cleanup
     old_conn.close()
