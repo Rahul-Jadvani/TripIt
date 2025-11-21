@@ -9,7 +9,12 @@
       "Bash(nul)",
       "Bash(celery -A celery_app.celery inspect:*)",
       "Bash(timeout 5 python:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker-compose:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

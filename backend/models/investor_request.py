@@ -28,8 +28,8 @@ class InvestorRequest(db.Model):
     # Investment Focus
     investment_stages = db.Column(db.JSON, default=list)  # ["Pre-seed", "Seed", etc.]
     industries = db.Column(db.JSON, default=list)  # ["AI/ML", "Web3", etc.]
-    ticket_size_min = db.Column(db.Integer)  # USD
-    ticket_size_max = db.Column(db.Integer)  # USD
+    ticket_size_min = db.Column(db.BigInteger)  # USD (supports up to 9 quintillion)
+    ticket_size_max = db.Column(db.BigInteger)  # USD (supports up to 9 quintillion)
     geographic_focus = db.Column(db.JSON, default=list)  # ["North America", "Europe", etc.]
 
     # About
