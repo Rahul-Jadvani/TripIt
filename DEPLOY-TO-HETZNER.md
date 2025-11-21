@@ -90,6 +90,15 @@ backend.zer0.pro (Backend)  → Nginx → localhost:8005 → Docker Container (F
    # Run database migration to create schema
    docker exec -it zer0_backend_prod python /app/migrations/migrate_schema.py
 
+   # Fix 1: Investor Ticket Size (BIGINT)
+  docker compose -f docker-compose.prod.yml run --rm --no-deps backend python fix_investor_ticket_size.py 
+
+  # Fix 2: Intro Request Stats (PRIMARY KEY)
+  docker compose -f docker-compose.prod.yml run --rm --no-deps backend python fix_intro_request_stats_constraint.py
+
+  # Fix 3: Message Conversations (UNIQUE)
+  docker compose -f docker-compose.prod.yml run --rm --no-deps backend python fix_message_conversations_constraint.py
+
    # Create admin users for admin panel access
    docker exec -it zer0_backend_prod python /app/scripts/add_admin_users.py
 

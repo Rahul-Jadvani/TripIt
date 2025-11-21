@@ -14,7 +14,8 @@
       "Bash(docker ps:*)",
       "Bash(docker logs:*)",
       "Bash(docker-compose:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(ssh root@128.140.37.30:*)"
     ],
     "deny": [],
     "ask": []
