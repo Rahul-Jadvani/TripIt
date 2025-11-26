@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Github, Twitter, Mail, ExternalLink, MessageSquare, Lightbulb, HelpCircle, Flag, Instagram, Linkedin, Reddit } from 'lucide-react';
+import { Twitter, Mail, ExternalLink, MessageSquare, Lightbulb, HelpCircle, Flag, Instagram, Linkedin } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { FeedbackModal } from './modals/FeedbackModal';
 import { useUserByUsername } from '../hooks/useUser';
@@ -68,7 +68,7 @@ export const Footer = memo(function Footer() {
     <>
       <footer className="bg-black border-t border-gray-900">
         <div className="container mx-auto px-4 py-12 sm:py-16">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-3">
@@ -104,6 +104,12 @@ export const Footer = memo(function Footer() {
                   <span>Explore</span>
                 </Link>
               </li>
+              <li>
+                <a href="https://layerz.zer0.pro" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Layerz</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -135,7 +141,7 @@ export const Footer = memo(function Footer() {
             </ul>
           </div>
 
-          {/* Community & Feedback */}
+          {/* Community */}
           <div>
             <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Community</h3>
             <ul className="space-y-3 text-sm">
@@ -169,12 +175,13 @@ export const Footer = memo(function Footer() {
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
-              <li>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>GitHub</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </li>
+            </ul>
+          </div>
+
+          {/* Feedback & Support */}
+          <div>
+            <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Support</h3>
+            <ul className="space-y-3 text-sm">
               <li>
                 <button onClick={() => openFeedbackModal('contact')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Reach Out</span>
@@ -235,17 +242,20 @@ export const Footer = memo(function Footer() {
           </p>
 
           {/* Social Icons */}
-          <div className="flex gap-6">
+          <div className="flex gap-4 flex-wrap">
+            {/* X (Twitter) */}
             <a
               href="https://x.com/Z_0_io"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
               aria-label="X (Twitter)"
-              title="X (Twitter)"
+              title="X"
             >
               <Twitter className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             </a>
+
+            {/* Instagram */}
             <a
               href="https://www.instagram.com/z_0.io/"
               target="_blank"
@@ -256,6 +266,8 @@ export const Footer = memo(function Footer() {
             >
               <Instagram className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             </a>
+
+            {/* LinkedIn */}
             <a
               href="https://www.linkedin.com/company/zer0th-protocol/"
               target="_blank"
@@ -266,48 +278,13 @@ export const Footer = memo(function Footer() {
             >
               <Linkedin className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             </a>
+
+            {/* Email */}
             <a
-              href="https://www.reddit.com/u/Disastrous_Intern912/s/I5N6UZcaSL"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
-              aria-label="Reddit"
-              title="Reddit"
-            >
-              <Reddit className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
-            </a>
-            <a
-              href="https://farcaster.xyz/z-0-io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
-              aria-label="Farcaster"
-              title="Farcaster"
-            >
-              <svg
-                className="h-5 w-5 group-hover:scale-110 transition-transform duration-200"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M7 0C3.582 0 1 2.582 1 6v12c0 3.418 2.582 6 6 6h10c3.418 0 6-2.582 6-6V6c0-3.418-2.582-6-6-6H7zm2 7c1.104 0 2 .896 2 2s-.896 2-2 2-2-.896-2-2 .896-2 2-2zm6 0c1.104 0 2 .896 2 2s-.896 2-2 2-2-.896-2-2 .896-2 2-2zm-5 7h8v2H10v-2z" />
-              </svg>
-            </a>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
-              aria-label="GitHub"
-              title="GitHub"
-            >
-              <Github className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
-            </a>
-            <a
-              href="mailto:support@zer0.pro"
+              href="mailto:zer0@z-0.io"
               className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
               aria-label="Email"
-              title="Email"
+              title="Email: zer0@z-0.io"
             >
               <Mail className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
             </a>

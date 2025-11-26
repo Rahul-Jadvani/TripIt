@@ -25,8 +25,8 @@ const CrowdCanvas = ({ src, rows = 15, cols = 7, active = true }: CrowdCanvasPro
 
     // Reduce particle count on small screens
     const isMobile = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-    const deviceRows = isMobile ? Math.max(6, Math.floor(rows * 0.6)) : rows;
-    const deviceCols = isMobile ? Math.max(3, Math.floor(cols * 0.6)) : cols;
+    const deviceRows = isMobile ? Math.max(3, Math.floor(rows * 0.25)) : rows;
+    const deviceCols = isMobile ? Math.max(2, Math.floor(cols * 0.25)) : cols;
 
     const config = {
       src,
@@ -48,7 +48,16 @@ const CrowdCanvas = ({ src, rows = 15, cols = 7, active = true }: CrowdCanvasPro
     // TWEEN FACTORIES
     const resetPeep = ({ stage, peep }: { stage: any; peep: any }) => {
       const direction = Math.random() > 0.5 ? 1 : -1;
-      const offsetY = 100 - 250 * gsap.parseEase("power2.in")(Math.random());
+      // On mobile, position in two rows; on desktop, spread them out
+      let offsetY: number;
+      if (isMobile) {
+        // Use sprite row to determine canvas row (top or bottom)
+        const spriteRow = Math.floor(peep.rect[1] / peep.rect[3]);
+        // Alternate between two row positions - both at bottom to avoid top visibility
+        offsetY = spriteRow % 2 === 0 ? 30 : 70;
+      } else {
+        offsetY = 100 - 250 * gsap.parseEase("power2.in")(Math.random());
+      }
       const startY = stage.height - peep.height + offsetY;
       let startX: number;
       let endX: number;
