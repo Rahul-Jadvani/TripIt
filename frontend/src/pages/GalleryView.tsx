@@ -55,6 +55,16 @@ const GalleryView = () => {
     setLoading(true);
     const allProjectsList = [...(hotData?.data || []), ...(topData?.data || []), ...(newData?.data || [])];
 
+    // Deduplicate projects by ID to avoid showing the same project multiple times
+    const seenIds = new Set<string>();
+    const deduplicatedList = allProjectsList.filter(project => {
+      if (seenIds.has(project.id)) {
+        return false;
+      }
+      seenIds.add(project.id);
+      return true;
+    });
+
     let filtered: Project[] = [];
 
     switch (category) {
@@ -68,7 +78,7 @@ const GalleryView = () => {
         filtered = (newData?.data || []).slice(0, 100);
         break;
       case 'ai-smart-contracts':
-        filtered = allProjectsList
+        filtered = deduplicatedList
           .filter(p =>
             p.techStack?.some(tech =>
               ['AI', 'Machine Learning', 'Smart Contract', 'Blockchain'].some(tag =>
@@ -79,12 +89,12 @@ const GalleryView = () => {
           .slice(0, 100);
         break;
       case 'most-requested':
-        filtered = allProjectsList
+        filtered = deduplicatedList
           .sort((a, b) => (b.commentCount || 0) - (a.commentCount || 0))
           .slice(0, 100);
         break;
       default:
-        filtered = allProjectsList.slice(0, 100);
+        filtered = deduplicatedList.slice(0, 100);
     }
 
     setAllProjects(filtered);
