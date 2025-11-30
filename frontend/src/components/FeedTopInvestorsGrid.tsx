@@ -63,7 +63,7 @@ function InvestorCard({ investor, allHref }: { investor: InvestorItem; allHref: 
 
         {/* Body box */}
         <div className="rounded-[16px] border-[3px] border-black p-3 bg-[#1d1d1d] shadow-[inset_0_0_0_2px_rgba(0,0,0,0.3)]">
-          <div className="rounded-[10px] h-16 border-[3px] border-black bg-gradient-to-r from-yellow-200 to-blue-200" />
+          <div className="rounded-[10px] h-16 border-[3px] border-black bg-gradient-to-r from-orange-300 to-blue-200" />
           <p className="mt-3 font-extrabold text-white/95 text-sm leading-snug">{caption}</p>
         </div>
 
@@ -71,7 +71,7 @@ function InvestorCard({ investor, allHref }: { investor: InvestorItem; allHref: 
         <div className="mt-4 flex items-center gap-4">
           <a
             href={profileHref}
-            className="inline-flex items-center justify-center h-10 w-10 rounded-[14px] border-[3px] border-black bg-yellow-300 text-black shadow-[0_6px_0_0_#000] hover:shadow-[0_8px_0_0_#000] hover:-translate-y-0.5 transition"
+            className="inline-flex items-center justify-center h-10 w-10 rounded-[14px] border-[3px] border-black bg-orange-300 text-black shadow-[0_6px_0_0_#000] hover:shadow-[0_8px_0_0_#000] hover:-translate-y-0.5 transition"
             aria-label="View profile"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

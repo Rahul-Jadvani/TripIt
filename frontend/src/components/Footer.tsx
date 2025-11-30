@@ -72,8 +72,7 @@ export const Footer = memo(function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <img src="/logo.png" alt="ZERO logo" className="h-8 w-8" />
-              <h2 className="text-2xl font-bold text-yellow-400" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>ZERO</h2>
+              <img src="/logo.svg" alt="ZERO logo" className="h-16 w-16" />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
               Proof-weighted discovery platform for hackathon projects. Connect, build, and discover innovative solutions.
@@ -82,30 +81,30 @@ export const Footer = memo(function Footer() {
 
           {/* Platform Links */}
           <div>
-            <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Platform</h3>
+            <h3 className="text-sm font-semibold text-orange-500 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Platform</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link to="/" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <Link to="/" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Feed</span>
                 </Link>
               </li>
               <li>
-                <Link to="/leaderboard" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <Link to="/leaderboard" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Leaderboard</span>
                 </Link>
               </li>
               <li>
-                <Link to="/search" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <Link to="/search" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Search</span>
                 </Link>
               </li>
               <li>
-                <Link to="/gallery/hackathon" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <Link to="/gallery/hackathon" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Explore</span>
                 </Link>
               </li>
               <li>
-                <a href="https://layerz.zer0.pro" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="https://layerz.zer0.pro" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Layerz</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
@@ -115,26 +114,26 @@ export const Footer = memo(function Footer() {
 
           {/* Resources */}
           <div>
-            <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Resources</h3>
+            <h3 className="text-sm font-semibold text-orange-500 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Resources</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link to="/about" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <Link to="/about" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>About</span>
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Documentation</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>FAQ</span>
                 </a>
               </li>
               <li>
-                <Link to="/investor-plans" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <Link to="/investor-plans" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Investor Plans</span>
                 </Link>
               </li>
@@ -143,34 +142,34 @@ export const Footer = memo(function Footer() {
 
           {/* Community */}
           <div>
-            <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Community</h3>
+            <h3 className="text-sm font-semibold text-orange-500 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Community</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="https://x.com/Z_0_io" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="https://x.com/Z_0_io" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>X (Twitter)</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
               <li>
-                <a href="https://www.instagram.com/z_0.io/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="https://www.instagram.com/z_0.io/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Instagram</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
               <li>
-                <a href="https://www.linkedin.com/company/zer0th-protocol/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="https://www.linkedin.com/company/zer0th-protocol/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>LinkedIn</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
               <li>
-                <a href="https://www.reddit.com/u/Disastrous_Intern912/s/I5N6UZcaSL" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="https://www.reddit.com/u/Disastrous_Intern912/s/I5N6UZcaSL" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Reddit</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
               <li>
-                <a href="https://farcaster.xyz/z-0-io" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <a href="https://farcaster.xyz/z-0-io" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Farcaster</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
@@ -180,28 +179,28 @@ export const Footer = memo(function Footer() {
 
           {/* Feedback & Support */}
           <div>
-            <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Support</h3>
+            <h3 className="text-sm font-semibold text-orange-500 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Support</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <button onClick={() => openFeedbackModal('contact')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <button onClick={() => openFeedbackModal('contact')} className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Reach Out</span>
                   <MessageSquare className="h-3 w-3" />
                 </button>
               </li>
               <li>
-                <button onClick={() => openFeedbackModal('suggestion')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <button onClick={() => openFeedbackModal('suggestion')} className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Suggestions</span>
                   <Lightbulb className="h-3 w-3" />
                 </button>
               </li>
               <li>
-                <button onClick={() => openFeedbackModal('improvement')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <button onClick={() => openFeedbackModal('improvement')} className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Help Us Improve</span>
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </li>
               <li>
-                <button onClick={() => openFeedbackModal('report')} className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 inline-flex items-center gap-1">
+                <button onClick={() => openFeedbackModal('report')} className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Report</span>
                   <Flag className="h-3 w-3" />
                 </button>
@@ -211,20 +210,20 @@ export const Footer = memo(function Footer() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Legal</h3>
+            <h3 className="text-sm font-semibold text-orange-500 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Legal</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200">
+                <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200">
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200">
+                <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200">
                   Terms of Service
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors duration-200">
+                <a href="#" className="text-gray-400 hover:text-orange-500 transition-colors duration-200">
                   Cookie Policy
                 </a>
               </li>
@@ -238,7 +237,7 @@ export const Footer = memo(function Footer() {
         {/* Bottom Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <p className="text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} <span className="text-yellow-400 font-semibold">ZERO</span>. All rights reserved.
+            &copy; {new Date().getFullYear()} <span className="text-orange-500 font-semibold">ZERO</span>. All rights reserved.
           </p>
 
           {/* Social Icons */}
@@ -248,7 +247,7 @@ export const Footer = memo(function Footer() {
               href="https://x.com/Z_0_io"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
+              className="text-gray-400 hover:text-orange-500 transition-colors duration-200 group"
               aria-label="X (Twitter)"
               title="X"
             >
@@ -260,7 +259,7 @@ export const Footer = memo(function Footer() {
               href="https://www.instagram.com/z_0.io/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
+              className="text-gray-400 hover:text-orange-500 transition-colors duration-200 group"
               aria-label="Instagram"
               title="Instagram"
             >
@@ -272,7 +271,7 @@ export const Footer = memo(function Footer() {
               href="https://www.linkedin.com/company/zer0th-protocol/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
+              className="text-gray-400 hover:text-orange-500 transition-colors duration-200 group"
               aria-label="LinkedIn"
               title="LinkedIn"
             >
@@ -282,7 +281,7 @@ export const Footer = memo(function Footer() {
             {/* Email */}
             <a
               href="mailto:zer0@z-0.io"
-              className="text-gray-400 hover:text-yellow-400 transition-colors duration-200 group"
+              className="text-gray-400 hover:text-orange-500 transition-colors duration-200 group"
               aria-label="Email"
               title="Email: zer0@z-0.io"
             >

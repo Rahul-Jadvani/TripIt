@@ -310,7 +310,7 @@ export default function AdminChains() {
                             </Link>
                             {getStatusBadge(chain.status)}
                             {chain.is_featured && (
-                              <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-500">
+                              <Badge variant="secondary" className="bg-orange-500/20 text-orange-500">
                                 <Star className="h-3 w-3 mr-1" />
                                 Featured
                               </Badge>

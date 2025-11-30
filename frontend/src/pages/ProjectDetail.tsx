@@ -262,18 +262,18 @@ export default function ProjectDetail() {
         <button
           type="button"
           onClick={() => setShowProfileChecklist(true)}
-          className="inline-flex items-center gap-2 text-xs text-muted-foreground border border-dashed border-yellow-500/50 rounded-full px-3 py-1 hover:bg-yellow-500/10 transition-colors"
+          className="inline-flex items-center gap-2 text-xs text-muted-foreground border border-dashed border-orange-500/50 rounded-full px-3 py-1 hover:bg-orange-500/10 transition-colors"
         >
-          <Info className="h-3.5 w-3.5 text-yellow-500" />
+          <Info className="h-3.5 w-3.5 text-orange-500" />
           Complete your project profile
         </button>
       );
     }
 
     return (
-      <div className="card-elevated p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-2 border-yellow-500/30">
+      <div className="card-elevated p-4 bg-gradient-to-r from-orange-500/10 to-orange-500/10 border-2 border-orange-500/30">
         <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <h3 className="font-bold text-foreground mb-1">Complete Your Project Profile</h3>
             <p className="text-sm text-muted-foreground mb-2">
@@ -283,7 +283,7 @@ export default function ProjectDetail() {
               {missingFields.map((field) => (
                 <span
                   key={field}
-                  className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-600 rounded border border-yellow-500/30"
+                  className="text-xs px-2 py-1 bg-orange-500/20 text-orange-600 rounded border border-orange-500/30"
                 >
                   {field}
                 </span>
@@ -291,7 +291,7 @@ export default function ProjectDetail() {
             </div>
             <Link
               to={`/project/${project.id}/edit`}
-              className="inline-block px-3 py-1.5 bg-yellow-500 text-black rounded text-xs font-semibold hover:bg-yellow-600 transition-colors"
+              className="inline-block px-3 py-1.5 bg-orange-500 text-black rounded text-xs font-semibold hover:bg-orange-600 transition-colors"
             >
               Edit Project
             </Link>

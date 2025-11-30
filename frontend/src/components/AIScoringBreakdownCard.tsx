@@ -64,8 +64,8 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
   const statusConfig = {
     pending: {
       icon: Clock,
-      iconClass: 'text-yellow-500 animate-pulse',
-      bgClass: 'bg-yellow-500/10 border-yellow-500/30',
+      iconClass: 'text-orange-500 animate-pulse',
+      bgClass: 'bg-orange-500/10 border-orange-500/30',
       title: 'Analysis Pending',
       message: 'Your project is queued for automated scoring (~30-60 seconds)',
     },
@@ -200,7 +200,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                         {scoreBreakdown.quality.stars !== undefined && (
                           <div className="flex items-center justify-between text-[10px]">
                             <span className="text-muted-foreground">GitHub Stars</span>
-                            <span className="font-bold text-yellow-500">{scoreBreakdown.quality.stars}</span>
+                            <span className="font-bold text-orange-500">{scoreBreakdown.quality.stars}</span>
                           </div>
                         )}
                         {scoreBreakdown.quality.forks !== undefined && (
@@ -327,7 +327,7 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 {scoreBreakdown?.validation?.mode === 'hybrid' ? (
-                  <Award className="h-4 w-4 text-yellow-500" />
+                  <Award className="h-4 w-4 text-orange-500" />
                 ) : (
                   <Brain className="h-4 w-4 text-primary" />
                 )}
@@ -349,8 +349,8 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
                       </p>
                       <div className="mt-2 space-y-1.5 text-muted-foreground">
                         <div className="flex items-start gap-2">
-                          <Award className="h-3 w-3 text-yellow-500 flex-shrink-0 mt-0.5" />
-                          <span><strong className="text-yellow-500">Expert Badge:</strong> {scoreBreakdown.validation.human_validator_score || 0}/20 pts from validator</span>
+                          <Award className="h-3 w-3 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <span><strong className="text-orange-500">Expert Badge:</strong> {scoreBreakdown.validation.human_validator_score || 0}/20 pts from validator</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <Brain className="h-3 w-3 text-blue-500 flex-shrink-0 mt-0.5" />
@@ -374,18 +374,18 @@ export function AIScoringBreakdownCard({ project, className = '' }: AIScoringBre
               <div className="mb-2 space-y-1.5">
                 {/* Badge info */}
                 {scoreBreakdown.validation.badges.map((badge: any, idx: number) => (
-                  <div key={idx} className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded border border-yellow-500/30">
-                    <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase">
+                  <div key={idx} className="flex items-center gap-2 p-2 bg-orange-500/10 rounded border border-orange-500/30">
+                    <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">
                       Expert ({badge.type})
                     </span>
-                    <span className="text-[10px] text-yellow-700 dark:text-yellow-300 ml-auto">
+                    <span className="text-[10px] text-orange-700 dark:text-orange-300 ml-auto">
                       +{badge.points} pts
                     </span>
                   </div>
                 ))}
                 {/* Score split */}
                 <div className="flex items-center gap-2 text-[10px] text-foreground mt-2">
-                  <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                  <span className="font-semibold text-orange-600 dark:text-orange-400">
                     Expert: {expertScore % 1 === 0 ? expertScore : expertScore.toFixed(1)}/20
                   </span>
                   <span className="text-muted-foreground">+</span>

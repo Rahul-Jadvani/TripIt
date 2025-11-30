@@ -97,7 +97,7 @@ export default function Login() {
               {/* Header */}
               <div className="mb-6 sm:mb-8 flex justify-center">
                 <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-[12px] border-4 border-black bg-secondary grid place-items-center shadow-[6px_6px_0_0_#000]">
-                  <img src="/logo.png" alt="ZERO" className="h-6 w-6 sm:h-8 sm:w-8 object-contain" />
+                  <img src="/logo.svg" alt="ZERO" className="h-6 w-6 sm:h-8 sm:w-8 object-contain" />
                 </div>
               </div>
 

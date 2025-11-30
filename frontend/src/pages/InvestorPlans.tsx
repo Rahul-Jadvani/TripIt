@@ -1483,8 +1483,8 @@ export default function InvestorPlans() {
           <div className="card-elevated p-8 md:p-10">
             {/* Header */}
             <div className="flex items-start gap-4 mb-6">
-              <div className="h-12 w-12 rounded-[15px] bg-gradient-to-br from-yellow-400/30 to-yellow-600/30 flex items-center justify-center border-2 border-yellow-500/50 flex-shrink-0">
-                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="h-12 w-12 rounded-[15px] bg-gradient-to-br from-orange-500/30 to-orange-600/30 flex items-center justify-center border-2 border-orange-500/50 flex-shrink-0">
+                <Clock className="h-6 w-6 text-orange-600 dark:text-orange-500" />
               </div>
               <div className="flex-1">
                 <h1 className="text-2xl font-black mb-2">Application Under Review</h1>
@@ -1495,22 +1495,22 @@ export default function InvestorPlans() {
             </div>
 
             {/* Status Banner */}
-            <div className="mb-6 p-6 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="mb-6 p-6 bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-lg">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 mt-0.5">
-                  <div className="h-10 w-10 rounded-full bg-yellow-500 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center">
                     <Clock className="h-5 w-5 text-white" />
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg text-yellow-900 dark:text-yellow-100 mb-2">
+                  <h3 className="font-bold text-lg text-orange-900 dark:text-orange-100 mb-2">
                     Pending Approval
                   </h3>
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-4">
+                  <p className="text-sm text-orange-800 dark:text-orange-300 mb-4">
                     We're reviewing your application to ensure you meet our investor criteria. This typically takes 1-2 business days. You'll receive an email notification once your application has been reviewed.
                   </p>
-                  <div className="flex items-center gap-2 text-sm text-yellow-900 dark:text-yellow-100">
-                    <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse"></div>
+                  <div className="flex items-center gap-2 text-sm text-orange-900 dark:text-orange-100">
+                    <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></div>
                     <span className="font-medium">Status: Under Review</span>
                   </div>
                 </div>

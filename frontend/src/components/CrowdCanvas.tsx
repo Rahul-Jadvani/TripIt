@@ -329,7 +329,7 @@ const CrowdCanvas = ({ src, rows = 15, cols = 7, active = true }: CrowdCanvasPro
 
 const Skiper39 = ({ active = true }: { active?: boolean }) => {
   return (
-    <div className="relative h-full w-full bg-gray-900 text-yellow-400">
+    <div className="relative h-full w-full bg-gray-900 text-orange-500">
       {/* Background ZERO watermark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
         <div
@@ -346,8 +346,8 @@ const Skiper39 = ({ active = true }: { active?: boolean }) => {
         </div>
       </div>
 
-      <div className="top-22 absolute left-1/2 grid -translate-x-1/2 content-start justify-items-center gap-6 text-center text-yellow-400 z-10">
-        <span className="relative max-w-[12ch] text-xs uppercase leading-tight opacity-60 after:absolute after:left-1/2 after:top-full after:h-16 after:w-px after:bg-gradient-to-b after:from-yellow-400 after:to-gray-900 after:content-['']">
+      <div className="top-22 absolute left-1/2 grid -translate-x-1/2 content-start justify-items-center gap-6 text-center text-orange-500 z-10">
+        <span className="relative max-w-[12ch] text-xs uppercase leading-tight opacity-60 after:absolute after:left-1/2 after:top-full after:h-16 after:w-px after:bg-gradient-to-b after:from-orange-500 after:to-gray-900 after:content-['']">
           Croud Canvas
         </span>
       </div>

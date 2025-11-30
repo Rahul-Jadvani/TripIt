@@ -644,7 +644,7 @@ export default function Gallery() {
                       setFilters((prev) => ({ ...prev, featured: Boolean(checked) }))
                     }
                   />
-                  <Star className="h-4 w-4 text-yellow-500" />
+                  <Star className="h-4 w-4 text-orange-500" />
                   <span className="text-sm font-medium">Only Featured Projects</span>
                 </label>
               </div>

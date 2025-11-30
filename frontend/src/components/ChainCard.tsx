@@ -66,7 +66,7 @@ export function ChainCard({ chain }: ChainCardProps) {
                   {chain.name}
                 </h3>
                 {chain.is_featured && (
-                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                  <Star className="h-4 w-4 fill-orange-500 text-orange-500" />
                 )}
                 {!chain.is_public && (
                   <Lock className="h-4 w-4 text-muted-foreground" />

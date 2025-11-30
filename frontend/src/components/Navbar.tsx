@@ -74,11 +74,8 @@ export const Navbar = memo(function Navbar() {
       <div className="container mx-auto px-6">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link to="/" onMouseEnter={() => prefetchRoute('/')} onFocus={() => prefetchRoute('/')} className="flex items-center gap-2 transition-quick hover:opacity-80 flex-shrink-0">
-            <img src="/logo.png" alt="ZERO" className="h-8 w-8" loading="lazy" />
-            <span className="text-xl font-black text-primary" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>
-              ZER0
-            </span>
+          <Link to="/" onMouseEnter={() => prefetchRoute('/')} onFocus={() => prefetchRoute('/')} className="transition-quick hover:opacity-80 flex-shrink-0">
+            <img src="/logo.svg" alt="ZERO" className="h-20 w-20" loading="lazy" />
           </Link>
 
           {/* Desktop Navigation */}

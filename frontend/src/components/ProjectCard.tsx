@@ -135,7 +135,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                         {/* Only show status badges for NEW projects (not legacy) */}
                         {!isLegacyProject && scoringStatus && scoringStatus !== 'completed' && (
                           <span className={`text-[8px] font-bold mt-0.5 px-1.5 py-0.5 rounded ${
-                            scoringStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-600' :
+                            scoringStatus === 'pending' ? 'bg-orange-500/20 text-orange-600' :
                             scoringStatus === 'processing' ? 'bg-blue-500/20 text-blue-600 animate-pulse' :
                             scoringStatus === 'retrying' ? 'bg-orange-500/20 text-orange-600' :
                             'bg-red-500/20 text-red-600'

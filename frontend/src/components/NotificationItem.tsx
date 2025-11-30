@@ -37,7 +37,7 @@ const NotificationIcon = ({ type }: { type: string }) => {
     case 'chain_follower':
       return <UserPlus className={cn(iconClass, "text-purple-500")} />;
     case 'chain_featured':
-      return <Star className={cn(iconClass, "text-yellow-500")} />;
+      return <Star className={cn(iconClass, "text-orange-500")} />;
     case 'chain_project_request':
       return <AlertCircle className={cn(iconClass, "text-blue-500")} />;
     case 'vote':

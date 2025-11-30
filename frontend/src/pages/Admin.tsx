@@ -271,7 +271,7 @@ function BadgeManagementList({ observerTarget }: BadgeManagementListProps) {
     const colors: Record<string, string> = {
       stone: 'bg-gray-500',
       silver: 'bg-gray-400',
-      gold: 'bg-yellow-500',
+      gold: 'bg-orange-500',
       platinum: 'bg-purple-500',
       demerit: 'bg-red-500',
       custom: 'bg-blue-500',
@@ -616,7 +616,7 @@ function ChainsModerationSection() {
                       </Link>
                       {getStatusBadge(chain.status)}
                       {chain.is_featured && (
-                        <Badge className="bg-yellow-500/20 text-yellow-500">
+                        <Badge className="bg-orange-500/20 text-orange-500">
                           <Star className="h-3 w-3 mr-1" />
                           Featured
                         </Badge>
@@ -842,7 +842,7 @@ function FeedbackManagement() {
 
   const getTypeBadge = (type: string) => {
     const variants: Record<string, any> = {
-      suggestion: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50', icon: '💡' },
+      suggestion: { color: 'bg-orange-500/20 text-orange-500 border-orange-500/50', icon: '💡' },
       improvement: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/50', icon: '🔧' },
       contact: { color: 'bg-green-500/20 text-green-400 border-green-500/50', icon: '💬' },
       report: { color: 'bg-red-500/20 text-red-400 border-red-500/50', icon: '🚩' },
@@ -857,7 +857,7 @@ function FeedbackManagement() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
-      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+      pending: 'bg-orange-500/20 text-orange-500 border-orange-500/50',
       reviewed: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
       resolved: 'bg-green-500/20 text-green-400 border-green-500/50',
       dismissed: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
@@ -947,7 +947,7 @@ function FeedbackManagement() {
                     </div>
                     {item.submitter && (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-yellow-400">
+                        <span className="text-sm font-medium text-orange-500">
                           Submitted by: @{item.submitter.username}
                         </span>
                         <span className="text-xs text-muted-foreground">

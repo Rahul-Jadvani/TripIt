@@ -253,7 +253,7 @@ export default function InvestorDashboard() {
                         </div>
                         <Button
                           disabled
-                          className="opacity-50 cursor-not-allowed bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border-2 border-yellow-600/30 text-muted-foreground"
+                          className="opacity-50 cursor-not-allowed bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-2 border-orange-600/30 text-muted-foreground"
                           size="sm"
                         >
                           <Crown className="h-4 w-4 mr-2" />

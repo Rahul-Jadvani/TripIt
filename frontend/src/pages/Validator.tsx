@@ -218,7 +218,7 @@ export default function Validator() {
   const getBadgeColor = (badge_type: string) => {
     switch (badge_type) {
       case 'platinum': return 'bg-gradient-to-r from-slate-300 to-slate-500 text-white';
-      case 'gold': return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white';
+      case 'gold': return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white';
       case 'silver': return 'bg-gradient-to-r from-gray-300 to-gray-500 text-white';
       case 'stone': return 'bg-gradient-to-r from-stone-400 to-stone-600 text-white';
       case 'demerit': return 'bg-gradient-to-r from-red-500 to-red-700 text-white';
@@ -306,7 +306,7 @@ export default function Validator() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gold Badges</CardTitle>
-              <Star className="h-4 w-4 text-yellow-500" />
+              <Star className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.badge_breakdown.gold}</div>

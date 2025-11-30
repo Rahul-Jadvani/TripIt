@@ -189,8 +189,8 @@ export default function ChainDetailPage() {
 
       {/* Admin Actions - Only visible to admins */}
       {isAdmin && (
-        <Alert className="border-yellow-500/50 bg-yellow-500/10">
-          <Shield className="h-4 w-4 text-yellow-500" />
+        <Alert className="border-orange-500/50 bg-orange-500/10">
+          <Shield className="h-4 w-4 text-orange-500" />
           <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <span className="text-sm font-medium">Admin Controls</span>
             <div className="flex flex-wrap gap-2">

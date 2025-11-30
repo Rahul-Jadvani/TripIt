@@ -28,9 +28,9 @@ const BADGE_CONFIG = {
   gold: {
     icon: Star,
     label: 'Gold',
-    color: 'text-yellow-500',
-    bgColor: 'bg-yellow-500/10',
-    borderColor: 'border-yellow-500/30',
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-500/10',
+    borderColor: 'border-orange-500/30',
     emoji: '🥇',
     points: 15,
   },

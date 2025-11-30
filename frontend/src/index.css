@@ -18,8 +18,8 @@ All colors MUST be HSL.
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
 
-    /* Primary: Brand yellow accent */
-    --primary: 44 99% 54%; /* #fec017 */
+    /* Primary: Brand orange accent */
+    --primary: 18 93% 56%; /* #f66926 */
     --primary-foreground: 0 0% 0%; /* #000000 - Black for contrast */
 
     --secondary: 0 0% 25%; /* #404040 - Dark gray */
@@ -30,7 +30,7 @@ All colors MUST be HSL.
 
     /* Accent: Bold black/dark */
     --accent: 0 0% 15%; /* #262626 - Dark for contrast */
-    --accent-foreground: 44 99% 54%; /* #fec017 */
+    --accent-foreground: 18 93% 56%; /* #f66926 */
 
     --destructive: 0 100% 60%; /* #FF3333 - Bold red */
     --destructive-foreground: 0 0% 0%;
@@ -43,12 +43,12 @@ All colors MUST be HSL.
     --warning: 30 100% 60%; /* ~#FFA54D */
     --warning-foreground: 0 0% 0%;
 
-    --success: 44 99% 54%; /* #fec017 */
+    --success: 18 93% 56%; /* #f66926 */
     --success-foreground: 0 0% 0%;
 
     --border: 0 0% 20%; /* #333333 - Dark borders */
     --input: 0 0% 18%;
-    --ring: 44 99% 54%; /* #fec017 */
+    --ring: 18 93% 56%; /* #f66926 */
 
     --radius: 0.938rem; /* 15px - Rounded but not too much */
 
@@ -57,7 +57,7 @@ All colors MUST be HSL.
     --ink: 0 0% 0%;
     /* Slightly darker/lighter primary variant for gradients */
     /* Slightly lighter variant for gradients */
-    --primary-alt: 44 90% 62%;
+    --primary-alt: 18 93% 65%;
 
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-alt)) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-alt)) 100%);
@@ -456,7 +456,7 @@ All colors MUST be HSL.
     content: "";
     position: absolute;
     inset: 0;
-    background: #F9D46A;
+    background: #f66926;
     opacity: 0.15;
     transform: translateX(-100%);
     transition: var(--transition-quick);
@@ -487,14 +487,14 @@ All colors MUST be HSL.
   /* Cinema/Glass effect styles for Netflix-like carousels */
   .glass-effect {
     @apply backdrop-blur-sm;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(254, 192, 23, 0.05));
-    border: 1px solid rgba(254, 192, 23, 0.1);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(246, 105, 38, 0.05));
+    border: 1px solid rgba(246, 105, 38, 0.1);
   }
 
   .glass-effect-hover {
     @apply backdrop-blur-md transition-all duration-300;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(254, 192, 23, 0.1));
-    border: 1px solid rgba(254, 192, 23, 0.3);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(246, 105, 38, 0.1));
+    border: 1px solid rgba(246, 105, 38, 0.3);
   }
 
   /* Card depth effect - subtle 3D perspective */
@@ -553,8 +553,8 @@ All colors MUST be HSL.
   }
 
   .title-cinematic:hover {
-    text-shadow: 0 0 20px rgba(254, 192, 23, 0.5);
-    -webkit-text-fill-color: #fec017;
+    text-shadow: 0 0 20px rgba(246, 105, 38, 0.5);
+    -webkit-text-fill-color: #f66926;
   }
 
   /* Smooth fade transitions for carousel items */

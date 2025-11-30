@@ -48,11 +48,11 @@ const feedbackConfig = {
 
 const accentThemes = {
   yellow: {
-    headerBg: 'bg-yellow-500/10',
-    badge: 'text-yellow-200 bg-yellow-500/15 border border-yellow-500/30',
-    focusRing: 'focus:ring-yellow-500/30',
-    button: 'bg-yellow-500 hover:bg-yellow-400 text-black',
-    subtle: 'text-yellow-200',
+    headerBg: 'bg-orange-500/10',
+    badge: 'text-orange-300 bg-orange-500/15 border border-orange-500/30',
+    focusRing: 'focus:ring-orange-500/30',
+    button: 'bg-orange-500 hover:bg-orange-500 text-black',
+    subtle: 'text-orange-300',
   },
   blue: {
     headerBg: 'bg-sky-500/10',
@@ -185,12 +185,12 @@ export function FeedbackModal({
             {/* Login Required Notice */}
             {!isLoggedIn && (
               <div className="flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/[0.02] text-gray-200">
-                <LogIn className="h-5 w-5 flex-shrink-0 text-yellow-300" />
+                <LogIn className="h-5 w-5 flex-shrink-0 text-orange-300" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-white">Login Required</p>
                   <p className="text-xs text-gray-400 mt-1">
                     You need to be logged in to submit feedback.{' '}
-                    <Link to="/login" className="underline text-yellow-300 hover:text-yellow-200" onClick={onClose}>
+                    <Link to="/login" className="underline text-orange-300 hover:text-orange-300" onClick={onClose}>
                       Log in here
                     </Link>
                   </p>

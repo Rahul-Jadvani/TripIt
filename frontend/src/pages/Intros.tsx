@@ -60,7 +60,7 @@ export default function Intros() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-orange-600" />;
       case 'accepted':
         // Use black to ensure visibility on primary/yellow backgrounds
         return <CheckCircle className="h-4 w-4 text-black" />;
