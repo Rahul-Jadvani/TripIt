@@ -1,14 +1,26 @@
 """
-Add Admin Users to admin_users table
-======================================
-Creates AdminUser records for OTP-based admin authentication.
-Run: docker exec -it zer0_backend_local python scripts/add_admin_users.py
+Add Admin Users - Simple version (no background services)
 """
+import os
 import sys
-sys.path.insert(0, '.')
+from pathlib import Path
 
-from app import create_app
+# Add backend directory to path
+backend_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_dir))
+
+# Set environment variables to disable background services
+os.environ['DISABLE_CACHE_WARMER'] = 'true'
+os.environ['DISABLE_MV_WORKER'] = 'true'
+os.environ['DISABLE_CELERY'] = 'true'
+os.environ['DISABLE_RECONCILIATION'] = 'true'
+
+from dotenv import load_dotenv
+load_dotenv()
+
+from flask import Flask
 from extensions import db
+from config import config
 from models.admin_user import AdminUser
 
 # Admin emails to create
@@ -18,10 +30,18 @@ ADMIN_EMAILS = [
 ]
 
 def add_admin_users():
-    """Add admin users to admin_users table"""
-    app = create_app()
+    """Add admin users without starting background services"""
+    # Create minimal Flask app
+    app = Flask(__name__)
+    app.config.from_object(config['development'])
+
+    # Initialize only database
+    db.init_app(app)
 
     with app.app_context():
+        # Create tables if they don't exist
+        db.create_all()
+
         print("=" * 70)
         print("ADDING ADMIN USERS TO admin_users TABLE")
         print("=" * 70)
@@ -36,13 +56,13 @@ def add_admin_users():
 
             if existing_admin:
                 if existing_admin.is_active:
-                    print(f"   ℹ️  Admin already exists: {email}")
+                    print(f"   INFO: Admin already exists: {email}")
                     existing_count += 1
                 else:
                     # Reactivate
                     existing_admin.is_active = True
                     db.session.commit()
-                    print(f"   ✅ Reactivated admin: {email}")
+                    print(f"   SUCCESS: Reactivated admin: {email}")
                     created_count += 1
             else:
                 # Create new admin
@@ -50,22 +70,21 @@ def add_admin_users():
                     email=email,
                     is_root=True,
                     is_active=True,
-                    created_by=None  # Self-created root admin
+                    created_by=None
                 )
                 db.session.add(admin)
                 db.session.commit()
-                print(f"   ✅ Created admin: {email} (ID: {admin.id})")
+                print(f"   SUCCESS: Created admin: {email} (ID: {admin.id})")
                 created_count += 1
 
         print("")
         print("=" * 70)
         if created_count > 0:
-            print(f"✅ Created/reactivated {created_count} admin user(s)")
+            print(f"SUCCESS: Created/reactivated {created_count} admin user(s)")
         if existing_count > 0:
-            print(f"ℹ️  {existing_count} admin user(s) already exist")
+            print(f"INFO: {existing_count} admin user(s) already exist")
         print("")
-        print("📧 To login, use POST /api/admin/request-otp with the email")
-        print("   You will receive an OTP code via email (if email is configured)")
+        print("To login, use POST /api/admin/request-otp with the email")
         print("=" * 70)
         print("")
 

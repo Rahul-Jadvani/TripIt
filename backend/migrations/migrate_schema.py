@@ -34,7 +34,7 @@ OLD_DB_URL = "postgresql://neondb_owner:npg_kgiQyc4dJA6C@ep-falling-dust-ad4x9ty
 # NEW DATABASE (Target) - Your new PostgreSQL in Docker
 # Use 'postgres' (Docker service name) when running inside Docker container
 # Use 'localhost' when running migration script directly on host
-NEW_DB_URL = "postgresql://zer0_prod_user:postgres@postgres:5432/zer0_discovery_prod?sslmode=disable&connect_timeout=10&keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=5"
+NEW_DB_URL = "postgresql://neondb_owner:npg_MzRYol9yj3Jn@ep-curly-cherry-a1q39v9d-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 # ============================================================================
 
 

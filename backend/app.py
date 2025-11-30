@@ -45,8 +45,13 @@ def initialize_root_admins():
     try:
         from sqlalchemy import text
 
-        # Temporarily disable triggers to avoid mv_refresh_queue errors
-        db.session.execute(text("SET session_replication_role = replica;"))
+        # Try to disable triggers (only works if database has superuser privileges)
+        try:
+            db.session.execute(text("SET session_replication_role = replica;"))
+            triggers_disabled = True
+        except Exception:
+            # Neon/cloud databases may not allow this - continue without disabling triggers
+            triggers_disabled = False
 
         # Update registered users to admin using raw SQL
         updated_count = 0
@@ -66,8 +71,9 @@ def initialize_root_admins():
                     updated_count += 1
                     print(f"[ADMIN] Set {email} as root admin")
 
-        # Re-enable triggers
-        db.session.execute(text("SET session_replication_role = DEFAULT;"))
+        # Re-enable triggers if we disabled them
+        if triggers_disabled:
+            db.session.execute(text("SET session_replication_role = DEFAULT;"))
 
         if updated_count > 0:
             db.session.commit()
