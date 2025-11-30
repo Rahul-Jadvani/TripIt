@@ -17,7 +17,7 @@ const getBackendUrl = (): string => {
   return isDev ? 'http://localhost:5000' : 'https://backend.zer0.pro';
 };
 
-// Transform backend project data to frontend format (same as useProjects hook)
+// Transform backend Itinerary data to frontend format (same as useItineraries hook)
 function transformProject(backendProject: any) {
   return {
     id: backendProject.id,
@@ -92,20 +92,20 @@ function transformProject(backendProject: any) {
 }
 
 interface SearchResults {
-  projects: any[];
+  Itineraries: any[];
   users: any[];
 }
 
 export default function Search() {
   const [query, setQuery] = useState('');
-  const [tab, setTab] = useState<'all' | 'projects' | 'users'>('all');
+  const [tab, setTab] = useState<'all' | 'Itineraries' | 'users'>('all');
 
   // Instagram-style search: Debounce query + React Query caching
   const debouncedQuery = useDebounce(query, 300); // 300ms delay
   const { data, isLoading } = useSearch(debouncedQuery);
 
   // Extract results (with defaults)
-  const results = data || { projects: [], users: [], total: 0 };
+  const results = data || { Itineraries: [], users: [], total: 0 };
   const loading = isLoading;
 
   return (
@@ -116,7 +116,7 @@ export default function Search() {
           <div className="mb-10 card-elevated p-8">
             <h1 className="text-3xl font-black text-foreground mb-2">Search</h1>
             <p className="text-sm text-muted-foreground">
-              Find projects, builders, and hackathons on Zer0
+              Find Itineraries, builders, and hackathons on Zer0
             </p>
           </div>
 
@@ -136,12 +136,12 @@ export default function Search() {
               <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
                 <TabsList className="inline-flex h-auto rounded-[15px] bg-secondary border-4 border-black p-1">
                   <TabsTrigger value="all" className="px-3 py-2 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-black">All</TabsTrigger>
-                  <TabsTrigger value="projects" className="px-3 py-2 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-black">Projects ({results.projects?.length || 0})</TabsTrigger>
+                  <TabsTrigger value="Itineraries" className="px-3 py-2 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-black">Itineraries ({results.Itineraries?.length || 0})</TabsTrigger>
                   <TabsTrigger value="users" className="px-3 py-2 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-black">Builders ({results.users?.length || 0})</TabsTrigger>
                 </TabsList>
               </Tabs>
               {query && (
-                <span className="text-xs text-muted-foreground">{results.total ?? (results.projects?.length || 0) + (results.users?.length || 0)} results</span>
+                <span className="text-xs text-muted-foreground">{results.total ?? (results.Itineraries?.length || 0) + (results.users?.length || 0)} results</span>
               )}
             </div>
             {!query && (
@@ -151,7 +151,7 @@ export default function Search() {
                   {['AI', 'Web3', 'Blockchain', 'DeFi', 'SaaS', 'Gaming'].map((t) => (
                     <button
                       key={t}
-                      onClick={() => { setQuery(t); setTab('projects'); }}
+                      onClick={() => { setQuery(t); setTab('Itineraries'); }}
                       className="inline-flex items-center px-3 py-1.5 rounded-[12px] bg-secondary border-2 border-black text-xs font-bold shadow-[3px_3px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] hover:-translate-y-0.5 transition-transform"
                     >
                       {t}
@@ -165,7 +165,7 @@ export default function Search() {
           {/* Loading State */}
           {loading && query && (
             <div className="space-y-8">
-              {/* Projects Section Skeleton */}
+              {/* Itineraries Section Skeleton */}
               <div>
                 <div className="h-7 w-32 bg-secondary rounded mb-4"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -194,7 +194,7 @@ export default function Search() {
                 <div className="mx-auto h-14 w-14 rounded-[12px] border-4 border-black bg-secondary grid place-items-center shadow-[6px_6px_0_0_#000]"><SearchIcon className="h-7 w-7 text-foreground" /></div>
                 <p className="text-lg font-bold text-foreground">Start your search</p>
                 <p className="text-sm text-muted-foreground">
-                  Enter keywords to find projects, discover builders, or explore hackathons
+                  Enter keywords to find Itineraries, discover builders, or explore hackathons
                 </p>
               </div>
             </div>
@@ -202,14 +202,14 @@ export default function Search() {
 
           {!loading && results && (
             <div className="space-y-8">
-              {/* Projects Results */}
-              {(tab === 'all' || tab === 'projects') && results.projects && results.projects.length > 0 && (
+              {/* Itineraries Results */}
+              {(tab === 'all' || tab === 'Itineraries') && results.Itineraries && results.Itineraries.length > 0 && (
                 <div>
                   <h2 className="text-xl font-black mb-4">
-                    Projects ({results.projects.length})
+                    Itineraries ({results.Itineraries.length})
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {results.projects.map((project) => (
+                    {results.Itineraries.map((project) => (
                       <ProjectCard key={project.id} project={project} />
                     ))}
                   </div>
@@ -246,13 +246,13 @@ export default function Search() {
               )}
 
               {/* No Results */}
-              {query && (!results.projects || results.projects.length === 0) &&
+              {query && (!results.Itineraries || results.Itineraries.length === 0) &&
                 (!results.users || results.users.length === 0) && (
                   <div className="card-elevated p-12 text-center">
                     <div className="space-y-4">
                       <p className="text-lg font-bold text-foreground">No results for \"{query}\"</p>
                       <p className="text-sm text-muted-foreground">
-                        Try different keywords or browse recent projects
+                        Try different keywords or browse recent Itineraries
                       </p>
                     </div>
                   </div>
@@ -264,6 +264,8 @@ export default function Search() {
     </div>
   );
 }
+
+
 
 
 

@@ -513,7 +513,7 @@ export default function Validator() {
                       <div className="text-2xl font-bold text-primary">
                         {formatScore(getProjectScore(project))}
                       </div>
-                      <div className="text-xs text-muted-foreground">Proof Score</div>
+                      <div className="text-xs text-muted-foreground">Credibility Score</div>
                     </div>
                   </div>
                 </CardHeader>
@@ -656,3 +656,5 @@ export default function Validator() {
     </div>
   );
 }
+
+

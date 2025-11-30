@@ -2,11 +2,11 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { adminService, projectsService, introsService, savedProjectsService } from '@/services/api';
-import { transformProject } from '@/hooks/useProjects';
-import { matchProjectsToInvestor } from '@/utils/investorMatching';
-import { ProjectCard } from '@/components/ProjectCard';
-import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
+import { adminService, itinerariesService, introsService, savedItinerariesService } from '@/services/api';
+import { transformItinerary } from '@/hooks/useItineraries';
+import { matchItinerariesToInvestor } from '@/utils/investorMatching';
+import { ItineraryCard } from '@/components/ProjectCard';
+import { ItineraryCardSkeletonGrid } from '@/components/ItineraryCardSkeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,19 +61,19 @@ export default function InvestorDashboard() {
     enabled: !!user,
   });
 
-  // Fetch matched projects from backend (primary source of truth)
-  const { data: matchedProjectsData, isLoading: matchedLoading } = useQuery({
+  // Fetch matched itinerarys from backend (primary source of truth)
+  const { data: matcheditinerarysData, isLoading: matchedLoading } = useQuery({
     queryKey: ['investorMatches', user?.id],
     queryFn: async () => {
       try {
-        const response = await projectsService.getInvestorMatches(1, 50, 20);
+        const response = await itinerariesService.getInvestorMatches(1, 50, 20);
         const payload = response.data || {};
-        const transformedProjects = Array.isArray(payload.data)
-          ? payload.data.map(transformProject)
+        const transformeditinerarys = Array.isArray(payload.data)
+          ? payload.data.map(transformItinerary)
           : [];
         return {
           ...payload,
-          data: transformedProjects,
+          data: transformeditinerarys,
         };
       } catch (error) {
         // Fallback: if endpoint not available, return empty gracefully
@@ -91,14 +91,14 @@ export default function InvestorDashboard() {
     gcTime: 1000 * 60 * 30, // 30 minutes
   });
 
-  // Fetch saved projects
-  const { data: savedProjects, isLoading: savedLoading } = useQuery({
-    queryKey: ['savedProjects'],
+  // Fetch saved itinerarys
+  const { data: saveditinerarys, isLoading: savedLoading } = useQuery({
+    queryKey: ['saveditinerarys'],
     queryFn: async () => {
-      const response = await savedProjectsService.getMySavedProjects(1, 50);
+      const response = await savedItinerariesService.getMySavedItineraries(1, 50);
       const payload = response.data || {};
       return Array.isArray(payload.data)
-        ? payload.data.map(transformProject)
+        ? payload.data.map(transformitinerary)
         : [];
     },
     enabled: !!user,
@@ -144,43 +144,43 @@ export default function InvestorDashboard() {
   }
 
   const stats = {
-    savedProjects: savedProjects?.length || 0,
+    saveditinerarys: saveditinerarys?.length || 0,
     introsSent: sentIntros?.length || 0,
     introsReceived: receivedIntros?.length || 0,
-    projectsViewed: 0, // We can add tracking for this later
+    itinerarysViewed: 0, // We can add tracking for this later
   };
 
   // Smart matching: Use backend-computed matches (enhanced scoring algorithm)
-  const matchedProjects = useMemo(() => {
-    // Backend already returns matched and scored projects
-    if (!matchedProjectsData?.data) return [];
+  const matcheditinerarys = useMemo(() => {
+    // Backend already returns matched and scored itinerarys
+    if (!matcheditinerarysData?.data) return [];
     
     // Data is already scored and filtered by backend - just use it as-is
-    return matchedProjectsData.data;
-  }, [matchedProjectsData]);
+    return matcheditinerarysData.data;
+  }, [matcheditinerarysData]);
 
-  // Apply manual filters on top of backend-matched projects (search, industry chips)
-  const filteredProjects = useMemo(() => {
-    let projects = matchedProjects;
+  // Apply manual filters on top of backend-matched itinerarys (search, industry chips)
+  const filtereditinerarys = useMemo(() => {
+    let itinerarys = matcheditinerarys;
 
     // Apply search filter
     if (filters.search) {
-      projects = projects.filter((project: any) =>
-        project.title.toLowerCase().includes(filters.search.toLowerCase())
+      itinerarys = itinerarys.filter((itinerary: any) =>
+        itinerary.title.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
 
     // Apply industry filter
     if (filters.industries.length > 0) {
-      projects = projects.filter((project: any) =>
-        project.categories?.some((cat: string) =>
+      itinerarys = itinerarys.filter((itinerary: any) =>
+        itinerary.categories?.some((cat: string) =>
           filters.industries.includes(cat)
         )
       );
     }
 
-    return projects;
-  }, [matchedProjects, filters]);
+    return itinerarys;
+  }, [matcheditinerarys, filters]);
 
   return (
     <div className="min-h-screen bg-background pt-20 px-4 pb-12">
@@ -193,7 +193,7 @@ export default function InvestorDashboard() {
                 Investor Dashboard
               </h1>
               <p className="text-muted-foreground">
-                Discover and connect with innovative projects
+                Discover and connect with innovative itinerarys
               </p>
             </div>
             <Button
@@ -273,10 +273,10 @@ export default function InvestorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="card-elevated p-6">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium text-muted-foreground">Saved Projects</div>
+              <div className="text-sm font-medium text-muted-foreground">Saved itinerarys</div>
               <Bookmark className="h-4 w-4 text-primary" />
             </div>
-            <div className="text-3xl font-black text-foreground">{stats.savedProjects}</div>
+            <div className="text-3xl font-black text-foreground">{stats.saveditinerarys}</div>
           </div>
 
           <div className="card-elevated p-6">
@@ -322,14 +322,14 @@ export default function InvestorDashboard() {
               className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
             >
               <Search className="h-4 w-4 mr-2" />
-              Discover Projects
+              Discover itinerarys
             </TabsTrigger>
             <TabsTrigger
               value="saved"
               className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
             >
               <Bookmark className="h-4 w-4 mr-2" />
-              Saved ({stats.savedProjects})
+              Saved ({stats.saveditinerarys})
             </TabsTrigger>
             <TabsTrigger
               value="intros"
@@ -382,11 +382,11 @@ export default function InvestorDashboard() {
                 </div>
               )}
 
-              {/* Matching Projects */}
+              {/* Matching itinerarys */}
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-black text-foreground">
-                    Projects Matching Your Criteria
+                    itinerarys Matching Your Criteria
                   </h3>
                   <Button
                     variant="outline"
@@ -397,23 +397,23 @@ export default function InvestorDashboard() {
                   </Button>
                 </div>
                 {matchedLoading ? (
-                  <ProjectCardSkeletonGrid count={3} />
-                ) : filteredProjects.length > 0 ? (
+                  <ItineraryCardSkeletonGrid count={3} />
+                ) : filtereditinerarys.length > 0 ? (
                   <div className="space-y-4">
-                    {filteredProjects.slice(0, 3).map((project: any) => (
-                      <ProjectCard key={project.id} project={project} />
+                    {filtereditinerarys.slice(0, 3).map((itinerary: any) => (
+                      <ItineraryCard key={itinerary.id} itinerary={itinerary} />
                     ))}
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-center py-8">
-                    No projects match your criteria yet.
+                    No itinerarys match your criteria yet.
                   </p>
                 )}
               </div>
             </div>
           </TabsContent>
 
-          {/* Discover Projects Tab */}
+          {/* Discover itinerarys Tab */}
           <TabsContent value="discover">
             <div className="space-y-6">
               {/* Search and Filters */}
@@ -424,7 +424,7 @@ export default function InvestorDashboard() {
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input
                         type="text"
-                        placeholder="Search projects..."
+                        placeholder="Search itinerarys..."
                         className="w-full pl-10 pr-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:outline-none"
                         value={filters.search}
                         onChange={(e) => setFilters({ ...filters, search: e.target.value })}
@@ -464,18 +464,18 @@ export default function InvestorDashboard() {
                 )}
               </div>
 
-              {/* Projects List */}
+              {/* itinerarys List */}
               {matchedLoading ? (
-                <ProjectCardSkeletonGrid count={6} />
-              ) : filteredProjects.length > 0 ? (
+                <ItineraryCardSkeletonGrid count={6} />
+              ) : filtereditinerarys.length > 0 ? (
                 <div className="space-y-4">
-                  {filteredProjects.map((project: any) => (
-                    <ProjectCard key={project.id} project={project} />
+                  {filtereditinerarys.map((itinerary: any) => (
+                    <ItineraryCard key={itinerary.id} itinerary={itinerary} />
                   ))}
                 </div>
               ) : (
                 <div className="card-elevated p-12 text-center">
-                  <p className="text-lg font-bold text-foreground mb-2">No projects found</p>
+                  <p className="text-lg font-bold text-foreground mb-2">No itinerarys found</p>
                   <p className="text-sm text-muted-foreground">
                     Try adjusting your search or filters
                   </p>
@@ -484,28 +484,28 @@ export default function InvestorDashboard() {
             </div>
           </TabsContent>
 
-          {/* Saved Projects Tab */}
+          {/* Saved itinerarys Tab */}
           <TabsContent value="saved">
             {savedLoading ? (
-              <ProjectCardSkeletonGrid count={3} />
-            ) : savedProjects && savedProjects.length > 0 ? (
+              <ItineraryCardSkeletonGrid count={3} />
+            ) : saveditinerarys && saveditinerarys.length > 0 ? (
               <div className="space-y-4">
-                {savedProjects.map((item: any) => {
-                  // Handle both nested (item.project) and direct project structures
-                  const project = item.project || item;
-                  if (!project || !project.id) return null;
-                  return <ProjectCard key={project.id} project={project} />;
+                {saveditinerarys.map((item: any) => {
+                  // Handle both nested (item.itinerary) and direct itinerary structures
+                  const itinerary = item.itinerary || item;
+                  if (!itinerary || !itinerary.id) return null;
+                  return <ItineraryCard key={itinerary.id} itinerary={itinerary} />;
                 })}
               </div>
             ) : (
               <div className="card-elevated p-12 text-center">
                 <Bookmark className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg font-bold text-foreground mb-2">No saved projects yet</p>
+                <p className="text-lg font-bold text-foreground mb-2">No saved itinerarys yet</p>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Start saving projects you're interested in
+                  Start saving itinerarys you're interested in
                 </p>
                 <Button onClick={() => setActiveTab('discover')}>
-                  Discover Projects
+                  Discover itinerarys
                 </Button>
               </div>
             )}
@@ -600,3 +600,5 @@ export default function InvestorDashboard() {
     </div>
   );
 }
+
+

@@ -117,43 +117,88 @@ api.interceptors.response.use(
   }
 );
 
-// Projects
-export const projectsService = {
-  getAll: (sort: string = 'hot', page: number = 1, includeDetailed: boolean = false) =>
-    api.get(`/projects?sort=${sort}&page=${page}${includeDetailed ? '&include=detailed' : ''}`),
-  getById: (id: string) => api.get(`/projects/${id}`),
-  create: (data: any) => api.post('/projects', data),
-  update: (id: string, data: any) => api.put(`/projects/${id}`, data),
-  delete: (id: string) => api.delete(`/projects/${id}`),
-  rescoreProject: (projectId: string) => api.post(`/admin/projects/${projectId}/rescore`),
-  getByUser: (userId: string) => api.get(`/users/${userId}/projects`),
-  getTaggedProjects: (userId: string) => api.get(`/users/${userId}/tagged-projects`),
-  getMostRequested: (limit: number = 20) => api.get(`/projects/most-requested?limit=${limit}`),
-  getFeatured: (limit: number = 20) => api.get(`/projects/featured?limit=${limit}`),
-  getByCategory: (category: string, limit: number = 20) => api.get(`/projects/by-category/${encodeURIComponent(category)}?limit=${limit}`),
-  getRisingStars: (limit: number = 20) => api.get(`/projects/rising-stars?limit=${limit}`),
-  getInvestorMatches: (page: number = 1, perPage: number = 20, minScore: number = 20) => 
-    api.get(`/projects/investor/matches?page=${page}&per_page=${perPage}&min_score=${minScore}`),
+// Itineraries (TripIt - replaces Projects)
+export const itinerariesService = {
+  getAll: (sort: string = 'trending', page: number = 1, includeDetailed: boolean = false) =>
+    api.get(`/itineraries?sort=${sort}&page=${page}${includeDetailed ? '&include=detailed' : ''}`),
+  getById: (id: string) => api.get(`/itineraries/${id}`),
+  create: (data: any) => api.post('/itineraries', data),
+  update: (id: string, data: any) => api.put(`/itineraries/${id}`, data),
+  delete: (id: string) => api.delete(`/itineraries/${id}`),
+  rescoreItinerary: (itineraryId: string) => api.post(`/admin/itineraries/${itineraryId}/rescore`),
+  getByUser: (userId: string) => api.get(`/users/${userId}/itineraries`),
+  getTaggedItineraries: (userId: string) => api.get(`/users/${userId}/tagged-itineraries`),
+  getMostRequested: (limit: number = 20) => api.get(`/itineraries/most-requested?limit=${limit}`),
+  getFeatured: (limit: number = 20) => api.get(`/itineraries/featured?limit=${limit}`),
+  getByDestination: (destination: string, limit: number = 20) => api.get(`/itineraries/by-destination/${encodeURIComponent(destination)}?limit=${limit}`),
+  getRisingStars: (limit: number = 20) => api.get(`/itineraries/rising-stars?limit=${limit}`),
+  getExpertMatches: (page: number = 1, perPage: number = 20, minScore: number = 20) =>
+    api.get(`/itineraries/travel-expert/matches?page=${page}&per_page=${perPage}&min_score=${minScore}`),
 };
 
-// Voting
+// Keep legacy projectsService as alias for backward compatibility during migration
+export const projectsService = itinerariesService;
+
+// Safety Ratings (TripIt - replaces Votes)
+export const safetyRatingsService = {
+  addRating: (itineraryId: string, data: any) =>
+    api.post('/safety-ratings', { ...data, itinerary_id: itineraryId }),
+  getRatings: (itineraryId: string) =>
+    api.get(`/safety-ratings/${itineraryId}`),
+  getRatingById: (ratingId: string) =>
+    api.get(`/safety-ratings/${ratingId}`),
+  updateRating: (ratingId: string, data: any) =>
+    api.put(`/safety-ratings/${ratingId}`, data),
+  deleteRating: (ratingId: string) =>
+    api.delete(`/safety-ratings/${ratingId}`),
+  getUserRatings: () =>
+    api.get('/safety-ratings/user/ratings'),
+  markHelpful: (ratingId: string) =>
+    api.post(`/safety-ratings/${ratingId}/helpful`),
+  markUnhelpful: (ratingId: string) =>
+    api.post(`/safety-ratings/${ratingId}/unhelpful`),
+};
+
+// Keep legacy votesService as alias for backward compatibility during migration
 export const votesService = {
   vote: (projectId: string, voteType: 'up' | 'down') =>
-    api.post('/votes', { project_id: projectId, vote_type: voteType }),
-  getUserVotes: () => api.get('/votes/user'),
+    safetyRatingsService.addRating(projectId, {
+      overall_safety_score: voteType === 'up' ? 5 : 1
+    }),
+  getUserVotes: () => safetyRatingsService.getUserRatings(),
 };
 
-// Comments
+// Travel Intel (TripIt - replaces Comments)
+export const travelIntelService = {
+  getByItinerary: (itineraryId: string) =>
+    api.get(
+      `/travel-intel?itinerary_id=${encodeURIComponent(itineraryId)}&per_page=100`
+    ),
+  create: (data: any) => api.post('/travel-intel', data),
+  getById: (intelId: string) => api.get(`/travel-intel/${intelId}`),
+  update: (intelId: string, data: any) => api.put(`/travel-intel/${intelId}`, data),
+  delete: (intelId: string) => api.delete(`/travel-intel/${intelId}`),
+  markHelpful: (intelId: string) =>
+    api.post(`/travel-intel/${intelId}/helpful`),
+  markUnhelpful: (intelId: string) =>
+    api.post(`/travel-intel/${intelId}/unhelpful`),
+  respond: (intelId: string, data: any) =>
+    api.post(`/travel-intel/${intelId}/respond`, data),
+  getUserIntel: () =>
+    api.get('/travel-intel/user/intel'),
+  getStats: (itineraryId: string) =>
+    api.get(`/travel-intel/stats/${itineraryId}`),
+};
+
+// Keep legacy commentsService as alias for backward compatibility during migration
 export const commentsService = {
   getByProject: (projectId: string) =>
-    api.get(
-      `/comments?project_id=${encodeURIComponent(projectId)}&per_page=100`
-    ),
-  create: (data: any) => api.post('/comments', data),
-  update: (commentId: string, data: any) => api.put(`/comments/${commentId}`, data),
-  delete: (commentId: string) => api.delete(`/comments/${commentId}`),
+    travelIntelService.getByItinerary(projectId),
+  create: (data: any) => travelIntelService.create(data),
+  update: (commentId: string, data: any) => travelIntelService.update(commentId, data),
+  delete: (commentId: string) => travelIntelService.delete(commentId),
   vote: (commentId: string, voteType: 'up' | 'down') =>
-    api.post(`/comments/${commentId}/vote`, { vote_type: voteType }),
+    voteType === 'up' ? travelIntelService.markHelpful(commentId) : travelIntelService.markUnhelpful(commentId),
 };
 
 // Badges
@@ -225,13 +270,22 @@ export const leaderboardService = {
   getFeatured: () => api.get('/users/leaderboard/featured'),
 };
 
-// Saved Projects
+// Saved Itineraries (TripIt - replaces Saved Projects)
+export const savedItinerariesService = {
+  saveItinerary: (itineraryId: string) => api.post(`/saved/save/${itineraryId}`),
+  unsaveItinerary: (itineraryId: string) => api.delete(`/saved/unsave/${itineraryId}`),
+  getMySavedItineraries: (page: number = 1, perPage: number = 20) =>
+    api.get(`/saved/itineraries?page=${page}&per_page=${perPage}`),
+  checkIfSavedItinerary: (itineraryId: string) => api.get(`/saved/check/${itineraryId}`),
+};
+
+// Keep legacy savedProjectsService as alias for backward compatibility during migration
 export const savedProjectsService = {
-  saveProject: (projectId: string) => api.post(`/saved/save/${projectId}`),
-  unsaveProject: (projectId: string) => api.delete(`/saved/unsave/${projectId}`),
+  saveProject: (projectId: string) => savedItinerariesService.saveItinerary(projectId),
+  unsaveProject: (projectId: string) => savedItinerariesService.unsaveItinerary(projectId),
   getMySavedProjects: (page: number = 1, perPage: number = 20) =>
-    api.get(`/saved/my-saved?page=${page}&per_page=${perPage}`),
-  checkIfSaved: (projectId: string) => api.get(`/saved/check/${projectId}`),
+    savedItinerariesService.getMySavedItineraries(page, perPage),
+  checkIfSaved: (projectId: string) => savedItinerariesService.checkIfSavedItinerary(projectId),
 };
 
 // Feedback
@@ -269,16 +323,27 @@ export const adminService = {
   updateValidatorPermissions: (validatorId: string, permissions: any) =>
     api.post(`/admin/validators/${validatorId}/permissions`, permissions),
 
-  // Projects
+  // Itineraries (replaces Projects)
+  getItineraries: (params: { search?: string; page?: number; perPage?: number } = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.search) queryParams.append('search', params.search);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.perPage) queryParams.append('per_page', params.perPage.toString());
+    return api.get(`/admin/itineraries?${queryParams.toString()}`);
+  },
+  toggleItineraryFeatured: (itineraryId: string) => api.post(`/admin/itineraries/${itineraryId}/feature`),
+  deleteItinerary: (itineraryId: string) => api.delete(`/admin/itineraries/${itineraryId}`),
+
+  // Keep legacy Projects alias for backward compatibility
   getProjects: (params: { search?: string; page?: number; perPage?: number } = {}) => {
     const queryParams = new URLSearchParams();
     if (params.search) queryParams.append('search', params.search);
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.perPage) queryParams.append('per_page', params.perPage.toString());
-    return api.get(`/admin/projects?${queryParams.toString()}`);
+    return api.get(`/admin/itineraries?${queryParams.toString()}`);
   },
-  toggleProjectFeatured: (projectId: string) => api.post(`/admin/projects/${projectId}/feature`),
-  deleteProject: (projectId: string) => api.delete(`/admin/projects/${projectId}`),
+  toggleProjectFeatured: (projectId: string) => api.post(`/admin/itineraries/${projectId}/feature`),
+  deleteProject: (projectId: string) => api.delete(`/admin/itineraries/${projectId}`),
 
   // Badges
   awardCustomBadge: (data: {

@@ -238,9 +238,9 @@ export const Navbar = memo(function Navbar() {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                      <Link to="/my-projects" className="cursor-pointer flex items-center gap-2 font-medium">
+                      <Link to="/my-Itineraries" className="cursor-pointer flex items-center gap-2 font-medium">
                         <Plus className="h-4 w-4" />
-                        <span>My Projects</span>
+                        <span>My Itineraries</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -420,4 +420,6 @@ export const Navbar = memo(function Navbar() {
     </header>
   );
 });
+
+
 

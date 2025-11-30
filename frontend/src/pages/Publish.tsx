@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { publishProjectSchema, PublishProjectInput } from '@/lib/schemas';
-import { useCreateProject } from '@/hooks/useProjects';
+import { useCreateItinerary } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -109,7 +109,7 @@ export default function Publish() {
 
   // Hackathons state
   const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
-  const [hackathonName, setHackathonName] = useState('');
+  const [destinationName, setdestinationName] = useState('');
   const [hackathonDate, setHackathonDate] = useState('');
   const [hackathonPrize, setHackathonPrize] = useState('');
 
@@ -124,7 +124,7 @@ export default function Publish() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedChainIds, setSelectedChainIds] = useState<string[]>([]);
 
-  const createProjectMutation = useCreateProject();
+  const createProjectMutation = useCreateItinerary();
 
   const {
     register,
@@ -141,7 +141,7 @@ export default function Publish() {
       description: '',
       demoUrl: '',
       githubUrl: '',
-      hackathonName: '',
+      destinationName: '',
       hackathonDate: '',
       techStack: [],
     },
@@ -245,13 +245,13 @@ export default function Publish() {
   };
 
   const handleAddHackathon = () => {
-    if (hackathonName.trim()) {
+    if (destinationName.trim()) {
       setHackathons([...hackathons, {
-        name: hackathonName.trim(),
+        name: destinationName.trim(),
         date: hackathonDate || '',
         prize: hackathonPrize.trim() || undefined
       }]);
-      setHackathonName('');
+      setdestinationName('');
       setHackathonDate('');
       setHackathonPrize('');
     }
@@ -610,7 +610,7 @@ export default function Publish() {
     if (formErrors?.demoUrl?.message) list.push({ id: 'demoUrl', message: `Demo URL: ${formErrors.demoUrl.message}` });
     if (formErrors?.githubUrl?.message) list.push({ id: 'githubUrl', message: `GitHub URL: ${formErrors.githubUrl.message}` });
     // Business rules
-    if (techStack.length === 0) list.push({ id: 'techStackSection', message: 'Tech Stack: Add at least one technology' });
+    if (techStack.length === 0) list.push({ id: 'techStackSection', message: 'Travel Style & Activities: Add at least one technology' });
     if (categories.length === 0) list.push({ id: 'categoriesSection', message: 'Categories: Select at least one category' });
 
     setFormErrorsList(list);
@@ -651,9 +651,9 @@ export default function Publish() {
           <div className="mb-10 card-elevated p-8">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <h1 className="mb-2 text-4xl font-black text-foreground">Publish Your Project</h1>
+                <h1 className="mb-2 text-4xl font-black text-foreground">Publish Your Itinerary</h1>
                 <p className="text-base text-muted-foreground leading-relaxed">
-                  Share your incredible hackathon project with our community. Get discovered, receive feedback, and connect with other builders.
+                  Share your incredible travel itinerary with our community. Get discovered, receive feedback, and connect with fellow travelers.
                 </p>
               </div>
               <button
@@ -706,7 +706,7 @@ export default function Publish() {
                 { id: 'basicsSection', label: 'Basics' },
                 { id: 'categoriesSection', label: 'Categories & layerz' },
                 { id: 'linksSection', label: 'Links' },
-                { id: 'techStackSection', label: 'Tech Stack' },
+                { id: 'techStackSection', label: 'Travel Style & Activities' },
                 { id: 'teamSection', label: 'Team' },
                 { id: 'storySection', label: 'Story' },
                 { id: 'marketSection', label: 'Market' },
@@ -871,10 +871,10 @@ export default function Publish() {
                     </h2>
                     <div className="space-y-6">
                   <div className="space-y-3">
-                    <Label htmlFor="title" className="text-base font-bold">Project Title *</Label>
+                    <Label htmlFor="title" className="text-base font-bold">Destination Name *</Label>
                     <Input
                       id="title"
-                      placeholder="e.g., DeFi Lending Platform"
+                      placeholder="e.g., Tokyo Winter Adventure, Southeast Asia Backpacking"
                       aria-invalid={!!errors.title}
                       className={`text-base ${errors.title ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('title')}
@@ -910,7 +910,7 @@ export default function Publish() {
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe your project in detail (minimum 50 characters, 200+ recommended)"
+                      placeholder="Describe your itinerary in detail (minimum 50 characters, 200+ recommended) - include places, activities, best time to visit, safety tips, etc."
                       rows={8}
                       aria-invalid={!!errors.description}
                       className={`text-base ${errors.description ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
@@ -936,12 +936,12 @@ export default function Publish() {
                 {currentStep === 2 && (
                   <>
                     <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                      Categories & layerz
+                      Travel Style & Categories
                     </h2>
                   <div className="space-y-3" id="categoriesSection">
                     <Label className="text-base font-bold">
-                      Project Categories * (Select all that apply)
-                      <span className="ml-2 text-xs badge-info">Helps validators find your project</span>
+                      Travel Types * (Select all that apply)
+                      <span className="ml-2 text-xs badge-info">Helps travelers discover your itinerary</span>
                     </Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
                       {[
@@ -1005,41 +1005,41 @@ export default function Publish() {
               {currentStep === 3 && (
               <div className="card-elevated p-8 bg-gradient-to-br from-card to-primary/5" id="storySection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
-                  <span className="inline-flex items-center gap-2"><BookOpen className="h-6 w-6" /> Project Story & Vision</span>
+                  <span className="inline-flex items-center gap-2"><BookOpen className="h-6 w-6" /> Trip Journey & Experience</span>
                 </h2>
-                <p className="text-sm text-muted-foreground mb-6">Share the journey behind your project - what inspired you and how it came to life</p>
+                <p className="text-sm text-muted-foreground mb-6">Share the journey behind this itinerary - what inspired you and what made it special</p>
 
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <Label htmlFor="projectStory" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Rocket className="h-4 w-4" /> The Journey</span>
+                      <span className="inline-flex items-center gap-2"><Rocket className="h-4 w-4" /> Trip Highlights</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
                       id="projectStory"
-                      placeholder="Tell us your project's story... How did this idea come to life? What challenges did you face? What were those breakthrough moments?"
+                      placeholder="Tell us about your trip experience... What were the highlights? What memorable moments did you have? What would you do differently next time?"
                       rows={5}
                       className="text-base resize-none"
                       value={projectStory}
                       onChange={(e) => setProjectStory(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">Help others understand the path you took to build this project</p>
+                    <p className="text-xs text-muted-foreground">Help other travelers understand what makes this itinerary special</p>
                   </div>
 
                   <div className="space-y-3">
                     <Label htmlFor="inspiration" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> The Spark</span>
+                      <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Travel Inspiration</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
                       id="inspiration"
-                      placeholder="What inspired you to build this? Was it a personal experience, a problem you noticed, or a vision for the future?"
+                      placeholder="What inspired you to take this trip? Was it a lifelong dream, bucket list item, or spontaneous adventure? What drew you to these destinations?"
                       rows={4}
                       className="text-base resize-none"
                       value={inspiration}
                       onChange={(e) => setInspiration(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">Share the 'why' behind your project</p>
+                    <p className="text-xs text-muted-foreground">Share the 'why' behind your travel journey</p>
                   </div>
                 </div>
               </div>
@@ -1049,41 +1049,41 @@ export default function Publish() {
               {currentStep === 3 && (
               <div className="card-elevated p-8 bg-gradient-to-br from-card to-accent/5" id="marketSection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
-                  <span className="inline-flex items-center gap-2"><Target className="h-6 w-6" /> Market & Innovation</span>
+                  <span className="inline-flex items-center gap-2"><Target className="h-6 w-6" /> Travel Details & Insights</span>
                 </h2>
-                <p className="text-sm text-muted-foreground mb-6">Show what makes your project stand out in the ecosystem</p>
+                <p className="text-sm text-muted-foreground mb-6">Share what makes your itinerary unique and helpful for other travelers</p>
 
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <Label htmlFor="marketComparison" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Competitive Landscape</span>
+                      <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Unique Highlights</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
                       id="marketComparison"
-                      placeholder="What other projects or products exist in this space? How does yours differ or improve upon them? What unique approach are you taking?"
+                      placeholder="What makes this itinerary different? Are there hidden gems or less-known places? Any special experiences or unique angles other travelers might miss?"
                       rows={5}
                       className="text-base resize-none"
                       value={marketComparison}
                       onChange={(e) => setMarketComparison(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">Help others see how your project fits in the market</p>
+                    <p className="text-xs text-muted-foreground">Help other travelers discover what's truly special about this journey</p>
                   </div>
 
                   <div className="space-y-3">
                     <Label htmlFor="noveltyFactor" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4" /> What Makes This Special</span>
+                      <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4" /> Safety & Travel Tips</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
                       id="noveltyFactor"
-                      placeholder="What's the novel or unique aspect of your project? Is it a new technology, an innovative approach, or a fresh perspective on an old problem?"
+                      placeholder="Include important travel safety tips, local customs to respect, best times to visit, things to avoid, or any warnings other travelers should know about."
                       rows={4}
                       className="text-base resize-none"
                       value={noveltyFactor}
                       onChange={(e) => setNoveltyFactor(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">Highlight your project's innovation factor</p>
+                    <p className="text-xs text-muted-foreground">Help travelers prepare better and stay safe on similar journeys</p>
                   </div>
                 </div>
               </div>
@@ -1165,7 +1165,7 @@ export default function Publish() {
               {currentStep === 3 && (
               <div className="card-elevated p-8">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Hackathons (Optional)
+                  Travel Companions (Optional)
                 </h2>
                 <div className="space-y-6">
                   {/* Display existing hackathons */}
@@ -1201,12 +1201,12 @@ export default function Publish() {
                   {/* Add new hackathon */}
                   <div className="space-y-4 p-4 bg-secondary/10 rounded-lg border border-border">
                     <div className="space-y-2">
-                      <Label htmlFor="hackathonName">Hackathon Name *</Label>
+                      <Label htmlFor="destinationName">Destination Name *</Label>
                       <Input
-                        id="hackathonName"
+                        id="destinationName"
                         placeholder="e.g., ETH Global London"
-                        value={hackathonName}
-                        onChange={(e) => setHackathonName(e.target.value)}
+                        value={destinationName}
+                        onChange={(e) => setdestinationName(e.target.value)}
                       />
                     </div>
 
@@ -1236,7 +1236,7 @@ export default function Publish() {
                       type="button"
                       variant="outline"
                       onClick={handleAddHackathon}
-                      disabled={!hackathonName.trim()}
+                      disabled={!destinationName.trim()}
                       className="w-full"
                     >
                       + Add Hackathon
@@ -1317,12 +1317,12 @@ export default function Publish() {
               {currentStep === 2 && (
               <div className="card-elevated p-8" id="techStackSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Tech Stack *
+                  Travel Activities & Interests *
                 </h2>
                 <div className="space-y-5">
                   <div className="flex gap-3">
                     <Input
-                      placeholder="Add technology (e.g., React, Solidity)"
+                      placeholder="Add activity (e.g., Hiking, Cultural Sites, Beach, Food Tour, Adventure Sports)"
                       value={techInput}
                       onChange={(e) => setTechInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTech())}
@@ -1365,7 +1365,7 @@ export default function Publish() {
               <div className="card-elevated p-8" id="teamSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3 flex items-center gap-2">
                   <Users className="h-6 w-6" />
-                  Team Members / Crew
+                  Travel Companions
                 </h2>
                 <div className="space-y-5">
                   {/* Toggle between registered and unregistered */}
@@ -1379,7 +1379,7 @@ export default function Publish() {
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      Registered Users (Recommended)
+                      Travelers on Platform
                     </button>
                     <button
                       type="button"
@@ -1390,7 +1390,7 @@ export default function Publish() {
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      Unregistered User
+                      Other Companions
                     </button>
                   </div>
 
@@ -1398,12 +1398,12 @@ export default function Publish() {
                   {!showUnregisteredForm && (
                     <div className="space-y-4">
                       <p className="text-sm text-muted-foreground">
-                        Search and select registered users from the platform. Their profiles will be linked and discoverable.
+                        Search and select travelers already on our platform. Their profiles will be linked and discoverable.
                       </p>
 
                       {!selectedUser && (
                         <div className="space-y-2">
-                          <Label className="font-bold">Search for Team Member</Label>
+                          <Label className="font-bold">Search for Travel Companion</Label>
                           <UserSearchSelect
                             onSelect={(user) => setSelectedUser(user)}
                             placeholder="Search users by name, username, or email..."
@@ -1707,3 +1707,5 @@ export default function Publish() {
     </div>
   );
 }
+
+

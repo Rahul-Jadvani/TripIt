@@ -10,7 +10,7 @@ import 'swiper/css/navigation';
 import 'swiper/css';
 
 import { Project } from '@/types';
-import { VoteButtons } from '@/components/VoteButtons';
+import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
 import { InteractiveScrollBackground } from '@/components/InteractiveScrollBackground';
 
 interface TopRatedCarouselProps {

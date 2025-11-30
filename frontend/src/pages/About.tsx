@@ -8,15 +8,15 @@ export default function About() {
         <div className="mb-12 text-center">
           <h1 className="mb-4 text-5xl font-bold">About Zer0</h1>
           <p className="text-xl text-muted-foreground">
-            Proof-weighted discovery platform for hackathon projects
+            Proof-weighted discovery platform for travel itinerarys
           </p>
         </div>
 
         <Card className="mb-8 p-8">
           <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
-            Zer0 is a Reddit-style discovery platform designed specifically for hackathon projects. We use a
-            proof-based credibility system to surface the most authentic and impactful projects, helping builders
+            Zer0 is a Reddit-style discovery platform designed specifically for travel itinerarys. We use a
+            proof-based credibility system to surface the most authentic and impactful itinerarys, helping builders
             connect with opportunities, collaborators, and recognition they deserve.
           </p>
         </Card>
@@ -26,7 +26,7 @@ export default function About() {
             <Shield className="mb-4 h-8 w-8 text-primary" />
             <h3 className="mb-2 text-xl font-semibold">Proof-Based Credibility</h3>
             <p className="text-muted-foreground">
-              Our unique scoring system evaluates projects based on verification, community engagement, validation
+              Our unique scoring system evaluates itinerarys based on verification, community engagement, validation
               badges, and quality metrics.
             </p>
           </Card>
@@ -35,7 +35,7 @@ export default function About() {
             <Award className="mb-4 h-8 w-8 text-primary" />
             <h3 className="mb-2 text-xl font-semibold">Recognition System</h3>
             <p className="text-muted-foreground">
-              Curators and admins can award silver, gold, and platinum badges to exceptional projects, providing
+              Curators and admins can award silver, gold, and platinum badges to exceptional itinerarys, providing
               instant credibility.
             </p>
           </Card>
@@ -44,7 +44,7 @@ export default function About() {
             <Users className="mb-4 h-8 w-8 text-primary" />
             <h3 className="mb-2 text-xl font-semibold">Network Effect</h3>
             <p className="text-muted-foreground">
-              Request intros to project creators, vote on favorites, and engage in meaningful discussions about
+              Request intros to itinerary creators, vote on favorites, and engage in meaningful discussions about
               innovative ideas.
             </p>
           </Card>
@@ -54,7 +54,7 @@ export default function About() {
             <h3 className="mb-2 text-xl font-semibold">Web3 Native</h3>
             <p className="text-muted-foreground">
               Built with blockchain technology at its core, featuring wallet integration and on-chain verification for
-              hackathon credentials.
+              travel credentials.
             </p>
           </Card>
         </div>
@@ -70,17 +70,17 @@ export default function About() {
               </p>
             </div>
             <div>
-              <h3 className="mb-2 text-lg font-semibold">How do I get my project featured?</h3>
+              <h3 className="mb-2 text-lg font-semibold">How do I get my itinerary featured?</h3>
               <p className="text-muted-foreground">
-                Projects with high proof scores and validation badges from curators are more likely to be featured.
-                Focus on building quality projects with proper documentation and community engagement.
+                itinerarys with high proof scores and validation badges from curators are more likely to be featured.
+                Focus on building quality itinerarys with proper documentation and community engagement.
               </p>
             </div>
             <div>
               <h3 className="mb-2 text-lg font-semibold">Can I connect my wallet?</h3>
               <p className="text-muted-foreground">
                 Yes! Connect your wallet to verify your builder credentials and increase your proof score through
-                on-chain hackathon certificates.
+                on-chain travel certificates.
               </p>
             </div>
           </div>
@@ -89,3 +89,5 @@ export default function About() {
     </div>
   );
 }
+
+

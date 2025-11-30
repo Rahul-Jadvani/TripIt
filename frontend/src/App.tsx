@@ -114,7 +114,7 @@ const App = () => (
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/register" element={<Register />} />
               <Route path="/offline" element={<NetworkIssue />} />
-              <Route path="/project/:id" element={<ProjectDetail />} />
+              <Route path="/itinerary/:id" element={<ProjectDetail />} />
               <Route path="/u/:username" element={<UserProfile />} />
               <Route path="/search" element={<Search />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
@@ -132,7 +132,7 @@ const App = () => (
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/my-projects" element={<ProtectedRoute><MyProjects /></ProtectedRoute>} />
               <Route path="/publish" element={<ProtectedRoute><Publish /></ProtectedRoute>} />
-              <Route path="/project/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
+              <Route path="/itinerary/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
               <Route path="/intros" element={<ProtectedRoute><Intros /></ProtectedRoute>} />
               <Route path="/investor-dashboard" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
               <Route path="/investor-directory" element={<ProtectedRoute><InvestorDirectory /></ProtectedRoute>} />
@@ -166,3 +166,4 @@ const App = () => (
 );
 
 export default App;
+

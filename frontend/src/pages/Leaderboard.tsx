@@ -4,21 +4,21 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Medal, Loader2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { FeaturedProjectsGridSkeleton } from '@/components/FeaturedProjectsSkeleton';
-import { useProjectsLeaderboard, useBuildersLeaderboard, useFeaturedLeaderboard } from '@/hooks/useLeaderboard';
+import { FeaturedItinerariesSkeleton } from '@/components/FeaturedItinerariesSkeleton';
+import { useItinerariesLeaderboard, useBuildersLeaderboard, useFeaturedLeaderboard } from '@/hooks/useLeaderboard';
 
-type LeaderboardTab = 'projects' | 'builders' | 'featured';
+type LeaderboardTab = 'itineraries' | 'builders' | 'featured';
 
 export default function Leaderboard() {
   const [searchParams] = useSearchParams();
-  const initialTab = (searchParams.get('tab') as LeaderboardTab) || 'projects';
+  const initialTab = (searchParams.get('tab') as LeaderboardTab) || 'itineraries';
   const [tab, setTab] = useState<LeaderboardTab>(initialTab);
   useEffect(() => {
-    const t = (searchParams.get('tab') as LeaderboardTab) || 'projects';
+    const t = (searchParams.get('tab') as LeaderboardTab) || 'itineraries';
     setTab(t);
   }, [searchParams]);
 
-  const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjectsLeaderboard();
+  const { data: itinerariesData, isLoading: itinerariesLoading, error: itinerariesError } = useItinerariesLeaderboard();
   const { data: buildersData, isLoading: buildersLoading, error: buildersError } = useBuildersLeaderboard();
   const { data: featuredData, isLoading: featuredLoading, error: featuredError } = useFeaturedLeaderboard(30);
 
@@ -37,7 +37,7 @@ export default function Leaderboard() {
           <div className="mb-6 card-elevated p-8">
             <h1 className="text-4xl font-black text-foreground mb-2">Leaderboard</h1>
             <p className="text-base text-muted-foreground">
-              Top projects and builders on Zer0
+              Top itineraries and builders on Zer0
             </p>
           </div>
 
@@ -46,10 +46,10 @@ export default function Leaderboard() {
             <Tabs value={tab} onValueChange={(v) => setTab(v as LeaderboardTab)}>
               <TabsList className="inline-flex h-auto rounded-[15px] bg-secondary border-4 border-black p-1">
                 <TabsTrigger
-                  value="projects"
+                  value="Itineraries"
                   className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
                 >
-                  Projects
+                  itineraries
                 </TabsTrigger>
                 <TabsTrigger
                   value="builders"
@@ -78,23 +78,23 @@ export default function Leaderboard() {
 
           {/* Leaderboard Items */}
           <div className="space-y-4 w-full box-border overflow-hidden">
-            {/* Projects Tab */}
-            {tab === 'projects' && (
+            {/* itineraries Tab */}
+            {tab === 'itineraries' && (
               <>
-                {projectsLoading && (
-                  <FeaturedProjectsGridSkeleton count={6} />
+                {itinerariesLoading && (
+                  <FeaturedItinerariesSkeleton count={6} />
                 )}
 
-                {projectsError && (
+                {itinerariesError && (
                   <div className="card-elevated p-12 text-center">
                     <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
                     <p className="text-lg font-bold text-foreground mb-2">Failed to load leaderboard</p>
-                    <p className="text-sm text-muted-foreground">{(projectsError as any)?.message || 'Please try again later'}</p>
+                    <p className="text-sm text-muted-foreground">{(itinerariesError as any)?.message || 'Please try again later'}</p>
                   </div>
                 )}
 
-                {!projectsLoading && !projectsError && projectsData && projectsData.length > 0 ? (
-                  projectsData.map((item: any) => (
+                {!itinerariesLoading && !itinerariesError && itinerariesData && itinerariesData.length > 0 ? (
+                  itinerariesData.map((item: any) => (
                     <div key={item.rank} className="card-elevated p-6">
                       <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center flex-shrink-0">
@@ -114,9 +114,9 @@ export default function Leaderboard() {
                     </div>
                   ))
                 ) : (
-                  !projectsLoading && !projectsError && (
+                  !itinerariesLoading && !itinerariesError && (
                     <div className="card-elevated p-12 text-center">
-                      <p className="text-lg font-bold text-foreground">No projects yet</p>
+                      <p className="text-lg font-bold text-foreground">No itineraries yet</p>
                       <p className="text-sm text-muted-foreground mt-2">Be the first to publish a project!</p>
                     </div>
                   )
@@ -128,7 +128,7 @@ export default function Leaderboard() {
             {tab === 'builders' && (
               <>
                 {buildersLoading && (
-                  <FeaturedProjectsGridSkeleton count={6} />
+                  <FeaturedItinerariesSkeleton count={6} />
                 )}
 
                 {buildersError && (
@@ -156,7 +156,7 @@ export default function Leaderboard() {
                           <Link to={`/u/${item.username}`} className="text-lg font-black text-primary hover:opacity-80 transition-quick block mb-1">
                             {item.username}
                           </Link>
-                          <p className="text-sm text-muted-foreground">{item.projects} projects</p>
+                          <p className="text-sm text-muted-foreground">{item.itineraries} itineraries</p>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <div className="text-3xl font-black text-primary">{item.score}</div>
@@ -235,8 +235,8 @@ export default function Leaderboard() {
                 ) : (
                   !featuredLoading && !featuredError && (
                     <div className="card-elevated p-12 text-center">
-                      <p className="text-lg font-bold text-foreground">No featured projects yet</p>
-                      <p className="text-sm text-muted-foreground mt-2">Feature projects from the admin panel to show them here.</p>
+                      <p className="text-lg font-bold text-foreground">No featured itineraries yet</p>
+                      <p className="text-sm text-muted-foreground mt-2">Feature itineraries from the admin panel to show them here.</p>
                     </div>
                   )
                 )}
@@ -248,3 +248,5 @@ export default function Leaderboard() {
     </div>
   );
 }
+
+

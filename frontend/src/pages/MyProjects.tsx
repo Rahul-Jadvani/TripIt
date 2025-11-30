@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Eye, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useUserProjects, useDeleteProject } from '@/hooks/useProjects';
+import { useUserItineraries, useDeleteItinerary } from '@/hooks/useProjects';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
 import { PostUpdateModal } from '@/components/PostUpdateModal';
@@ -13,8 +13,8 @@ import { toast } from 'sonner';
 
 export default function MyProjects() {
   const { user } = useAuth();
-  const { data, isLoading, error } = useUserProjects(user?.id || '');
-  const deleteProjectMutation = useDeleteProject();
+  const { data, isLoading, error } = useUserItineraries(user?.id || '');
+  const deleteProjectMutation = useDeleteItinerary();
   const queryClient = useQueryClient();
   const [showPostUpdate, setShowPostUpdate] = useState<string | null>(null);
   const [projectPendingDeletion, setProjectPendingDeletion] = useState<{ id: string; title: string } | null>(null);
@@ -33,14 +33,14 @@ export default function MyProjects() {
           <div className="mb-10 card-elevated p-8">
             <div className="flex items-start justify-between gap-6">
               <div className="flex-1">
-                <h1 className="text-4xl font-black text-foreground mb-2">My Projects</h1>
+                <h1 className="text-4xl font-black text-foreground mb-2">My Itineraries</h1>
                 <p className="text-base text-muted-foreground">
-                  Manage your published and draft projects
+                  Manage your published and draft itineraries
                 </p>
               </div>
               <Link to="/publish" className="btn-primary inline-flex items-center gap-2 px-4 py-2 flex-shrink-0">
                 <Plus className="h-4 w-4" />
-                <span>New Project</span>
+                <span>New Itinerary</span>
               </Link>
             </div>
           </div>
@@ -54,7 +54,7 @@ export default function MyProjects() {
           {error && (
             <div className="card-elevated p-12 text-center">
               <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-              <p className="text-lg font-bold text-foreground mb-2">Failed to load projects</p>
+              <p className="text-lg font-bold text-foreground mb-2">Failed to load itineraries</p>
               <p className="text-sm text-muted-foreground">{(error as any)?.message || 'Please try again later'}</p>
             </div>
           )}
@@ -72,7 +72,7 @@ export default function MyProjects() {
                     <div className="border-t-2 border-border bg-secondary/20 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-bold text-muted-foreground">
-                          Project Actions
+                          Itinerary Actions
                         </p>
                         <div className="flex items-center gap-2">
                           <button
@@ -120,11 +120,11 @@ export default function MyProjects() {
               ) : (
                 <div className="card-elevated p-12 text-center">
                   <div className="space-y-4">
-                    <p className="text-lg font-bold text-foreground">You haven't published any projects yet.</p>
-                    <p className="text-sm text-muted-foreground mb-6">Start by creating and publishing your first hackathon project</p>
+                    <p className="text-lg font-bold text-foreground">You haven't published any itineraries yet.</p>
+                    <p className="text-sm text-muted-foreground mb-6">Start by creating and publishing your first travel itinerary</p>
                     <Link to="/publish" className="btn-primary inline-flex items-center gap-2">
                       <Plus className="h-4 w-4" />
-                      Publish Your First Project
+                      Publish Your First Itinerary
                     </Link>
                   </div>
                 </div>
@@ -165,3 +165,5 @@ export default function MyProjects() {
     </div>
   );
 }
+
+

@@ -6,9 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChainBadge } from '@/components/ChainBadge';
-import { useCheckIfSaved, useSaveProject, useUnsaveProject } from '@/hooks/useSavedProjects';
-import { VoteButtons } from '@/components/VoteButtons';
-import { CommentSection } from '@/components/CommentSection';
+import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
+import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
+import { TravelIntelSection } from '@/components/TravelIntelSection';
 import { BadgeAwarder } from '@/components/BadgeAwarder';
 import { ProjectBadges } from '@/components/ProjectBadges';
 import { IntroRequest } from '@/components/IntroRequest';
@@ -27,9 +27,9 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { data, isLoading, error } = useProjectById(id || '');
-  const { data: isSaved, isLoading: checkingIfSaved } = useCheckIfSaved(id || '');
-  const saveMutation = useSaveProject();
-  const unsaveMutation = useUnsaveProject();
+  const { data: isSaved, isLoading: checkingIfSaved } = useCheckIfSavedItinerary(id || '');
+  const saveMutation = useSaveItinerary();
+  const unsaveMutation = useUnsaveItinerary();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [showPostUpdate, setShowPostUpdate] = useState(false);
   const [showProfileChecklist, setShowProfileChecklist] = useState(false);
@@ -192,14 +192,14 @@ export default function ProjectDetail() {
   const displayScore = getProjectScore(project);
 
   const insightCards = [
-    project.project_story && (
+    project.travel_story && (
       <div key="story" className="card-elevated p-6">
         <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
           <FileText className="h-4 w-4 text-primary" />
-          Project Journey
+          Trip Journey
         </h2>
         <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
-          {project.project_story}
+          {project.travel_story}
         </div>
       </div>
     ),
@@ -249,7 +249,7 @@ export default function ProjectDetail() {
 
     const missingFields: string[] = [];
     if (!project.categories || project.categories.length === 0) missingFields.push('Categories');
-    if (!project.project_story) missingFields.push('Project Journey');
+    if (!project.travel_story) missingFields.push('Trip Journey');
     if (!project.inspiration) missingFields.push('Inspiration');
     if (!project.market_comparison) missingFields.push('Market Comparison');
     if (!project.novelty_factor) missingFields.push('Novelty Factor');
@@ -399,7 +399,7 @@ export default function ProjectDetail() {
       <div className="card-elevated p-6">
         <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
           <Code className="h-4 w-4 text-primary" />
-          Tech Stack
+          Travel Style & Activities
         </h2>
         <div className="flex flex-wrap gap-2">
           {project.techStack.map((tech: string) => (
@@ -698,7 +698,7 @@ export default function ProjectDetail() {
               )}
 
               <div id="comments" className="card-elevated p-6 scroll-mt-20">
-                <h2 className="text-lg font-black mb-4 text-foreground">Comments & Discussion</h2>
+                <h2 className="text-lg font-black mb-4 text-foreground">Travel Intel & Discussion</h2>
                 <CommentSection projectId={id || String(project.id)} altProjectId={String(project.id)} />
               </div>
             </div>
@@ -737,3 +737,6 @@ export default function ProjectDetail() {
     </div>
   );
 }
+
+
+

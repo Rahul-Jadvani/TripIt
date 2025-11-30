@@ -9,14 +9,14 @@ const TopRatedCarousel = lazy(() =>
 );
 import { ProjectCardSkeletonGrid, TopRatedCarouselSkeleton } from '@/components/ProjectCardSkeleton';
 import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle } from 'lucide-react';
-import { useProjects, transformProject } from '@/hooks/useProjects';
+import { useProjects, useItineraries, transformProject, transformItinerary } from '@/hooks/useProjects';
 import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
 import { usePublicInvestors } from '@/hooks/useInvestors';
 import { useDashboardStats } from '@/hooks/useStats';
 import { useMostRequestedProjects, useRecentConnections, useFeaturedProjects, useRisingStars, useCategoryProjects } from '@/hooks/useFeed';
 import { useAuth } from '@/context/AuthContext';
-import { projectsService } from '@/services/api';
-import { Project } from '@/types';
+import { itinerariesService } from '@/services/api';
+import { Project, Itinerary } from '@/types';
 import { FeedMiniThread } from '@/components/FeedMiniThread';
 import { FeedLeaderTagCard } from '@/components/FeedLeaderTagCard';
 // import { FeedTopInvestorCard } from '@/components/FeedTopInvestorCard';
@@ -102,7 +102,7 @@ export default function Feed() {
           queryClient.prefetchQuery({
             queryKey: ['projects', sort, 3],
             queryFn: async () => {
-              const response = await projectsService.getAll(sort, 3);
+              const response = await itinerariesService.getAll(sort, 3);
               return {
                 ...response.data,
                 data: response.data.data?.map(transformProject) || [],
@@ -225,10 +225,10 @@ export default function Feed() {
               </div>
               <div className="flex-1">
                 <h1 className="text-2xl sm:text-4xl font-black text-foreground mb-2">
-                  Discover Projects
+                  Discover Itineraries
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-2xl">
-                  Explore amazing hackathon projects with proof-weighted credibility. Find innovative builders, track their growth, and connect.
+                  Explore amazing travel itineraries with safety-verified credibility. Find inspiring travelers, track their journeys, and connect.
                 </p>
               </div>
             </div>
@@ -442,14 +442,14 @@ export default function Feed() {
               )}
             </div>
 
-            {/* Featured Projects Carousel */}
+            {/* Featured Itineraries Carousel */}
             {categorizedProjects.featured.length > 0 && (
               <section id="featured" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
                     <ProjectCarousel
                       projects={categorizedProjects.featured}
-                      categoryTitle="Featured Projects"
+                      categoryTitle="Featured Itineraries"
                       categoryName="featured"
                       categoryIcon={<Sparkles className="h-5 w-5" />}
                       autoplay={true}
@@ -476,14 +476,14 @@ export default function Feed() {
               </section>
             )}
 
-            {/* New Launches Carousel */}
+            {/* Latest Itineraries Carousel */}
             {categorizedProjects.newLaunches.length > 0 && (
               <section id="new-launches" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
                     <ProjectCarousel
                       projects={categorizedProjects.newLaunches}
-                      categoryTitle="New Launches"
+                      categoryTitle="Latest Itineraries"
                       categoryName="new-launches"
                       categoryIcon={<Clock className="h-5 w-5" />}
                       autoplay={true}
@@ -703,10 +703,10 @@ export default function Feed() {
             {Object.values(categorizedProjects).every(cat => cat.length === 0) && (
               <div className="card-elevated py-20 text-center p-8 rounded-2xl">
                 <div className="space-y-4">
-                  <div className="text-6xl">🚀</div>
-                  <p className="text-2xl font-black text-foreground">No projects found</p>
+                  <div className="text-6xl">🗺️</div>
+                  <p className="text-2xl font-black text-foreground">No itineraries found</p>
                   <p className="text-base text-muted-foreground">
-                    Be the first to publish your amazing hackathon project!
+                    Be the first to publish your amazing travel itinerary!
                   </p>
                 </div>
               </div>
@@ -719,3 +719,4 @@ export default function Feed() {
     </div>
   );
 }
+

@@ -149,6 +149,155 @@ export interface Badge {
   awardedAt: string;
 }
 
+// ============================================================================
+// TRIPIT MODELS (New Travel-Focused Types)
+// ============================================================================
+
+export interface Traveler extends User {
+  sbt_id?: string;
+  sbt_verified?: boolean;
+  destinations_visited?: number;
+  total_trips_count?: number;
+  total_km_traveled?: number;
+  traveler_reputation_score?: number;
+  certifications?: string[];
+  women_guide_certified?: boolean;
+}
+
+export interface SafetyRating {
+  id: string;
+  itinerary_id: string;
+  traveler_sbt_id: string;
+  overall_safety_score: number; // 1-5
+  rating_type: 'overall' | 'accommodation' | 'route' | 'community' | 'women_safety';
+  detailed_feedback?: string;
+  accommodation_safety?: number;
+  route_safety?: number;
+  community_safety?: number;
+  women_safety_score?: number;
+  photo_ipfs_hashes?: string[];
+  helpful_count?: number;
+  unhelpful_count?: number;
+  verified_traveler?: boolean;
+  experience_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TravelIntel {
+  id: string;
+  itinerary_id: string;
+  intel_type: 'question' | 'update' | 'warning' | 'recommendation' | 'local_insight';
+  title?: string;
+  content: string;
+  location_gps?: string;
+  severity_level?: 'low' | 'medium' | 'high' | 'critical';
+  safety_related?: boolean;
+  status?: 'open' | 'in_progress' | 'resolved' | 'archived';
+  traveler_sbt_id?: string;
+  responder_sbt_id?: string;
+  response_status?: string;
+  photo_ipfs_hashes?: string[];
+  helpful_count?: number;
+  parent_intel_id?: string; // For threaded Q&A
+  replies?: TravelIntel[];
+  created_at: string;
+  updated_at: string;
+  traveler?: Traveler;
+  is_deleted?: boolean;
+  deleted_at?: string;
+}
+
+export interface TravelCredibilityScore {
+  total: number;
+  identity_score: number;
+  travel_history_score: number;
+  community_score: number;
+  safety_score_component: number;
+  quality_score: number;
+}
+
+export interface Itinerary {
+  id: string;
+  uuid?: string;
+  title: string;
+  description: string;
+  // Travel Details
+  destination: string;
+  regions?: string[];
+  country?: string;
+  state_province?: string;
+  start_date: string;
+  end_date: string;
+  duration_days?: number;
+  difficulty_level?: 'easy' | 'moderate' | 'difficult' | 'expert';
+  travel_type?: string; // Solo, Group, Family, etc.
+  // Budget
+  estimated_budget_min?: number;
+  estimated_budget_max?: number;
+  actual_budget_spent?: number;
+  // Route & GPS
+  route_gpx?: string;
+  route_waypoints?: Array<{ lat: number; lon: number; name?: string; elevation?: number }>;
+  starting_point_gps?: string;
+  ending_point_gps?: string;
+  route_map_url?: string;
+  // Travel Experience
+  travel_style?: string;
+  activity_tags?: string[];
+  travel_companions?: Array<{ name: string; role?: string }>;
+  // Safety & Verification
+  women_safe_certified?: boolean;
+  safety_score?: number;
+  safety_ratings_count?: number;
+  safety_ratings_avg?: number;
+  // Credibility Scoring
+  travel_credibility_score?: number;
+  identity_score?: number;
+  travel_history_score?: number;
+  community_score?: number;
+  safety_score_component?: number;
+  quality_score?: number;
+  // Engagement Metrics
+  safety_ratings?: SafetyRating[];
+  travel_intel?: TravelIntel[];
+  helpful_count?: number;
+  share_count?: number;
+  view_count?: number;
+  // Status
+  is_published?: boolean;
+  is_featured?: boolean;
+  is_deleted?: boolean;
+  // Relations
+  traveler_id?: string;
+  creator?: Traveler;
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+  featured_at?: string;
+  last_verified_date?: string;
+}
+
+export interface SavedItinerary {
+  id: string;
+  traveler_id: string;
+  itinerary_id: string;
+  itinerary?: Itinerary;
+  saved_at: string;
+}
+
+export interface ItineraryUpdate {
+  id: string;
+  itinerary_id: string;
+  content: string;
+  photo_urls?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Type alias for backward compatibility with frontend code using "Project"
+export type ProjectOrItinerary = Project | Itinerary;
+
 export interface Comment {
   id: string;
   content: string;

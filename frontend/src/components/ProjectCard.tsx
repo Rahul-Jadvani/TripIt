@@ -6,9 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowUp, MessageSquare, Award, Star, TrendingUp, Github, ExternalLink, Shield, Share2, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCheckIfSaved, useSaveProject, useUnsaveProject } from '@/hooks/useSavedProjects';
+import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
 import { useAuth } from '@/context/AuthContext';
-import { VoteButtons } from '@/components/VoteButtons';
+import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
 import { IntroRequest } from '@/components/IntroRequest';
 import { InteractiveScrollBackground } from '@/components/InteractiveScrollBackground';
 import { ShareDialog } from '@/components/ShareDialog';
@@ -21,9 +21,9 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const { user } = useAuth();
-  const { data: isSaved, isLoading: checkingIfSaved } = useCheckIfSaved(project.id);
-  const saveMutation = useSaveProject();
-  const unsaveMutation = useUnsaveProject();
+  const { data: isSaved, isLoading: checkingIfSaved } = useCheckIfSavedItinerary(project.id);
+  const saveMutation = useSaveItinerary();
+  const unsaveMutation = useUnsaveItinerary();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [savedLocal, setSavedLocal] = useState<boolean | null>(null);
 
@@ -76,7 +76,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <Link to={`/project/${project.id}`} className="flex flex-col flex-1 min-h-0 relative z-10">
           {/* Main content container - scrollable */}
           <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
-            {/* Header with title and proof score badge */}
+            {/* Header with title and Credibility Score badge */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-2 mb-2">
@@ -92,7 +92,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 </p>
               </div>
 
-              {/* Proof score badge - top right */}
+              {/* Credibility Score badge - top right */}
               <div className="flex-shrink-0 flex flex-col gap-2 items-end">
                 {/* Share and Save buttons */}
                 <div className="flex gap-1">
@@ -325,3 +325,4 @@ export function ProjectCard({ project }: ProjectCardProps) {
     </div>
   );
 }
+

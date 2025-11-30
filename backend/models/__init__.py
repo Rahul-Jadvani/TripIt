@@ -1,6 +1,7 @@
 """
 Database models
 """
+# Legacy Zer0 Models
 from .user import User
 from .project import Project, ProjectScreenshot
 from .vote import Vote
@@ -25,7 +26,22 @@ from .validator_permissions import ValidatorPermissions
 from .investor_request import InvestorRequest
 from .admin_scoring_config import AdminScoringConfig
 
+# New TripIt Models (Phase 1)
+from .traveler import Traveler
+from .itinerary import Itinerary
+from .itinerary_view import ItineraryView
+from .safety_rating import SafetyRating
+from .travel_intel import TravelIntel
+from .day_plan import DayPlan
+from .embedded_business import EmbeddedBusiness
+from .hidden_gem import HiddenGem
+from .safety_alert import SafetyAlert
+from .traveler_certification import TravelerCertification
+from .sbt_verification import SBTVerification
+from .travel_group import TravelGroup, travel_group_itineraries
+
 __all__ = [
+    # Legacy Zer0 Models
     'User',
     'Project',
     'ProjectScreenshot',
@@ -55,5 +71,19 @@ __all__ = [
     'ValidatorAssignment',
     'ValidatorPermissions',
     'InvestorRequest',
-    'AdminScoringConfig'
+    'AdminScoringConfig',
+    # New TripIt Models (Phase 1)
+    'Traveler',
+    'Itinerary',
+    'ItineraryView',
+    'SafetyRating',
+    'TravelIntel',
+    'DayPlan',
+    'EmbeddedBusiness',
+    'HiddenGem',
+    'SafetyAlert',
+    'TravelerCertification',
+    'SBTVerification',
+    'TravelGroup',
+    'travel_group_itineraries'
 ]

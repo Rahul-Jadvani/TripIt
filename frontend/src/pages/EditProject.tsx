@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { publishProjectSchema, PublishProjectInput } from '@/lib/schemas';
-import { useProjectById } from '@/hooks/useProjects';
+import { useItineraryById } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +20,7 @@ export default function EditProject() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: projectData, isLoading } = useProjectById(id || '');
+  const { data: projectData, isLoading } = useItineraryById(id || '');
 
   const [techStack, setTechStack] = useState<string[]>([]);
   const [techInput, setTechInput] = useState('');
@@ -36,11 +36,11 @@ export default function EditProject() {
   const [selectedChainIds, setSelectedChainIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Hackathons state
-  const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
-  const [hackathonName, setHackathonName] = useState('');
-  const [hackathonDate, setHackathonDate] = useState('');
-  const [hackathonPrize, setHackathonPrize] = useState('');
+  // destinations state
+  const [destinations, setdestinations] = useState<{ name: string; date: string; prize?: string }[]>([]);
+  const [destinationName, setdestinationName] = useState('');
+  const [destinationDate, setdestinationDate] = useState('');
+  const [destinationPrize, setdestinationPrize] = useState('');
 
   const {
     register,
@@ -70,8 +70,8 @@ export default function EditProject() {
       setValue('description', project.description);
       setValue('demoUrl', project.demo_url || project.demoUrl || '');
       setValue('githubUrl', project.github_url || project.githubUrl || '');
-      setValue('hackathonName', project.hackathon_name || project.hackathonName || '');
-      setValue('hackathonDate', project.hackathon_date || project.hackathonDate || '');
+      setValue('destinationName', project.destination_name || project.destinationName || '');
+      setValue('destinationDate', project.destination_date || project.destinationDate || '');
 
       // Set state values
       setTechStack(project.tech_stack || project.techStack || []);
@@ -82,7 +82,7 @@ export default function EditProject() {
       setNoveltyFactor(project.novelty_factor || '');
       setCategories(project.categories || []);
       setPitchDeckUrl(project.pitch_deck_url || '');
-      setHackathons(project.hackathons || []);
+      setdestinations(project.destinations || []);
       setSelectedChainIds(project.chains?.map((chain: any) => chain.id) || []);
     }
   }, [projectData, user, id, navigate, setValue]);
@@ -110,21 +110,21 @@ export default function EditProject() {
     setTeamMembers(teamMembers.filter((_, i) => i !== index));
   };
 
-  const handleAddHackathon = () => {
-    if (hackathonName.trim()) {
-      setHackathons([...hackathons, {
-        name: hackathonName.trim(),
-        date: hackathonDate || '',
-        prize: hackathonPrize.trim() || undefined
+  const handleAdddestination = () => {
+    if (destinationName.trim()) {
+      setdestinations([...destinations, {
+        name: destinationName.trim(),
+        date: destinationDate || '',
+        prize: destinationPrize.trim() || undefined
       }]);
-      setHackathonName('');
-      setHackathonDate('');
-      setHackathonPrize('');
+      setdestinationName('');
+      setdestinationDate('');
+      setdestinationPrize('');
     }
   };
 
-  const handleRemoveHackathon = (index: number) => {
-    setHackathons(hackathons.filter((_, i) => i !== index));
+  const handleRemovedestination = (index: number) => {
+    setdestinations(destinations.filter((_, i) => i !== index));
   };
 
   const onSubmit = async (data: PublishProjectInput) => {
@@ -139,7 +139,7 @@ export default function EditProject() {
         description: data.description,
         demo_url: data.demoUrl,
         github_url: data.githubUrl,
-        hackathons: hackathons,
+        destinations: destinations,
         tech_stack: techStack,
         team_members: teamMembers,
         project_story: projectStory,
@@ -313,31 +313,31 @@ export default function EditProject() {
                   </div>
                 </div>
 
-                {/* Hackathons */}
+                {/* destinations */}
                 <div className="space-y-4">
-                  <Label>Hackathons</Label>
+                  <Label>destinations</Label>
 
-                  {/* Display existing hackathons */}
-                  {hackathons.length > 0 && (
+                  {/* Display existing destinations */}
+                  {destinations.length > 0 && (
                     <div className="space-y-2">
-                      {hackathons.map((hackathon, index) => (
+                      {destinations.map((destination, index) => (
                         <div key={index} className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
                           <div className="flex-1">
-                            <p className="font-bold text-foreground text-sm">{hackathon.name}</p>
-                            {hackathon.date && (
+                            <p className="font-bold text-foreground text-sm">{destination.name}</p>
+                            {destination.date && (
                               <p className="text-xs text-muted-foreground">
-                                {new Date(hackathon.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                {new Date(destination.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                               </p>
                             )}
-                            {hackathon.prize && (
-                              <p className="text-xs text-primary font-semibold">{hackathon.prize}</p>
+                            {destination.prize && (
+                              <p className="text-xs text-primary font-semibold">{destination.prize}</p>
                             )}
                           </div>
                           <Button
                             type="button"
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleRemoveHackathon(index)}
+                            onClick={() => handleRemovedestination(index)}
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -346,37 +346,37 @@ export default function EditProject() {
                     </div>
                   )}
 
-                  {/* Add new hackathon */}
+                  {/* Add new destination */}
                   <div className="space-y-3 p-3 bg-secondary/10 rounded-lg border border-border">
                     <div>
-                      <Label htmlFor="newHackathonName" className="text-sm">Add Hackathon</Label>
+                      <Label htmlFor="newdestinationName" className="text-sm">Add destination</Label>
                       <Input
-                        id="newHackathonName"
-                        placeholder="Hackathon name"
-                        value={hackathonName}
-                        onChange={(e) => setHackathonName(e.target.value)}
+                        id="newdestinationName"
+                        placeholder="destination name"
+                        value={destinationName}
+                        onChange={(e) => setdestinationName(e.target.value)}
                         className="mt-1"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="newHackathonDate" className="text-sm">Date</Label>
+                      <Label htmlFor="newdestinationDate" className="text-sm">Date</Label>
                       <Input
-                        id="newHackathonDate"
+                        id="newdestinationDate"
                         type="date"
-                        value={hackathonDate}
-                        onChange={(e) => setHackathonDate(e.target.value)}
+                        value={destinationDate}
+                        onChange={(e) => setdestinationDate(e.target.value)}
                         className="mt-1"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="newHackathonPrize" className="text-sm">Prize (Optional)</Label>
+                      <Label htmlFor="newdestinationPrize" className="text-sm">Prize (Optional)</Label>
                       <Input
-                        id="newHackathonPrize"
+                        id="newdestinationPrize"
                         placeholder="e.g., 1st Place - $10,000"
-                        value={hackathonPrize}
-                        onChange={(e) => setHackathonPrize(e.target.value)}
+                        value={destinationPrize}
+                        onChange={(e) => setdestinationPrize(e.target.value)}
                         className="mt-1"
                       />
                     </div>
@@ -384,19 +384,19 @@ export default function EditProject() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={handleAddHackathon}
-                      disabled={!hackathonName.trim()}
+                      onClick={handleAdddestination}
+                      disabled={!destinationName.trim()}
                       size="sm"
                       className="w-full"
                     >
-                      + Add Hackathon
+                      + Add destination
                     </Button>
                   </div>
                 </div>
 
-                {/* Tech Stack */}
+                {/* Travel Style & Activities */}
                 <div>
-                  <Label>Tech Stack</Label>
+                  <Label>Travel Style & Activities</Label>
                   <div className="flex gap-2 mt-2">
                     <Input
                       value={techInput}
@@ -487,3 +487,5 @@ export default function EditProject() {
     </div>
   );
 }
+
+

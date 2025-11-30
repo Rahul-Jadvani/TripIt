@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useProjects } from '@/hooks/useProjects';
+import { useItineraries } from '@/hooks/useItineraries';
 import { useAuth } from '@/context/AuthContext';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
@@ -145,8 +145,8 @@ const projectHasBadge = (project: any, badgeFilter: string): boolean => {
   );
 };
 
-// Derive available categories and badges from loaded projects so filters reflect actual data
-// This helps avoid showing category filters that match no projects
+// Derive available categories and badges from loaded Itineraries so filters reflect actual data
+// This helps avoid showing category filters that match no Itineraries
 
 
 const TECH_STACKS = [
@@ -205,24 +205,24 @@ const FilterSection = ({
 
 export default function Gallery() {
   const { user } = useAuth();
-  const { data: projectsData, isLoading } = useProjects('hot', 1, true);
-  const projects = projectsData?.data || [];
+  const { data: ItinerariesData, isLoading } = useItineraries('hot', 1, true);
+  const Itineraries = ItinerariesData?.data || [];
 
-  // Dynamically compute available categories and badges from the projects payload
+  // Dynamically compute available categories and badges from the Itineraries payload
   const availableCategories = useMemo(() => {
     const set = new Set<string>();
-    projects.forEach((p: any) => {
+    Itineraries.forEach((p: any) => {
       (p.categories || []).forEach((c: string) => {
         if (c) set.add(String(c));
       });
     });
     return Array.from(set).sort();
-  }, [projects]);
+  }, [Itineraries]);
 
   const availableBadges = useMemo(() => {
     const badgeMap = new Map<string, string>();
 
-    projects.forEach((p: any) => {
+    Itineraries.forEach((p: any) => {
       getProjectBadgeEntries(p).forEach((badge: any) => {
         const rawValue = extractBadgeValue(badge);
         const normalized = normalizeBadgeValue(rawValue);
@@ -238,7 +238,7 @@ export default function Gallery() {
     return Array.from(badgeMap.entries())
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [projects]);
+  }, [Itineraries]);
 
   const [filters, setFilters] = useState<FilterState>({
     search: '',
@@ -323,8 +323,8 @@ export default function Gallery() {
     });
   }, []);
 
-  const filteredProjects = useMemo(() => {
-    let result = [...projects];
+  const filteredItineraries = useMemo(() => {
+    let result = [...Itineraries];
 
     // Search
     if (filters.search) {
@@ -446,7 +446,7 @@ export default function Gallery() {
     result.sort(sortFunctions[filters.sortBy] || sortFunctions.featured);
 
     return result;
-  }, [projects, filters]);
+  }, [Itineraries, filters]);
 
   const activeFilterCount = useMemo(() => {
     return (
@@ -476,7 +476,7 @@ export default function Gallery() {
             Explore
           </h1>
           <p className="text-muted-foreground text-lg">
-            Featured projects from the ecosystem
+            Featured Itineraries from the ecosystem
           </p>
         </div>
 
@@ -514,7 +514,7 @@ export default function Gallery() {
               onToggle={() => toggleSection('search')}
             >
               <Input
-                placeholder="Search projects..."
+                placeholder="Search Itineraries..."
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -645,7 +645,7 @@ export default function Gallery() {
                     }
                   />
                   <Star className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-medium">Only Featured Projects</span>
+                  <span className="text-sm font-medium">Only Featured Itineraries</span>
                 </label>
               </div>
             </FilterSection>
@@ -783,35 +783,35 @@ export default function Gallery() {
             </FilterSection>
           </div>
 
-          {/* Projects Grid */}
+          {/* Itineraries Grid */}
           <div>
             {/* Results Info */}
             <div className="mb-6 p-4 bg-secondary/30 border-2 border-black rounded-lg">
               <p className="font-bold">
-                Showing <span className="text-primary">{filteredProjects.length}</span> projects
+                Showing <span className="text-primary">{filteredItineraries.length}</span> Itineraries
                 {activeFilterCount > 0 && ` (${activeFilterCount} active filters)`}
               </p>
             </div>
 
-            {/* Projects Grid */}
+            {/* Itineraries Grid */}
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 12 }).map((_, idx) => (
                   <div key={idx} className="h-[600px] bg-secondary rounded-lg animate-pulse"></div>
                 ))}
               </div>
-            ) : filteredProjects.length > 0 ? (
+            ) : filteredItineraries.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProjects.map((project: any) => (
+                {filteredItineraries.map((project: any) => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 border-4 border-black rounded-2xl bg-secondary/20">
                 <Filter className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-bold mb-2">No projects found</h3>
+                <h3 className="text-xl font-bold mb-2">No Itineraries found</h3>
                 <p className="text-muted-foreground text-center max-w-md">
-                  Try adjusting your filters to find more projects.
+                  Try adjusting your filters to find more Itineraries.
                 </p>
                 {activeFilterCount > 0 && (
                   <Button
@@ -830,3 +830,5 @@ export default function Gallery() {
     </div>
   );
 }
+
+

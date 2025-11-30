@@ -10,7 +10,7 @@ export const Footer = memo(function Footer() {
   const location = useLocation();
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('contact');
-  const [reportedProjectId, setReportedProjectId] = useState<string | undefined>(undefined);
+  const [reporteditineraryId, setReporteditineraryId] = useState<string | undefined>(undefined);
   const [reportedUserId, setReportedUserId] = useState<string | undefined>(undefined);
   const [detectedUsername, setDetectedUsername] = useState<string | undefined>(undefined);
 
@@ -29,14 +29,14 @@ export const Footer = memo(function Footer() {
   const openFeedbackModal = useCallback((type: FeedbackType) => {
     setFeedbackType(type);
 
-    // Auto-detect project or user ID from current page URL
+    // Auto-detect itinerary or user ID from current page URL
     if (type === 'report') {
       const pathname = location.pathname;
 
-      // Check if on project detail page: /project/:id
-      const projectMatch = pathname.match(/^\/project\/([^\/]+)$/);
-      if (projectMatch) {
-        setReportedProjectId(projectMatch[1]);
+      // Check if on itinerary detail page: /itinerary/:id
+      const itineraryMatch = pathname.match(/^\/itinerary\/([^\/]+)$/);
+      if (itineraryMatch) {
+        setReporteditineraryId(itineraryMatch[1]);
         setReportedUserId(undefined);
         setDetectedUsername(undefined);
       }
@@ -46,17 +46,17 @@ export const Footer = memo(function Footer() {
         if (userMatch) {
           const username = userMatch[1];
           setDetectedUsername(username);
-          setReportedProjectId(undefined);
+          setReporteditineraryId(undefined);
           // User ID will be set automatically by useEffect when profileUser data is fetched
         } else {
           // General report
-          setReportedProjectId(undefined);
+          setReporteditineraryId(undefined);
           setReportedUserId(undefined);
           setDetectedUsername(undefined);
         }
       }
     } else {
-      setReportedProjectId(undefined);
+      setReporteditineraryId(undefined);
       setReportedUserId(undefined);
       setDetectedUsername(undefined);
     }
@@ -75,7 +75,7 @@ export const Footer = memo(function Footer() {
               <img src="/logo.svg" alt="ZERO logo" className="h-16 w-16" />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
-              Proof-weighted discovery platform for hackathon projects. Connect, build, and discover innovative solutions.
+              Proof-weighted discovery platform for travel destination itinerarys. Connect, build, and discover innovative solutions.
             </p>
           </div>
 
@@ -99,7 +99,7 @@ export const Footer = memo(function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/gallery/hackathon" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
+                <Link to="/gallery/travel destination" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Explore</span>
                 </Link>
               </li>
@@ -296,9 +296,11 @@ export const Footer = memo(function Footer() {
         isOpen={feedbackModalOpen}
         onClose={() => setFeedbackModalOpen(false)}
         initialType={feedbackType}
-        reportedProjectId={reportedProjectId}
+        reporteditineraryId={reporteditineraryId}
         reportedUserId={reportedUserId}
       />
     </>
   );
 });
+
+

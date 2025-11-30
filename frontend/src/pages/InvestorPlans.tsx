@@ -23,7 +23,7 @@ const PLANS = [
     period: 'forever',
     description: 'Perfect for getting started',
     features: [
-      'Browse all projects',
+      'Browse all itinerarys',
       'Request intros to builders',
       'Direct messaging',
       'Basic analytics',
@@ -41,10 +41,10 @@ const PLANS = [
     description: 'For active investors',
     features: [
       'Everything in Free',
-      'Advanced project filters',
+      'Advanced itinerary filters',
       'Priority intro requests',
       'Monthly builder insights report',
-      'Early access to featured projects',
+      'Early access to featured itinerarys',
       'Verified investor badge',
     ],
     limitations: [],
@@ -564,7 +564,7 @@ export default function InvestorPlans() {
           toast.success('Investor profile updated successfully!');
           navigate('/investor-dashboard');
         } else {
-          toast.success('Application submitted successfully! Your request is under review. Once approved, you will have access to request intros from project builders.');
+          toast.success('Application submitted successfully! Your request is under review. Once approved, you will have access to request intros from itinerary builders.');
           navigate('/');
         }
       } else {
@@ -1596,7 +1596,7 @@ export default function InvestorPlans() {
             Choose Your Plan
           </h1>
           <p className="text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Get access to vetted hackathon projects, connect with talented builders, and discover the next big thing
+            Get access to vetted travel itinerarys, connect with talented builders, and discover the next big thing
           </p>
         </div>
 
@@ -1707,3 +1707,5 @@ export default function InvestorPlans() {
     </div>
   );
 }
+
+

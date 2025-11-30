@@ -58,7 +58,7 @@ class Config:
     AWS_S3_BUCKET = os.getenv('AWS_S3_BUCKET')
     AWS_S3_REGION = os.getenv('AWS_S3_REGION', 'us-east-1')
 
-    # Blockchain
+    # Blockchain - Legacy (Zer0)
     KAIA_TESTNET_RPC = os.getenv(
         'KAIA_TESTNET_RPC',
         'https://public-en-kairos.node.kaia.io'
@@ -67,6 +67,34 @@ class Config:
         'OXCERTS_CONTRACT_ADDRESS',
         '0x0000000000000000000000000000000000000000'  # Update with actual contract
     )
+
+    # Blockchain - TripIt (Base Sepolia)
+    BASE_SEPOLIA_RPC = os.getenv(
+        'BASE_SEPOLIA_RPC',
+        'https://sepolia.base.org'
+    )
+    BASE_MAINNET_RPC = os.getenv(
+        'BASE_MAINNET_RPC',
+        'https://mainnet.base.org'
+    )
+    BLOCKCHAIN_NETWORK = os.getenv('BLOCKCHAIN_NETWORK', 'base_sepolia')  # base_sepolia or base_mainnet
+
+    # SBT Contract (Soul-Bound Travel Card)
+    SBT_CONTRACT_ADDRESS = os.getenv(
+        'SBT_CONTRACT_ADDRESS',
+        '0x0000000000000000000000000000000000000000'  # Update with actual contract
+    )
+
+    # TRIP Token Contract
+    TRIP_TOKEN_CONTRACT_ADDRESS = os.getenv(
+        'TRIP_TOKEN_CONTRACT_ADDRESS',
+        '0x0000000000000000000000000000000000000000'  # Update with actual contract
+    )
+
+    # Web3 / Blockchain Deployment
+    BLOCKCHAIN_DEPLOYER_ADDRESS = os.getenv('BLOCKCHAIN_DEPLOYER_ADDRESS')
+    BLOCKCHAIN_DEPLOYER_PRIVATE_KEY = os.getenv('BLOCKCHAIN_DEPLOYER_PRIVATE_KEY')
+    BLOCKCHAIN_GAS_PRICE_MULTIPLIER = float(os.getenv('BLOCKCHAIN_GAS_PRICE_MULTIPLIER', 1.2))
 
     # Pinata IPFS
     PINATA_API_KEY = os.getenv('PINATA_API_KEY')
