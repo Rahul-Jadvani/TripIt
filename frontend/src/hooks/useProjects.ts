@@ -320,5 +320,7 @@ export function useRescoreProject() {
   });
 }
 
-// Alias for terminology migration (Zer0 → TripIt)
+// Aliases for terminology migration (Zer0 → TripIt)
 export const useItineraries = useProjects;
+export const useUserItineraries = useUserProjects;
+export const useDeleteItinerary = useDeleteProject;
