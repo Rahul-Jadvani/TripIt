@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight, Github } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight, Github, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PublishLoader, PublishSuccess } from '@/components/PublishLoader';
 import { toast } from 'sonner';
@@ -75,7 +75,6 @@ export default function Publish() {
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
-  const [githubUrlWarning, setGithubUrlWarning] = useState<string>('');
   const [githubActionLoading, setGithubActionLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{ user_id?: string; name: string; role: string; username?: string; avatar_url?: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<{ id: string; username: string; display_name: string; email: string; avatar_url?: string } | null>(null);
@@ -138,9 +137,16 @@ export default function Publish() {
       title: '',
       tagline: '',
       description: '',
+      destination: '',
+      start_date: '',
+      end_date: '',
+      duration_days: undefined,
+      difficulty_level: undefined,
+      estimated_budget_min: undefined,
+      estimated_budget_max: undefined,
       demoUrl: '',
       githubUrl: '',
-      destinationName: '',
+      hackathonName: '',
       hackathonDate: '',
       techStack: [],
     },
@@ -150,10 +156,10 @@ export default function Publish() {
   // Guarded next for per-step validation
   const handleNext = async () => {
     if (currentStep === 1) {
-      const ok = await trigger(['title', 'description', 'githubUrl']);
+      const ok = await trigger(['title', 'description', 'destination', 'start_date', 'end_date']);
       if (!ok) {
         setShowErrorSummary(true);
-        const firstInvalid = ['title', 'description', 'githubUrl'].find((f) => (errors as any)?.[f]);
+        const firstInvalid = ['title', 'description', 'destination', 'start_date', 'end_date'].find((f) => (errors as any)?.[f]);
         if (firstInvalid) {
           document.getElementById(firstInvalid)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -390,47 +396,6 @@ export default function Publish() {
     setPitchDeckFile(null);
   };
 
-  const validateGithubUrl = (url: string): boolean => {
-    if (!url || !url.trim()) {
-      setGithubUrlWarning('');
-      return true; // Optional field
-    }
-
-    try {
-      const urlObj = new URL(url);
-
-      // Check if it's a GitHub URL
-      if (!urlObj.hostname.includes('github.com')) {
-        setGithubUrlWarning('⚠️ Must be a valid GitHub URL (e.g., https://github.com/username/repo)');
-        return false;
-      }
-
-      // Check if URL has proper repo format
-      const pathParts = urlObj.pathname.split('/').filter(p => p);
-      if (pathParts.length < 2) {
-        setGithubUrlWarning('⚠️ GitHub URL should include username and repository (e.g., https://github.com/username/repo)');
-        return false;
-      }
-
-      // If user has connected GitHub, validate username
-      if (user?.github_connected && user?.github_username) {
-        const username = user.github_username.toLowerCase();
-        const urlUsername = pathParts[0].toLowerCase();
-
-        if (urlUsername !== username) {
-          setGithubUrlWarning(`⚠️ GitHub URL should belong to your account (@${user.github_username}). Current URL belongs to @${pathParts[0]}`);
-          return false;
-        }
-      }
-
-      setGithubUrlWarning('✓ Valid GitHub URL');
-      return true;
-    } catch {
-      setGithubUrlWarning('⚠️ Invalid URL format. Please enter a complete URL starting with https://');
-      return false;
-    }
-  };
-
   const handleGithubConnect = async () => {
     setGithubActionLoading(true);
     try {
@@ -480,18 +445,16 @@ export default function Publish() {
       return;
     }
 
-    // Validate GitHub URL if provided
-    if (data.githubUrl && !validateGithubUrl(data.githubUrl)) {
-      toast.error('Please fix the GitHub URL before publishing');
-      return;
-    }
-
     try {
       // Convert camelCase to snake_case for backend
       const payload: any = {
         title: data.title,
         description: data.description,
         tech_stack: techStack,
+        // Required travel fields
+        destination: data.destination,
+        start_date: data.start_date,
+        end_date: data.end_date,
       };
 
       // Add optional fields only if they have values
@@ -502,7 +465,25 @@ export default function Publish() {
         payload.demo_url = data.demoUrl;
       }
       if (data.githubUrl && data.githubUrl.trim()) {
-        payload.github_url = data.githubUrl;
+        payload.route_gpx = data.githubUrl;  // Map link (GPX/KML/Google Maps)
+      }
+      if (data.duration_days) {
+        payload.duration_days = data.duration_days;
+      }
+      if (data.difficulty_level) {
+        payload.difficulty_level = data.difficulty_level;
+      }
+      if (data.estimated_budget_min) {
+        payload.estimated_budget_min = data.estimated_budget_min;
+      }
+      if (data.estimated_budget_max) {
+        payload.estimated_budget_max = data.estimated_budget_max;
+      }
+      if (data.hackathonName && data.hackathonName.trim()) {
+        payload.hackathon_name = data.hackathonName;  // Day-by-day itinerary
+      }
+      if (data.hackathonDate && data.hackathonDate.trim()) {
+        payload.hackathon_date = data.hackathonDate;  // Safety intelligence
       }
       // Send hackathons array if any exist
       if (hackathons.length > 0) {
@@ -605,12 +586,15 @@ export default function Publish() {
   const onInvalid = (formErrors: any) => {
     const list: { id: string; message: string }[] = [];
     if (formErrors?.title?.message) list.push({ id: 'title', message: `Title: ${formErrors.title.message}` });
-    if (formErrors?.description?.message) list.push({ id: 'description', message: `Description: ${formErrors.description.message}` });
-    if (formErrors?.demoUrl?.message) list.push({ id: 'demoUrl', message: `Demo URL: ${formErrors.demoUrl.message}` });
-    if (formErrors?.githubUrl?.message) list.push({ id: 'githubUrl', message: `GitHub URL: ${formErrors.githubUrl.message}` });
+    if (formErrors?.description?.message) list.push({ id: 'description', message: `Trip Overview: ${formErrors.description.message}` });
+    if (formErrors?.destination?.message) list.push({ id: 'destination', message: `Destination: ${formErrors.destination.message}` });
+    if (formErrors?.start_date?.message) list.push({ id: 'start_date', message: `Start Date: ${formErrors.start_date.message}` });
+    if (formErrors?.end_date?.message) list.push({ id: 'end_date', message: `End Date: ${formErrors.end_date.message}` });
+    if (formErrors?.demoUrl?.message) list.push({ id: 'demoUrl', message: `Booking Link: ${formErrors.demoUrl.message}` });
+    if (formErrors?.githubUrl?.message) list.push({ id: 'githubUrl', message: `Map Link: ${formErrors.githubUrl.message}` });
     // Business rules
-    if (techStack.length === 0) list.push({ id: 'techStackSection', message: 'Travel Style & Activities: Add at least one technology' });
-    if (categories.length === 0) list.push({ id: 'categoriesSection', message: 'Categories: Select at least one category' });
+    if (techStack.length === 0) list.push({ id: 'techStackSection', message: 'Safety & Gear Tags: Add at least one tag' });
+    if (categories.length === 0) list.push({ id: 'categoriesSection', message: 'Travel Types: Select at least one type' });
 
     setFormErrorsList(list);
     setShowErrorSummary(true);
@@ -703,14 +687,14 @@ export default function Publish() {
             <div className="mt-4 flex flex-wrap gap-2">
               {[
                 { id: 'basicsSection', label: 'Basics' },
-                { id: 'categoriesSection', label: 'Categories & layerz' },
-                { id: 'linksSection', label: 'Links' },
-                { id: 'techStackSection', label: 'Travel Style & Activities' },
-                { id: 'teamSection', label: 'Team' },
-                { id: 'storySection', label: 'Story' },
-                { id: 'marketSection', label: 'Market' },
-                { id: 'pitchDeckSection', label: 'Pitch Deck' },
-                { id: 'screenshotsSection', label: 'Screenshots' },
+                { id: 'categoriesSection', label: 'Travel Types' },
+                { id: 'linksSection', label: 'Links & Maps' },
+                { id: 'techStackSection', label: 'Safety & Gear' },
+                { id: 'teamSection', label: 'Companions' },
+                { id: 'storySection', label: 'Itinerary' },
+                { id: 'marketSection', label: 'Insights' },
+                { id: 'pitchDeckSection', label: 'Permits' },
+                { id: 'screenshotsSection', label: 'Photos' },
               ].map((s) => (
                 <button
                   key={s.id}
@@ -870,10 +854,10 @@ export default function Publish() {
                     </h2>
                     <div className="space-y-6">
                   <div className="space-y-3">
-                    <Label htmlFor="title" className="text-base font-bold">Destination Name *</Label>
+                    <Label htmlFor="title" className="text-base font-bold">Itinerary Title *</Label>
                     <Input
                       id="title"
-                      placeholder="e.g., Tokyo Winter Adventure, Southeast Asia Backpacking"
+                      placeholder="E.g., Spiti Valley Winter Expedition, Himalayan Trek Adventure"
                       aria-invalid={!!errors.title}
                       className={`text-base ${errors.title ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('title')}
@@ -887,10 +871,10 @@ export default function Publish() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label htmlFor="tagline" className="text-base font-bold">Tagline (Optional)</Label>
+                    <Label htmlFor="tagline" className="text-base font-bold">Teaser / Hook (Optional)</Label>
                     <Input
                       id="tagline"
-                      placeholder="A brief one-liner description"
+                      placeholder="Short 1-liner summary of your trip"
                       maxLength={300}
                       className="text-base"
                       {...register('tagline')}
@@ -905,11 +889,11 @@ export default function Publish() {
 
                   <div className="space-y-3">
                     <Label htmlFor="description" className="text-base font-bold">
-                      Description *
+                      Trip Overview *
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe your itinerary in detail (minimum 50 characters, 200+ recommended) - include places, activities, best time to visit, safety tips, etc."
+                      placeholder="Describe the vibe, experience, and what makes this trip special. Include terrain, activities, cultural experiences, and any unique highlights (minimum 50 characters)."
                       rows={8}
                       aria-invalid={!!errors.description}
                       className={`text-base ${errors.description ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
@@ -928,6 +912,139 @@ export default function Publish() {
                       </span>
                     </div>
                   </div>
+
+                  {/* New Travel-Specific Fields */}
+                  <div className="space-y-3">
+                    <Label htmlFor="destination" className="text-base font-bold">Primary Destination *</Label>
+                    <Input
+                      id="destination"
+                      placeholder="E.g., Himalayas, Spiti Valley, Ladakh, Kerala Backwaters"
+                      aria-invalid={!!errors.destination}
+                      className={`text-base ${errors.destination ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
+                      {...register('destination')}
+                    />
+                    {errors.destination && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-4 w-4" />
+                        {errors.destination.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Main location or region for this itinerary</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="start_date" className="text-base font-bold">Start Date *</Label>
+                      <Input
+                        id="start_date"
+                        type="date"
+                        aria-invalid={!!errors.start_date}
+                        className={`text-base ${errors.start_date ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
+                        {...register('start_date')}
+                      />
+                      {errors.start_date && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          {errors.start_date.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="end_date" className="text-base font-bold">End Date *</Label>
+                      <Input
+                        id="end_date"
+                        type="date"
+                        aria-invalid={!!errors.end_date}
+                        className={`text-base ${errors.end_date ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
+                        {...register('end_date')}
+                      />
+                      {errors.end_date && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          {errors.end_date.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="duration_days" className="text-base font-bold">Duration (Days) <span className="text-xs badge-secondary">Optional</span></Label>
+                      <Input
+                        id="duration_days"
+                        type="number"
+                        min="1"
+                        max="365"
+                        placeholder="E.g., 7"
+                        className="text-base"
+                        {...register('duration_days', { valueAsNumber: true })}
+                      />
+                      {errors.duration_days && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          {errors.duration_days.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">Auto-calculated from dates, or enter manually</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="difficulty_level" className="text-base font-bold">Difficulty Level <span className="text-xs badge-secondary">Optional</span></Label>
+                      <select
+                        id="difficulty_level"
+                        className="w-full text-base border rounded-md p-2 bg-background"
+                        {...register('difficulty_level')}
+                      >
+                        <option value="">Select difficulty</option>
+                        <option value="easy">Easy</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="hard">Hard</option>
+                        <option value="extreme">Extreme</option>
+                      </select>
+                      {errors.difficulty_level && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          {errors.difficulty_level.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-base font-bold">Budget Per Person <span className="text-xs badge-secondary">Optional</span></Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="estimated_budget_min" className="text-sm">Minimum (₹ or $)</Label>
+                        <Input
+                          id="estimated_budget_min"
+                          type="number"
+                          min="0"
+                          placeholder="E.g., 15000"
+                          className="text-base"
+                          {...register('estimated_budget_min', { valueAsNumber: true })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="estimated_budget_max" className="text-sm">Maximum (₹ or $)</Label>
+                        <Input
+                          id="estimated_budget_max"
+                          type="number"
+                          min="0"
+                          placeholder="E.g., 25000"
+                          className="text-base"
+                          {...register('estimated_budget_max', { valueAsNumber: true })}
+                        />
+                      </div>
+                    </div>
+                    {(errors.estimated_budget_min || errors.estimated_budget_max) && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-4 w-4" />
+                        {errors.estimated_budget_min?.message || errors.estimated_budget_max?.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Estimated budget range including accommodation, food, transport, and activities</p>
+                  </div>
                     </div>
                   </>
                 )}
@@ -944,17 +1061,17 @@ export default function Publish() {
                     </Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
                       {[
-                        'AI/ML',
-                        'Web3/Blockchain',
-                        'FinTech',
-                        'HealthTech',
-                        'EdTech',
-                        'E-Commerce',
-                        'SaaS',
-                        'DevTools',
-                        'IoT',
-                        'Gaming',
-                        'Social',
+                        'Solo Travel',
+                        'Women-Only',
+                        'Family',
+                        'Road Trip',
+                        'Trekking',
+                        'Cultural',
+                        'Spiritual',
+                        'Food & Culinary',
+                        'Adventure',
+                        'Wildlife',
+                        'Photography',
                         'Other'
                       ].map((cat) => (
                         <label key={cat} className="flex items-center gap-2 cursor-pointer hover:bg-muted p-2 rounded">
@@ -1026,19 +1143,64 @@ export default function Publish() {
                   </div>
 
                   <div className="space-y-3">
+                    <Label htmlFor="hackathonName" className="text-base font-bold flex items-center gap-2">
+                      <span className="inline-flex items-center gap-2"><Calendar className="h-4 w-4" /> Day-by-Day Itinerary</span>
+                      <span className="text-xs badge-info">Recommended</span>
+                    </Label>
+                    <Textarea
+                      id="hackathonName"
+                      placeholder="Day 1: Arrival in Manali, check-in at hotel, local market exploration...
+Day 2: Trek to Chandratal Lake, camping under stars...
+Day 3: Return journey via Kunzum Pass, visit local monastery...
+(Add as many days as needed with details about activities, accommodations, and travel times)"
+                      rows={15}
+                      className="text-base resize-none"
+                      {...register('hackathonName')}
+                    />
+                    <p className="text-xs text-muted-foreground">Detailed day-wise breakdown helps travelers plan better</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="hackathonDate" className="text-base font-bold flex items-center gap-2">
+                      <span className="inline-flex items-center gap-2"><Shield className="h-4 w-4" /> Safety Intelligence & Risks</span>
+                      <span className="text-xs badge-warning">Important</span>
+                    </Label>
+                    <Textarea
+                      id="hackathonDate"
+                      placeholder="List specific risks travelers should know about:
+- Landslide zones during monsoon
+- Wildlife encounters (bears, leopards)
+- Nearest hospital: District Hospital, Kaza (45km)
+- Network connectivity: Only BSNL available after Gramphu
+- Emergency numbers: Local police, forest dept
+- Altitude sickness precautions above 3000m
+- Road conditions and weather warnings"
+                      rows={10}
+                      className="text-base resize-none"
+                      {...register('hackathonDate')}
+                    />
+                    <p className="text-xs text-muted-foreground">Critical safety information can prevent emergencies</p>
+                  </div>
+
+                  <div className="space-y-3">
                     <Label htmlFor="inspiration" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Travel Inspiration</span>
+                      <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Hidden Gems & Local Businesses</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
                       id="inspiration"
-                      placeholder="What inspired you to take this trip? Was it a lifelong dream, bucket list item, or spontaneous adventure? What drew you to these destinations?"
-                      rows={4}
+                      placeholder="Mention verified homestays, local guides, authentic restaurants, unique spots:
+- Tashi's Homestay in Kibber village (verified, ₹800/night)
+- Norbu's Cafe - best momos in Kaza
+- Local guide Dorje (+91-XXXXXXXXXX) - knows secret viewpoints
+- Ancient monastery with rare manuscripts (ask for permission)
+- Hidden waterfall 2km off main route"
+                      rows={6}
                       className="text-base resize-none"
                       value={inspiration}
                       onChange={(e) => setInspiration(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">Share the 'why' behind your travel journey</p>
+                    <p className="text-xs text-muted-foreground">Support local businesses and share insider knowledge</p>
                   </div>
                 </div>
               </div>
@@ -1088,13 +1250,13 @@ export default function Publish() {
               </div>
               )}
 
-              {/* NEW: Pitch Deck Section */}
+              {/* NEW: Permits & Documents Section */}
               {currentStep === 4 && (
               <div className="card-elevated p-8 bg-gradient-to-br from-card to-secondary/10" id="pitchDeckSection">
                 <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
-                  <span className="inline-flex items-center gap-2"><FileText className="h-6 w-6" /> Pitch Deck</span>
+                  <span className="inline-flex items-center gap-2"><FileText className="h-6 w-6" /> Permits & Documents</span>
                 </h2>
-                <p className="text-sm text-muted-foreground mb-6">Upload your pitch deck to give investors and collaborators a complete view</p>
+                <p className="text-sm text-muted-foreground mb-6">Upload permits, tickets, or ID proof for verification (Optional)</p>
 
                 <div className="space-y-4">
                   {!pitchDeckUrl ? (
@@ -1122,8 +1284,8 @@ export default function Publish() {
                               <FileText className="h-8 w-8 text-primary" />
                             </div>
                             <div>
-                              <p className="text-base font-bold text-foreground mb-1">Upload Pitch Deck (PDF)</p>
-                              <p className="text-xs text-muted-foreground">Max 25MB • Stored on IPFS</p>
+                              <p className="text-base font-bold text-foreground mb-1">Upload Permits/Documents (PDF)</p>
+                              <p className="text-xs text-muted-foreground">Max 25MB • Permits, tickets, ID proof</p>
                             </div>
                           </>
                         )}
@@ -1137,7 +1299,7 @@ export default function Publish() {
                             <FileText className="h-6 w-6 text-black" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-foreground">{pitchDeckFile?.name || 'Pitch Deck'}</p>
+                            <p className="text-sm font-bold text-foreground">{pitchDeckFile?.name || 'Permit Document'}</p>
                             <p className="text-xs text-muted-foreground">
                               {pitchDeckFile ? `${(pitchDeckFile.size / 1024 / 1024).toFixed(2)} MB` : 'Uploaded'}
                             </p>
@@ -1147,7 +1309,7 @@ export default function Publish() {
                           type="button"
                           onClick={handleRemovePitchDeck}
                           className="p-2 hover:bg-destructive/20 rounded-lg transition-smooth"
-                          title="Remove pitch deck"
+                          title="Remove document"
                         >
                           <X className="h-5 w-5 text-destructive" />
                         </button>
@@ -1155,7 +1317,7 @@ export default function Publish() {
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground inline-flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4" /> A good pitch deck can significantly increase investor interest and collaboration opportunities
+                    <Lightbulb className="h-4 w-4" /> Uploading permits and tickets adds credibility to your itinerary
                   </p>
                 </div>
               </div>
@@ -1253,12 +1415,12 @@ export default function Publish() {
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="demoUrl">
-                      Demo URL
+                      Booking / Reference Link <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Input
                       id="demoUrl"
                       type="url"
-                      placeholder="https://demo.example.com"
+                      placeholder="https://yourblog.com/trip-guide or booking page link"
                       aria-invalid={!!errors.demoUrl}
                       className={`${errors.demoUrl ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
                       {...register('demoUrl')}
@@ -1266,48 +1428,25 @@ export default function Publish() {
                     {errors.demoUrl && (
                       <p className="text-sm text-destructive">{errors.demoUrl.message}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">A working demo helps showcase your project's functionality</p>
+                    <p className="text-xs text-muted-foreground">Link to your blog post, travel guide, or booking page for this trip</p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="githubUrl">
-                      GitHub URL <span className="text-xs text-muted-foreground">(Required for AI analysis)</span>
+                      Map Link <span className="text-xs text-muted-foreground">(GPX / KML / Google Maps)</span>
                     </Label>
                     <Input
                       id="githubUrl"
                       type="url"
-                      placeholder="https://github.com/username/repo"
+                      placeholder="https://maps.google.com/... or GPX/KML file link"
                       aria-invalid={!!errors.githubUrl}
-                      disabled={!user?.github_connected}
                       className={`${errors.githubUrl ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
-                      {...register('githubUrl', {
-                        onChange: (e) => validateGithubUrl(e.target.value),
-                        onBlur: (e) => validateGithubUrl(e.target.value)
-                      })}
+                      {...register('githubUrl')}
                     />
-                    {!user?.github_connected && (
-                      <p className="text-xs text-muted-foreground">
-                        Connect GitHub to enable this field so we can analyze your repository.
-                      </p>
-                    )}
                     {errors.githubUrl && (
                       <p className="text-sm text-destructive">{errors.githubUrl.message}</p>
                     )}
-                    {githubUrlWarning && (
-                      <div className={`flex items-start gap-2 p-2 rounded-md transition-all duration-200 ${
-                        githubUrlWarning.startsWith('✓')
-                          ? 'bg-primary border border-primary/80 hover:bg-primary/90 hover:border-primary'
-                          : 'bg-primary border border-primary/80 hover:bg-primary/90'
-                      }`}>
-                        {githubUrlWarning.startsWith('✓') ? (
-                          <Check className="h-4 w-4 text-black mt-0.5 flex-shrink-0 font-bold stroke-2" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-black mt-0.5 flex-shrink-0 font-bold stroke-2" />
-                        )}
-                        <p className={`text-xs font-semibold text-black`}>{githubUrlWarning}</p>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">GitHub repo required for AI to analyze code quality and team credentials.</p>
+                    <p className="text-xs text-muted-foreground">Essential for route verification. Share Google Maps link, GPX file, or KML file with your route</p>
                   </div>
                 </div>
               </div>
@@ -1316,12 +1455,13 @@ export default function Publish() {
               {currentStep === 2 && (
               <div className="card-elevated p-8" id="techStackSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Travel Activities & Interests *
+                  Safety & Gear Tags *
                 </h2>
+                <p className="text-sm text-muted-foreground mb-4">Add tags for safety information, required gear, and logistics</p>
                 <div className="space-y-5">
                   <div className="flex gap-3">
                     <Input
-                      placeholder="Add activity (e.g., Hiking, Cultural Sites, Beach, Food Tour, Adventure Sports)"
+                      placeholder="Type and press enter (e.g., 'First Aid Required', '4G Network', 'Permit Needed', 'Safe for Solo')"
                       value={techInput}
                       onChange={(e) => setTechInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTech())}
@@ -1352,7 +1492,7 @@ export default function Publish() {
                   {techStack.length === 0 && showErrorSummary && (
                     <p className="text-sm font-bold text-destructive flex items-center gap-1">
                       <AlertTriangle className="h-4 w-4" />
-                      Add at least one technology
+                      Add at least one safety or gear tag
                     </p>
                   )}
                 </div>
@@ -1558,11 +1698,11 @@ export default function Publish() {
               {currentStep === 4 && (
               <div className="card-elevated p-8" id="screenshotsSection">
                 <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Screenshots <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                  Trip Photos <span className="text-xs text-muted-foreground font-normal">(Recommended)</span>
                 </h2>
                 <div className="space-y-5">
                   <p className="text-sm text-muted-foreground">
-                    Upload screenshots to showcase your project's UI and features. Images are stored on IPFS via Pinata.
+                    Upload geotagged photos as visual proof of your journey. High-quality images increase trust. Stored securely on IPFS.
                   </p>
 
                   {/* File Upload Button */}
@@ -1592,7 +1732,7 @@ export default function Publish() {
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                           </svg>
-                          Upload Screenshots ({screenshotUrls.length}/5)
+                          Upload Trip Photos ({screenshotUrls.length}/5)
                         </>
                       )}
                     </label>
