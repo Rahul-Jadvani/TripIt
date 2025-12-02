@@ -55,7 +55,7 @@ class TravelIntel(db.Model):
     resolved_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
-    replies = db.relationship('TravelIntel', remote_side=[id], backref='parent', lazy='dynamic', cascade='all, delete-orphan')
+    replies = db.relationship('TravelIntel', backref=db.backref('parent', remote_side=[id]), lazy='dynamic', cascade='all, delete-orphan')
 
     def to_dict(self):
         """Convert to dictionary"""

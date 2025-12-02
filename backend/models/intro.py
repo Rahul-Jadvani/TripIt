@@ -31,6 +31,11 @@ class Intro(db.Model):
         db.CheckConstraint("status IN ('pending', 'accepted', 'declined')"),
     )
 
+    # Relationships
+    # requester, recipient, and project are all created via backrefs from User and Project models
+    # See: User model lines 53-56 for requester/recipient backrefs
+    # See: Project model line 88 for project backref
+
     def to_dict(self, include_users=False):
         """Convert to dictionary"""
         data = {

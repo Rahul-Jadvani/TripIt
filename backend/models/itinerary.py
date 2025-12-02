@@ -93,7 +93,7 @@ class Itinerary(db.Model):
     safety_alerts = db.relationship('SafetyAlert', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
     safety_ratings = db.relationship('SafetyRating', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
     travel_intel = db.relationship('TravelIntel', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
-    travel_groups = db.relationship('TravelGroup', secondary='travel_group_itineraries', lazy='dynamic')
+    # travel_groups relationship defined in TravelGroup model with backref
 
     def calculate_proof_score(self):
         """Recalculate proof score from components"""
@@ -105,9 +105,9 @@ class Itinerary(db.Model):
             self.quality_score
         )
 
-    def to_dict(self):
+    def to_dict(self, include_creator=False, user_id=None):
         """Convert to dictionary"""
-        return {
+        data = {
             'id': self.id,
             'uuid': self.uuid,
             'title': self.title,
@@ -128,6 +128,16 @@ class Itinerary(db.Model):
             'proof_score': self.proof_score,
             'is_published': self.is_published,
             'is_featured': self.is_featured,
+            'view_count': self.view_count,
+            'helpful_votes': self.helpful_votes,
+            'comment_count': self.comment_count,
+            'created_by_traveler_id': self.created_by_traveler_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+        # Include creator info if requested
+        if include_creator and self.creator:
+            data['creator'] = self.creator.to_dict()
+
+        return data

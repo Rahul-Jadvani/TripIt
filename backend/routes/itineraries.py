@@ -85,7 +85,7 @@ def list_itineraries(user_id):
 
         # Credibility score filter
         if min_score is not None:
-            query = query.filter(Itinerary.travel_credibility_score >= min_score)
+            query = query.filter(Itinerary.proof_score >= min_score)
 
         # Safety score filter
         if min_safety_score is not None:
@@ -113,17 +113,17 @@ def list_itineraries(user_id):
         # Sorting
         if sort == 'trending' or sort == 'hot':
             query = query.order_by(
-                Itinerary.travel_credibility_score.desc(),
+                Itinerary.proof_score.desc(),
                 Itinerary.created_at.desc()
             )
         elif sort == 'newest' or sort == 'new':
             query = query.order_by(Itinerary.created_at.desc())
         elif sort == 'top-rated' or sort == 'top':
-            query = query.order_by(Itinerary.safety_score.desc(), Itinerary.travel_credibility_score.desc())
+            query = query.order_by(Itinerary.safety_score.desc(), Itinerary.proof_score.desc())
         elif sort == 'most-helpful':
-            query = query.order_by(Itinerary.helpful_count.desc())
+            query = query.order_by(Itinerary.helpful_votes.desc())
         else:
-            query = query.order_by(Itinerary.travel_credibility_score.desc(), Itinerary.created_at.desc())
+            query = query.order_by(Itinerary.proof_score.desc(), Itinerary.created_at.desc())
 
         # Count and paginate
         total = query.count()
@@ -201,7 +201,7 @@ def create_itinerary(user_id):
 
         # Create itinerary
         itinerary = Itinerary(
-            traveler_id=user_id,
+            created_by_traveler_id=user_id,
             title=validated_data['title'],
             description=validated_data['description'],
             destination=validated_data['destination'],
@@ -227,7 +227,7 @@ def create_itinerary(user_id):
 
         # Set initial scoring status
         itinerary.scoring_status = 'pending'
-        itinerary.travel_credibility_score = 0
+        itinerary.proof_score = 0
 
         db.session.commit()
 
@@ -264,7 +264,7 @@ def update_itinerary(user_id, itinerary_id):
         if not itinerary:
             return error_response('Not found', 'Itinerary not found', 404)
 
-        if itinerary.traveler_id != user_id:
+        if itinerary.created_by_traveler_id != user_id:
             return error_response('Forbidden', 'You can only edit your own itineraries', 403)
 
         data = request.get_json()
@@ -322,7 +322,7 @@ def delete_itinerary(user_id, itinerary_id):
         if not itinerary:
             return error_response('Not found', 'Itinerary not found', 404)
 
-        if itinerary.traveler_id != user_id:
+        if itinerary.created_by_traveler_id != user_id:
             return error_response('Forbidden', 'You can only delete your own itineraries', 403)
 
         itinerary.is_deleted = True
@@ -533,7 +533,7 @@ def get_leaderboard(user_id):
             query = query.filter(Itinerary.created_at >= since)
 
         top_itineraries = query.options(joinedload(Itinerary.creator)).order_by(
-            Itinerary.travel_credibility_score.desc()
+            Itinerary.proof_score.desc()
         ).limit(limit).all()
 
         # Top travelers
@@ -542,9 +542,9 @@ def get_leaderboard(user_id):
             Traveler.username,
             Traveler.first_name,
             Traveler.avatar_url,
-            func.sum(Itinerary.travel_credibility_score).label('total_score'),
+            func.sum(Itinerary.proof_score).label('total_score'),
             func.count(Itinerary.id).label('itinerary_count')
-        ).join(Itinerary, Traveler.id == Itinerary.traveler_id).filter(
+        ).join(Itinerary, Traveler.id == Itinerary.created_by_traveler_id).filter(
             Itinerary.is_deleted == False
         )
 
@@ -554,7 +554,7 @@ def get_leaderboard(user_id):
         top_travelers = traveler_query.group_by(
             Traveler.id, Traveler.username, Traveler.first_name, Traveler.avatar_url
         ).order_by(
-            func.sum(Itinerary.travel_credibility_score).desc()
+            func.sum(Itinerary.proof_score).desc()
         ).limit(limit).all()
 
         # Featured itineraries
@@ -632,7 +632,7 @@ def get_itineraries_by_destination(user_id, destination):
             Itinerary.is_deleted == False,
             Itinerary.destination.ilike(f'%{destination}%')
         ).options(joinedload(Itinerary.creator)).order_by(
-            Itinerary.travel_credibility_score.desc()
+            Itinerary.proof_score.desc()
         ).limit(limit).all()
 
         data = [i.to_dict(include_creator=True, user_id=user_id) for i in itineraries]
@@ -679,6 +679,37 @@ def get_rising_stars(user_id):
         }
 
         CacheService.set('rising_stars_itineraries', response_data, ttl=3600)
+
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
+@itineraries_bp.route('/most-requested', methods=['GET'])
+@optional_auth
+def get_most_requested_itineraries(user_id):
+    """Get most requested/popular itineraries by view count and engagement"""
+    try:
+        limit = request.args.get('limit', 20, type=int)
+        limit = min(limit, 50)
+
+        itineraries = Itinerary.query.filter_by(
+            is_deleted=False
+        ).options(joinedload(Itinerary.creator)).order_by(
+            Itinerary.view_count.desc(),
+            Itinerary.safety_ratings_count.desc()
+        ).limit(limit).all()
+
+        data = [i.to_dict(include_creator=True, user_id=user_id) for i in itineraries]
+
+        response_data = {
+            'status': 'success',
+            'message': 'Most requested itineraries retrieved',
+            'data': data
+        }
+
+        CacheService.set('most_requested_itineraries', response_data, ttl=3600)
 
         return jsonify(response_data), 200
 

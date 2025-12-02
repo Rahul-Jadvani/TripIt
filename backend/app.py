@@ -64,12 +64,16 @@ def initialize_root_admins():
     try:
         from sqlalchemy import text
 
+        # Ensure we start with a clean session state
+        db.session.rollback()
+
         # Try to disable triggers (only works if database has superuser privileges)
         try:
             db.session.execute(text("SET session_replication_role = replica;"))
             triggers_disabled = True
         except Exception:
             # Neon/cloud databases may not allow this - continue without disabling triggers
+            db.session.rollback()  # Clear the failed transaction
             triggers_disabled = False
 
         # Update registered users to admin using raw SQL

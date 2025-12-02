@@ -84,13 +84,13 @@ class Traveler(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_verified_date = db.Column(db.DateTime, nullable=True)
 
-    # Relationships (disabled until database tables are created)
-    # itineraries = db.relationship('Itinerary', backref='creator', lazy='dynamic', foreign_keys='Itinerary.created_by_traveler_id')
-    # safety_ratings = db.relationship('SafetyRating', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='SafetyRating.traveler_id')
-    # travel_intel = db.relationship('TravelIntel', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='TravelIntel.traveler_id')
-    # travel_groups = db.relationship('TravelGroup', backref='creator', lazy='dynamic', foreign_keys='TravelGroup.created_by_traveler_id')
-    # certifications = db.relationship('TravelerCertification', backref='traveler', lazy='dynamic', cascade='all, delete-orphan')
-    # sbt_verification = db.relationship('SBTVerification', backref='traveler', uselist=False, cascade='all, delete-orphan')
+    # Relationships
+    itineraries = db.relationship('Itinerary', backref='creator', lazy='dynamic', foreign_keys='Itinerary.created_by_traveler_id')
+    safety_ratings = db.relationship('SafetyRating', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='SafetyRating.traveler_id')
+    travel_intel = db.relationship('TravelIntel', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='TravelIntel.traveler_id')
+    # travel_groups creator relationship is defined in TravelGroup model with backref='created_travel_groups'
+    certifications = db.relationship('TravelerCertification', backref='traveler', lazy='dynamic', cascade='all, delete-orphan')
+    sbt_verification = db.relationship('SBTVerification', backref='traveler', uselist=False, cascade='all, delete-orphan')
 
     def to_dict(self, include_sensitive=False):
         """Convert to dictionary"""
