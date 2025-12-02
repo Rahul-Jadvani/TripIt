@@ -12,6 +12,7 @@ import 'swiper/css';
 import { Project } from '@/types';
 import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
 import { InteractiveScrollBackground } from '@/components/InteractiveScrollBackground';
+import { VoteButtons } from '@/components/VoteButtons';
 
 interface TopRatedCarouselProps {
   projects: Project[];

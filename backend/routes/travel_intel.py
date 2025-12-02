@@ -43,8 +43,7 @@ def get_travel_intel(user_id):
         # Build query for top-level intel only (not replies)
         query = TravelIntel.query.filter_by(
             itinerary_id=itinerary_id,
-            parent_intel_id=None,
-            is_deleted=False
+            parent_intel_id=None
         )
 
         # Filter by type if specified
@@ -64,7 +63,7 @@ def get_travel_intel(user_id):
         total = query.count()
         intel_items = query.limit(per_page).offset((page - 1) * per_page).all()
 
-        data = [i.to_dict(include_creator=True) for i in intel_items]
+        data = [i.to_dict() for i in intel_items]
 
         response_data = {
             'status': 'success',
@@ -173,21 +172,20 @@ def get_travel_intel_detail(user_id, intel_id):
     """Get detailed travel intel with replies"""
     try:
         intel = TravelIntel.query.get(intel_id)
-        if not intel or intel.is_deleted:
+        if not intel:
             return error_response('Not found', 'Travel intel not found', 404)
 
         # Get replies
         replies = TravelIntel.query.filter_by(
-            parent_intel_id=intel_id,
-            is_deleted=False
+            parent_intel_id=intel_id
         ).order_by(TravelIntel.created_at.asc()).all()
 
         response_data = {
             'status': 'success',
             'message': 'Travel intel retrieved',
             'data': {
-                'intel': intel.to_dict(include_creator=True),
-                'replies': [r.to_dict(include_creator=True) for r in replies]
+                'intel': intel.to_dict(),
+                'replies': [r.to_dict() for r in replies]
             }
         }
 
@@ -265,8 +263,8 @@ def delete_travel_intel(user_id, intel_id):
         if intel.traveler_id != user_id:
             return error_response('Forbidden', 'You can only delete your own intel', 403)
 
-        intel.is_deleted = True
-        intel.deleted_at = datetime.utcnow()
+        # Hard delete since we don't have is_deleted column
+        db.session.delete(intel)
         db.session.commit()
 
         # Invalidate cache
@@ -342,14 +340,14 @@ def get_user_travel_intel(user_id):
     try:
         page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
 
-        query = TravelIntel.query.filter_by(traveler_id=user_id, is_deleted=False)
+        query = TravelIntel.query.filter_by(traveler_id=user_id)
         total = query.count()
 
         intel_items = query.order_by(
             TravelIntel.created_at.desc()
         ).limit(per_page).offset((page - 1) * per_page).all()
 
-        data = [i.to_dict(include_creator=True) for i in intel_items]
+        data = [i.to_dict() for i in intel_items]
 
         response_data = {
             'status': 'success',
@@ -420,29 +418,25 @@ def get_itinerary_intel_stats(user_id, itinerary_id):
 
         # Get stats
         total_intel = TravelIntel.query.filter_by(
-            itinerary_id=itinerary_id,
-            is_deleted=False
+            itinerary_id=itinerary_id
         ).count()
 
         by_type = {}
         for intel_type in ['question', 'update', 'warning', 'recommendation', 'local_insight']:
             count = TravelIntel.query.filter_by(
                 itinerary_id=itinerary_id,
-                intel_type=intel_type,
-                is_deleted=False
+                intel_type=intel_type
             ).count()
             by_type[intel_type] = count
 
         critical_count = TravelIntel.query.filter_by(
             itinerary_id=itinerary_id,
-            severity_level='critical',
-            is_deleted=False
+            severity_level='critical'
         ).count()
 
         resolved_count = TravelIntel.query.filter_by(
             itinerary_id=itinerary_id,
-            status='resolved',
-            is_deleted=False
+            status='resolved'
         ).count()
 
         response_data = {

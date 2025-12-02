@@ -23,39 +23,30 @@ export const publishProjectSchema = z.object({
     .min(3, 'Destination must be at least 3 characters')
     .max(200, 'Destination must be less than 200 characters'),
 
-  start_date: z.string()
-    .min(1, 'Start date is required'),
-
-  end_date: z.string()
-    .min(1, 'End date is required'),
-
   duration_days: z.number()
     .min(1, 'Duration must be at least 1 day')
     .max(365, 'Duration must be less than 365 days')
     .optional(),
 
-  difficulty_level: z.enum(['easy', 'moderate', 'hard', 'extreme'])
-    .optional(),
-
-  estimated_budget_min: z.number()
-    .min(0)
-    .optional(),
-
-  estimated_budget_max: z.number()
+  estimated_budget: z.number()
     .min(0)
     .optional(),
 
   // Map Link (formerly githubUrl)
   githubUrl: z.string()
-    .url('Invalid URL format')
     .optional()
-    .or(z.literal('')),
+    .refine((val) => !val || val === '' || z.string().url().safeParse(val).success, {
+      message: 'Invalid URL format',
+    })
+    .default(''),
 
   // Booking/Reference Link (formerly demoUrl)
   demoUrl: z.string()
-    .url('Invalid URL format')
     .optional()
-    .or(z.literal('')),
+    .refine((val) => !val || val === '' || z.string().url().safeParse(val).success, {
+      message: 'Invalid URL format',
+    })
+    .default(''),
 
   // Step 2: Tags & Logistics
   techStack: z.array(z.string()).optional().default([]), // Safety & Gear Tags

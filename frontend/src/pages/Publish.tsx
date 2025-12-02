@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight, Github, Calendar } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PublishLoader, PublishSuccess } from '@/components/PublishLoader';
 import { toast } from 'sonner';
@@ -25,10 +25,10 @@ export default function Publish() {
   // Multistep state
   const [currentStep, setCurrentStep] = useState<number>(1);
   const stepDefs: { index: number; label: string; anchors: string[] }[] = [
-    { index: 1, label: 'Basics', anchors: ['basicsSection', 'linksSection'] },
-    { index: 2, label: 'Tech & Categories', anchors: ['categoriesSection', 'techStackSection'] },
-    { index: 3, label: 'Team & Story', anchors: ['teamSection', 'storySection', 'marketSection'] },
-    { index: 4, label: 'Assets & Submit', anchors: ['pitchDeckSection', 'screenshotsSection'] },
+    { index: 1, label: 'Trip Details', anchors: ['basicsSection', 'linksSection'] },
+    { index: 2, label: 'Travel Types & Tags', anchors: ['categoriesSection', 'techStackSection'] },
+    { index: 3, label: 'Journey & Team', anchors: ['teamSection', 'storySection', 'marketSection'] },
+    { index: 4, label: 'Photos & Submit', anchors: ['screenshotsSection'] },
   ];
   const totalSteps = stepDefs.length;
   const scrollToSection = (id?: string) => {
@@ -63,7 +63,6 @@ export default function Publish() {
       teamSection: 'teamSection',
       storySection: 'storySection',
       marketSection: 'marketSection',
-      pitchDeckSection: 'pitchDeckSection',
       screenshotsSection: 'screenshotsSection',
     };
     const section = idToSection[id] || id;
@@ -75,7 +74,6 @@ export default function Publish() {
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
-  const [githubActionLoading, setGithubActionLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{ user_id?: string; name: string; role: string; username?: string; avatar_url?: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<{ id: string; username: string; display_name: string; email: string; avatar_url?: string } | null>(null);
   const [memberRole, setMemberRole] = useState('');
@@ -105,22 +103,12 @@ export default function Publish() {
     }
   }, [refreshUser]);
 
-  // Hackathons state
-  const [hackathons, setHackathons] = useState<{ name: string; date: string; prize?: string }[]>([]);
-  const [destinationName, setdestinationName] = useState('');
-  const [hackathonDate, setHackathonDate] = useState('');
-  const [hackathonPrize, setHackathonPrize] = useState('');
-
   // NEW: Extended project information
-  const [pitchDeckUrl, setPitchDeckUrl] = useState<string>('');
-  const [pitchDeckFile, setPitchDeckFile] = useState<File | null>(null);
-  const [uploadingPitchDeck, setUploadingPitchDeck] = useState(false);
   const [projectStory, setProjectStory] = useState('');
   const [inspiration, setInspiration] = useState('');
   const [marketComparison, setMarketComparison] = useState('');
   const [noveltyFactor, setNoveltyFactor] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedChainIds, setSelectedChainIds] = useState<string[]>([]);
 
   const createProjectMutation = useCreateItinerary();
 
@@ -138,12 +126,8 @@ export default function Publish() {
       tagline: '',
       description: '',
       destination: '',
-      start_date: '',
-      end_date: '',
       duration_days: undefined,
-      difficulty_level: undefined,
-      estimated_budget_min: undefined,
-      estimated_budget_max: undefined,
+      estimated_budget: undefined,
       demoUrl: '',
       githubUrl: '',
       hackathonName: '',
@@ -156,10 +140,10 @@ export default function Publish() {
   // Guarded next for per-step validation
   const handleNext = async () => {
     if (currentStep === 1) {
-      const ok = await trigger(['title', 'description', 'destination', 'start_date', 'end_date']);
+      const ok = await trigger(['title', 'description', 'destination']);
       if (!ok) {
         setShowErrorSummary(true);
-        const firstInvalid = ['title', 'description', 'destination', 'start_date', 'end_date'].find((f) => (errors as any)?.[f]);
+        const firstInvalid = ['title', 'description', 'destination'].find((f) => (errors as any)?.[f]);
         if (firstInvalid) {
           document.getElementById(firstInvalid)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -249,23 +233,6 @@ export default function Publish() {
     setTeamMembers(teamMembers.filter((_, i) => i !== index));
   };
 
-  const handleAddHackathon = () => {
-    if (destinationName.trim()) {
-      setHackathons([...hackathons, {
-        name: destinationName.trim(),
-        date: hackathonDate || '',
-        prize: hackathonPrize.trim() || undefined
-      }]);
-      setdestinationName('');
-      setHackathonDate('');
-      setHackathonPrize('');
-    }
-  };
-
-  const handleRemoveHackathon = (index: number) => {
-    setHackathons(hackathons.filter((_, i) => i !== index));
-  };
-
   const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -341,95 +308,6 @@ export default function Publish() {
     setScreenshotFiles(screenshotFiles.filter((_, i) => i !== index));
   };
 
-  const handlePitchDeckUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-
-    // Validate file type
-    if (file.type !== 'application/pdf') {
-      toast.error('Only PDF files are allowed for pitch decks');
-      return;
-    }
-
-    // Validate file size (25MB max)
-    if (file.size > 25 * 1024 * 1024) {
-      toast.error('File size must be less than 25MB');
-      return;
-    }
-
-    setUploadingPitchDeck(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload/pitch-deck`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      const ipfsUrl = data.data.url;
-
-      setPitchDeckUrl(ipfsUrl);
-      setPitchDeckFile(file);
-      toast.success('Pitch deck uploaded successfully!');
-    } catch (error: any) {
-      if (import.meta.env.DEV) console.error('Pitch deck upload error:', error);
-      toast.error('Failed to upload pitch deck');
-    } finally {
-      setUploadingPitchDeck(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleRemovePitchDeck = () => {
-    setPitchDeckUrl('');
-    setPitchDeckFile(null);
-  };
-
-  const handleGithubConnect = async () => {
-    setGithubActionLoading(true);
-    try {
-      const response = await authService.githubConnect();
-      const authUrl = response.data?.data?.auth_url;
-      if (!authUrl) {
-        toast.error('Failed to start GitHub connection');
-        setGithubActionLoading(false);
-        return;
-      }
-      window.location.href = authUrl;
-    } catch (error: any) {
-      if (import.meta.env.DEV) console.error('GitHub connect error:', error);
-      const message = error.response?.data?.message || error.message || 'Failed to connect GitHub';
-      toast.error(message);
-      setGithubActionLoading(false);
-    }
-  };
-
-  const handleGithubDisconnect = async () => {
-    setGithubActionLoading(true);
-    try {
-      await authService.githubDisconnect();
-      toast.success('GitHub account disconnected');
-      if (refreshUser) await refreshUser();
-    } catch (error: any) {
-      if (import.meta.env.DEV) console.error('GitHub disconnect error:', error);
-      const message = error.response?.data?.message || error.message || 'Failed to disconnect GitHub';
-      toast.error(message);
-    } finally {
-      setGithubActionLoading(false);
-    }
-  };
-
   const onSubmit = async (data: PublishProjectInput) => {
     if (techStack.length === 0) {
       goToStep(getStepForId('techStackSection'));
@@ -446,89 +324,40 @@ export default function Publish() {
     }
 
     try {
-      // Convert camelCase to snake_case for backend
+      // Map frontend fields to backend ItineraryCreateSchema
       const payload: any = {
         title: data.title,
         description: data.description,
-        tech_stack: techStack,
-        // Required travel fields
         destination: data.destination,
-        start_date: data.start_date,
-        end_date: data.end_date,
+        activity_tags: techStack,  // Map tech_stack → activity_tags
       };
 
       // Add optional fields only if they have values
-      if (data.tagline && data.tagline.trim()) {
-        payload.tagline = data.tagline;
-      }
-      if (data.demoUrl && data.demoUrl.trim()) {
-        payload.demo_url = data.demoUrl;
-      }
       if (data.githubUrl && data.githubUrl.trim()) {
-        payload.route_gpx = data.githubUrl;  // Map link (GPX/KML/Google Maps)
+        payload.route_map_url = data.githubUrl;  // Map link (GPX/KML/Google Maps)
       }
       if (data.duration_days) {
         payload.duration_days = data.duration_days;
       }
-      if (data.difficulty_level) {
-        payload.difficulty_level = data.difficulty_level;
-      }
-      if (data.estimated_budget_min) {
-        payload.estimated_budget_min = data.estimated_budget_min;
-      }
-      if (data.estimated_budget_max) {
-        payload.estimated_budget_max = data.estimated_budget_max;
-      }
-      if (data.hackathonName && data.hackathonName.trim()) {
-        payload.hackathon_name = data.hackathonName;  // Day-by-day itinerary
-      }
-      if (data.hackathonDate && data.hackathonDate.trim()) {
-        payload.hackathon_date = data.hackathonDate;  // Safety intelligence
-      }
-      // Send hackathons array if any exist
-      if (hackathons.length > 0) {
-        payload.hackathons = hackathons;
-      }
-      if (screenshotUrls.length > 0) {
-        payload.screenshot_urls = screenshotUrls;
+      if (data.estimated_budget) {
+        payload.budget_amount = data.estimated_budget;
+        payload.budget_currency = 'INR';  // Default to INR for Indian rupees
       }
       if (teamMembers.length > 0) {
-        payload.team_members = teamMembers.map((m) => {
+        payload.travel_companions = teamMembers.map((m) => {
           const t: any = {};
-          if (m.user_id) t.user_id = m.user_id;
+          if (m.user_id) t.traveler_id = m.user_id;
           if (m.name) t.name = m.name;
           if (m.role) t.role = m.role;
           if (m.username) t.username = m.username;
-          if (m.avatar_url) t.avatar_url = m.avatar_url; // omit null/undefined to avoid backend null errors
+          if (m.avatar_url) t.avatar_url = m.avatar_url;
           return t;
         });
       }
-      // NEW: Add extended project information
-      if (projectStory && projectStory.trim()) {
-        payload.project_story = projectStory;
-      }
-      if (inspiration && inspiration.trim()) {
-        payload.inspiration = inspiration;
-      }
-      if (pitchDeckUrl && pitchDeckUrl.trim()) {
-        payload.pitch_deck_url = pitchDeckUrl;
-      }
-      if (marketComparison && marketComparison.trim()) {
-        payload.market_comparison = marketComparison;
-      }
-      if (noveltyFactor && noveltyFactor.trim()) {
-        payload.novelty_factor = noveltyFactor;
-      }
-      if (categories && categories.length > 0) {
-        payload.categories = categories;
-      }
-      if (selectedChainIds && selectedChainIds.length > 0) {
-        payload.chain_ids = selectedChainIds;
-      }
 
       if (import.meta.env.DEV) {
-        console.log('=== SUBMITTING PROJECT ===');
-        console.log('GitHub URL from form:', data.githubUrl);
+        console.log('=== SUBMITTING ITINERARY ===');
+        console.log('Map Link from form:', data.githubUrl);
         console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
         console.log('========================');
       }
@@ -537,22 +366,18 @@ export default function Publish() {
       setPublishState('loading');
       const res: any = await createProjectMutation.mutateAsync(payload);
       const newId = res?.data?.data?.id || res?.data?.data?.project_id || res?.data?.id;
-      toast.success('Project published successfully!');
+      toast.success('Itinerary published successfully!');
       setPublishedId(newId);
       setPublishState('success');
       reset();
       setTechStack([]);
       setScreenshotUrls([]);
       setTeamMembers([]);
-      // NEW: Reset extended fields
       setProjectStory('');
       setInspiration('');
-      setPitchDeckUrl('');
-      setPitchDeckFile(null);
       setMarketComparison('');
       setNoveltyFactor('');
       setCategories([]);
-      setSelectedChainIds([]);
       // Navigation handled by success modal action
     } catch (error: any) {
       if (import.meta.env.DEV) console.error('Error publishing project:', error);
@@ -588,8 +413,6 @@ export default function Publish() {
     if (formErrors?.title?.message) list.push({ id: 'title', message: `Title: ${formErrors.title.message}` });
     if (formErrors?.description?.message) list.push({ id: 'description', message: `Trip Overview: ${formErrors.description.message}` });
     if (formErrors?.destination?.message) list.push({ id: 'destination', message: `Destination: ${formErrors.destination.message}` });
-    if (formErrors?.start_date?.message) list.push({ id: 'start_date', message: `Start Date: ${formErrors.start_date.message}` });
-    if (formErrors?.end_date?.message) list.push({ id: 'end_date', message: `End Date: ${formErrors.end_date.message}` });
     if (formErrors?.demoUrl?.message) list.push({ id: 'demoUrl', message: `Booking Link: ${formErrors.demoUrl.message}` });
     if (formErrors?.githubUrl?.message) list.push({ id: 'githubUrl', message: `Map Link: ${formErrors.githubUrl.message}` });
     // Business rules
@@ -693,7 +516,6 @@ export default function Publish() {
                 { id: 'teamSection', label: 'Companions' },
                 { id: 'storySection', label: 'Itinerary' },
                 { id: 'marketSection', label: 'Insights' },
-                { id: 'pitchDeckSection', label: 'Permits' },
                 { id: 'screenshotsSection', label: 'Photos' },
               ].map((s) => (
                 <button
@@ -708,57 +530,6 @@ export default function Publish() {
                   {s.label}
                 </button>
               ))}
-            </div>
-
-            {/* GitHub Connection - Outside Form */}
-            <div className="mt-6 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">GitHub Connection</p>
-                  <p className="text-xs text-muted-foreground">Connect your GitHub to enable AI analysis of your code and team credentials</p>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  {user?.github_connected ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleGithubDisconnect}
-                        disabled={githubActionLoading}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                        {githubActionLoading ? 'Working...' : 'Disconnect'}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleGithubConnect}
-                        disabled={githubActionLoading}
-                      >
-                        <Github className="h-3.5 w-3.5" />
-                        Reconnect
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleGithubConnect}
-                      disabled={githubActionLoading}
-                    >
-                      <Github className="h-3.5 w-3.5" />
-                      {githubActionLoading ? 'Opening...' : 'Connect GitHub'}
-                    </Button>
-                  )}
-                </div>
-                {user?.github_connected && (
-                  <span className="text-xs text-primary font-medium inline-flex items-center gap-1">
-                    <Github className="h-3 w-3" />
-                    @{user.github_username}
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* Proof Score Info - Collapsible */}
@@ -934,42 +705,6 @@ export default function Publish() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <Label htmlFor="start_date" className="text-base font-bold">Start Date *</Label>
-                      <Input
-                        id="start_date"
-                        type="date"
-                        aria-invalid={!!errors.start_date}
-                        className={`text-base ${errors.start_date ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
-                        {...register('start_date')}
-                      />
-                      {errors.start_date && (
-                        <p className="text-sm text-destructive flex items-center gap-1">
-                          <AlertTriangle className="h-4 w-4" />
-                          {errors.start_date.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="end_date" className="text-base font-bold">End Date *</Label>
-                      <Input
-                        id="end_date"
-                        type="date"
-                        aria-invalid={!!errors.end_date}
-                        className={`text-base ${errors.end_date ? 'border-destructive ring-2 ring-destructive/30' : ''}`}
-                        {...register('end_date')}
-                      />
-                      {errors.end_date && (
-                        <p className="text-sm text-destructive flex items-center gap-1">
-                          <AlertTriangle className="h-4 w-4" />
-                          {errors.end_date.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
                       <Label htmlFor="duration_days" className="text-base font-bold">Duration (Days) <span className="text-xs badge-secondary">Optional</span></Label>
                       <Input
                         id="duration_days"
@@ -986,64 +721,27 @@ export default function Publish() {
                           {errors.duration_days.message}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground">Auto-calculated from dates, or enter manually</p>
+                      <p className="text-xs text-muted-foreground">Number of days for this trip</p>
                     </div>
 
                     <div className="space-y-3">
-                      <Label htmlFor="difficulty_level" className="text-base font-bold">Difficulty Level <span className="text-xs badge-secondary">Optional</span></Label>
-                      <select
-                        id="difficulty_level"
-                        className="w-full text-base border rounded-md p-2 bg-background"
-                        {...register('difficulty_level')}
-                      >
-                        <option value="">Select difficulty</option>
-                        <option value="easy">Easy</option>
-                        <option value="moderate">Moderate</option>
-                        <option value="hard">Hard</option>
-                        <option value="extreme">Extreme</option>
-                      </select>
-                      {errors.difficulty_level && (
+                      <Label htmlFor="estimated_budget" className="text-base font-bold">Approx. Budget Per Person <span className="text-xs badge-secondary">Optional</span></Label>
+                      <Input
+                        id="estimated_budget"
+                        type="number"
+                        min="0"
+                        placeholder="E.g., 20000 (₹ or $)"
+                        className="text-base"
+                        {...register('estimated_budget', { valueAsNumber: true })}
+                      />
+                      {errors.estimated_budget && (
                         <p className="text-sm text-destructive flex items-center gap-1">
                           <AlertTriangle className="h-4 w-4" />
-                          {errors.difficulty_level.message}
+                          {errors.estimated_budget.message}
                         </p>
                       )}
+                      <p className="text-xs text-muted-foreground">Approximate cost including accommodation, food, transport</p>
                     </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-base font-bold">Budget Per Person <span className="text-xs badge-secondary">Optional</span></Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="estimated_budget_min" className="text-sm">Minimum (₹ or $)</Label>
-                        <Input
-                          id="estimated_budget_min"
-                          type="number"
-                          min="0"
-                          placeholder="E.g., 15000"
-                          className="text-base"
-                          {...register('estimated_budget_min', { valueAsNumber: true })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="estimated_budget_max" className="text-sm">Maximum (₹ or $)</Label>
-                        <Input
-                          id="estimated_budget_max"
-                          type="number"
-                          min="0"
-                          placeholder="E.g., 25000"
-                          className="text-base"
-                          {...register('estimated_budget_max', { valueAsNumber: true })}
-                        />
-                      </div>
-                    </div>
-                    {(errors.estimated_budget_min || errors.estimated_budget_max) && (
-                      <p className="text-sm text-destructive flex items-center gap-1">
-                        <AlertTriangle className="h-4 w-4" />
-                        {errors.estimated_budget_min?.message || errors.estimated_budget_max?.message}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Estimated budget range including accommodation, food, transport, and activities</p>
                   </div>
                     </div>
                   </>
@@ -1102,16 +800,6 @@ export default function Publish() {
                       )}
                     </div>
                   </div>
-
-                  {/* Chains Selector */}
-                  <div className="space-y-3 mt-6">
-                    <ChainSelector
-                      selectedChainIds={selectedChainIds}
-                      onSelectionChange={setSelectedChainIds}
-                      maxSelections={5}
-                      projectCategories={categories}
-                    />
-                  </div>
                   </>
                 )}
                 
@@ -1145,7 +833,7 @@ export default function Publish() {
                   <div className="space-y-3">
                     <Label htmlFor="hackathonName" className="text-base font-bold flex items-center gap-2">
                       <span className="inline-flex items-center gap-2"><Calendar className="h-4 w-4" /> Day-by-Day Itinerary</span>
-                      <span className="text-xs badge-info">Recommended</span>
+                      <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
                       id="hackathonName"
@@ -1250,162 +938,6 @@ Day 3: Return journey via Kunzum Pass, visit local monastery...
               </div>
               )}
 
-              {/* NEW: Permits & Documents Section */}
-              {currentStep === 4 && (
-              <div className="card-elevated p-8 bg-gradient-to-br from-card to-secondary/10" id="pitchDeckSection">
-                <h2 className="text-2xl font-black mb-2 text-foreground border-b-4 border-primary pb-3">
-                  <span className="inline-flex items-center gap-2"><FileText className="h-6 w-6" /> Permits & Documents</span>
-                </h2>
-                <p className="text-sm text-muted-foreground mb-6">Upload permits, tickets, or ID proof for verification (Optional)</p>
-
-                <div className="space-y-4">
-                  {!pitchDeckUrl ? (
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center bg-secondary/20 hover:bg-secondary/30 transition-smooth">
-                      <input
-                        type="file"
-                        id="pitchDeck"
-                        accept=".pdf"
-                        onChange={handlePitchDeckUpload}
-                        className="hidden"
-                        disabled={uploadingPitchDeck}
-                      />
-                      <label
-                        htmlFor="pitchDeck"
-                        className="cursor-pointer flex flex-col items-center gap-3"
-                      >
-                        {uploadingPitchDeck ? (
-                          <>
-                            <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                            <p className="text-sm font-bold text-foreground">Uploading to IPFS...</p>
-                          </>
-                        ) : (
-                          <>
-                            <div className="p-4 bg-primary/20 rounded-full">
-                              <FileText className="h-8 w-8 text-primary" />
-                            </div>
-                            <div>
-                              <p className="text-base font-bold text-foreground mb-1">Upload Permits/Documents (PDF)</p>
-                              <p className="text-xs text-muted-foreground">Max 25MB • Permits, tickets, ID proof</p>
-                            </div>
-                          </>
-                        )}
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-primary rounded-lg p-6 bg-primary/10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-primary rounded-lg">
-                            <FileText className="h-6 w-6 text-black" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground">{pitchDeckFile?.name || 'Permit Document'}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {pitchDeckFile ? `${(pitchDeckFile.size / 1024 / 1024).toFixed(2)} MB` : 'Uploaded'}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleRemovePitchDeck}
-                          className="p-2 hover:bg-destructive/20 rounded-lg transition-smooth"
-                          title="Remove document"
-                        >
-                          <X className="h-5 w-5 text-destructive" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground inline-flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4" /> Uploading permits and tickets adds credibility to your itinerary
-                  </p>
-                </div>
-              </div>
-              )}
-
-              {currentStep === 3 && (
-              <div className="card-elevated p-8">
-                <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3">
-                  Travel Companions (Optional)
-                </h2>
-                <div className="space-y-6">
-                  {/* Display existing hackathons */}
-                  {hackathons.length > 0 && (
-                    <div className="space-y-3">
-                      <Label>Added Hackathons</Label>
-                      {hackathons.map((hackathon, index) => (
-                        <div key={index} className="flex items-center gap-3 p-4 bg-secondary/20 rounded-lg border border-border">
-                          <div className="flex-1">
-                            <p className="font-bold text-foreground">{hackathon.name}</p>
-                            {hackathon.date && (
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(hackathon.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                              </p>
-                            )}
-                            {hackathon.prize && (
-                              <p className="text-sm text-primary font-semibold">{hackathon.prize}</p>
-                            )}
-                          </div>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRemoveHackathon(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Add new hackathon */}
-                  <div className="space-y-4 p-4 bg-secondary/10 rounded-lg border border-border">
-                    <div className="space-y-2">
-                      <Label htmlFor="destinationName">Destination Name *</Label>
-                      <Input
-                        id="destinationName"
-                        placeholder="e.g., ETH Global London"
-                        value={destinationName}
-                        onChange={(e) => setdestinationName(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="hackathonDate">Date</Label>
-                      <Input
-                        id="hackathonDate"
-                        type="date"
-                        value={hackathonDate}
-                        onChange={(e) => setHackathonDate(e.target.value)}
-                        style={{ colorScheme: 'dark' }}
-                        className="[&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:brightness-100 [&::-webkit-calendar-picker-indicator]:opacity-100"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="hackathonPrize">Prize/Award (Optional)</Label>
-                      <Input
-                        id="hackathonPrize"
-                        placeholder="e.g., 1st Place - $10,000"
-                        value={hackathonPrize}
-                        onChange={(e) => setHackathonPrize(e.target.value)}
-                      />
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleAddHackathon}
-                      disabled={!destinationName.trim()}
-                      className="w-full"
-                    >
-                      + Add Hackathon
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              )}
 
               {currentStep === 1 && (
               <div className="card-elevated p-8" id="linksSection">

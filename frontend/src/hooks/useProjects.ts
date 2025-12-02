@@ -1,13 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectsService } from '@/services/api';
+import { projectsService, itinerariesService } from '@/services/api';
 import { toast } from 'sonner';
 
 // Transform backend project data to frontend format
 export function transformProject(backendProject: any) {
+  // Map itinerary fields to project fields for compatibility
+  const techStack = backendProject.tech_stack || backendProject.activity_tags || [];
+  const teamMembers = backendProject.team_members || backendProject.travel_companions || [];
+  const demoUrl = backendProject.demo_url || backendProject.route_map_url || '';
+  const githubUrl = backendProject.github_url || backendProject.route_map_url || '';
+
   return {
     id: backendProject.id,
     title: backendProject.title,
-    tagline: backendProject.tagline || '',
+    tagline: backendProject.tagline || backendProject.destination || '',
     description: backendProject.description,
     projectStory: backendProject.project_story,
     project_story: backendProject.project_story,
@@ -18,25 +24,30 @@ export function transformProject(backendProject: any) {
     market_comparison: backendProject.market_comparison,
     noveltyFactor: backendProject.novelty_factor,
     novelty_factor: backendProject.novelty_factor,
+    // Itinerary-specific fields
+    destination: backendProject.destination,
+    duration_days: backendProject.duration_days,
+    budget_amount: backendProject.budget_amount,
+    budget_currency: backendProject.budget_currency,
     categories: (backendProject.categories || []).map((c: any) => {
       if (!c) return '';
       if (typeof c === 'string') return c;
       if (typeof c === 'object') return c.name || c.title || c.label || JSON.stringify(c);
       return String(c);
     }),
-    demoUrl: backendProject.demo_url,
-    githubUrl: backendProject.github_url,
+    demoUrl,
+    githubUrl,
     hackathonName: backendProject.hackathon_name || '',
     hackathonDate: backendProject.hackathon_date || '',
     hackathons: backendProject.hackathons || [],
-    techStack: (backendProject.tech_stack || []).map((t: any) => {
+    techStack: (techStack || []).map((t: any) => {
       if (!t) return '';
       if (typeof t === 'string') return t;
       if (typeof t === 'object') return t.name || t.label || JSON.stringify(t);
       return String(t);
     }),
-    teamMembers: backendProject.team_members || [],
-    team_members: backendProject.team_members || [],
+    teamMembers: teamMembers,
+    team_members: teamMembers,
     screenshots: backendProject.screenshots?.map((s: any) => s.url) || [],
     authorId: backendProject.user_id,
     author: backendProject.creator ? {
@@ -164,12 +175,19 @@ export function useProjectById(id: string) {
   return useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
-      const response = await projectsService.getById(id);
+      // Use itineraries API instead of projects
+      const response = await itinerariesService.getById(id);
+
+      console.log('[useProjectById] Raw API response:', response.data);
+      console.log('[useProjectById] Raw data:', response.data.data);
 
       // Transform the single project data
+      const transformed = response.data.data ? transformProject(response.data.data) : null;
+      console.log('[useProjectById] Transformed data:', transformed);
+
       return {
         ...response.data,
-        data: response.data.data ? transformProject(response.data.data) : null,
+        data: transformed,
       };
     },
     enabled: !!id,

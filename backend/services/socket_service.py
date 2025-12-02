@@ -28,6 +28,22 @@ class SocketService:
             print(f"[Socket.IO] Error emitting project:created: {e}")
 
     @staticmethod
+    def emit_itinerary_created(itinerary_data):
+        """
+        Emit event when a new itinerary is created
+        Frontend will show "New itinerary published" notification
+        """
+        try:
+            socketio.emit('itinerary:created', {
+                'type': 'itinerary_created',
+                'data': itinerary_data,
+                'message': f"New itinerary: {itinerary_data.get('title', 'Untitled')}"
+            })
+            print(f"[Socket.IO] Emitted itinerary:created - {itinerary_data.get('title')}")
+        except Exception as e:
+            print(f"[Socket.IO] Error emitting itinerary:created: {e}")
+
+    @staticmethod
     def emit_project_updated(project_id, project_data):
         """
         Emit event when a project is updated

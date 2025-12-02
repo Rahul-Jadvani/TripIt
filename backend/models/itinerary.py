@@ -28,8 +28,8 @@ class Itinerary(db.Model):
     state_province = db.Column(db.String(100), nullable=True)
 
     # Travel Details
-    start_date = db.Column(db.Date, nullable=False, index=True)
-    end_date = db.Column(db.Date, nullable=False)
+    start_date = db.Column(db.Date, nullable=True, index=True)
+    end_date = db.Column(db.Date, nullable=True)
     duration_days = db.Column(db.Integer, nullable=True)  # Calculated from dates
     difficulty_level = db.Column(db.String(20))  # Easy, Medium, Hard, Expert
     travel_type = db.Column(db.String(50))  # Solo, Group, Family, etc.
@@ -38,12 +38,16 @@ class Itinerary(db.Model):
     estimated_budget_min = db.Column(db.Integer, nullable=True)  # In INR or USD
     estimated_budget_max = db.Column(db.Integer, nullable=True)
     actual_budget_spent = db.Column(db.Integer, nullable=True)
+    budget_amount = db.Column(db.Float, nullable=True)  # For schema compatibility
+    budget_currency = db.Column(db.String(3), nullable=True, default='USD')
 
     # Route & GPS
     route_gpx = db.Column(db.Text, nullable=True)  # GPX format for route
+    route_map_url = db.Column(db.String(500), nullable=True)  # URL to map
     route_waypoints = db.Column(db.JSON, default=[])  # Array of GPS points: [{lat, lon, name, elevation}, ...]
     starting_point_gps = db.Column(db.String(50), nullable=True)  # "lat,lon"
     ending_point_gps = db.Column(db.String(50), nullable=True)
+    best_season = db.Column(db.String(100), nullable=True)  # Best time to visit
 
     # Community Content
     day_plans_count = db.Column(db.Integer, default=0)
@@ -51,6 +55,9 @@ class Itinerary(db.Model):
     hidden_gems_count = db.Column(db.Integer, default=0)
     safety_alerts_count = db.Column(db.Integer, default=0)
     community_tags = db.Column(db.JSON, default=[])  # Array of user-defined tags
+    activity_tags = db.Column(db.JSON, default=[])  # Activity/safety tags
+    travel_style = db.Column(db.String(100), nullable=True)  # Solo, Group, etc.
+    travel_companions = db.Column(db.JSON, default=[])  # Array of travel companions
 
     # Safety & Verification
     photo_evidence_ipfs_hashes = db.Column(db.JSON, default=[])  # Array of IPFS hashes
@@ -87,6 +94,7 @@ class Itinerary(db.Model):
     last_verified_date = db.Column(db.DateTime, nullable=True)
 
     # Relationships
+    # creator relationship is defined in Traveler model with backref='creator'
     day_plans = db.relationship('DayPlan', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
     embedded_businesses = db.relationship('EmbeddedBusiness', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
     hidden_gems = db.relationship('HiddenGem', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
@@ -117,10 +125,20 @@ class Itinerary(db.Model):
             'regions': self.regions,
             'start_date': self.start_date.isoformat() if self.start_date else None,
             'end_date': self.end_date.isoformat() if self.end_date else None,
+            'duration_days': self.duration_days,
             'difficulty_level': self.difficulty_level,
             'travel_type': self.travel_type,
+            'travel_style': self.travel_style,
             'estimated_budget_min': self.estimated_budget_min,
             'estimated_budget_max': self.estimated_budget_max,
+            'budget_amount': self.budget_amount,
+            'budget_currency': self.budget_currency,
+            'route_gpx': self.route_gpx,
+            'route_map_url': self.route_map_url,
+            'best_season': self.best_season,
+            'activity_tags': self.activity_tags or [],
+            'travel_companions': self.travel_companions or [],
+            'community_tags': self.community_tags or [],
             'safety_score': self.safety_score,
             'women_safe_certified': self.women_safe_certified,
             'safety_ratings_count': self.safety_ratings_count,
@@ -132,6 +150,7 @@ class Itinerary(db.Model):
             'helpful_votes': self.helpful_votes,
             'comment_count': self.comment_count,
             'created_by_traveler_id': self.created_by_traveler_id,
+            'user_id': self.created_by_traveler_id,  # Alias for compatibility
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

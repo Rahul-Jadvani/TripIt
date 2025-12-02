@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers, Info, X } from 'lucide-react';
+import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers, Info, X, MapPin, DollarSign, Sun, Map } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
 import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
@@ -11,6 +11,8 @@ import { TravelIntelSection } from '@/components/TravelIntelSection';
 import { IntroRequest } from '@/components/IntroRequest';
 import { ShareDialog } from '@/components/ShareDialog';
 import { PostUpdateModal } from '@/components/PostUpdateModal';
+import { VoteButtons } from '@/components/VoteButtons';
+import { CommentSection } from '@/components/CommentSection';
 import { useAuth } from '@/context/AuthContext';
 import { useProjectById } from '@/hooks/useProjects';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,14 +40,14 @@ export default function ProjectDetail() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Fetch project updates
+  // Fetch project updates (disabled - endpoint doesn't exist yet)
   const { data: updatesData } = useQuery({
     queryKey: ['projectUpdates', id],
     queryFn: async () => {
       const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/projects/${id}/updates`);
       return response.data.data;
     },
-    enabled: !!id
+    enabled: false  // Disabled - updates endpoint not implemented
   });
 
   // Delete update mutation
@@ -127,7 +129,7 @@ export default function ProjectDetail() {
       }
 
       // Track view (fire and forget)
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/projects/${id}/view`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/itineraries/${id}/view`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -434,6 +436,62 @@ export default function ProjectDetail() {
     );
   };
 
+  const renderItineraryDetailsCard = () => {
+    const hasDuration = project.duration_days;
+    const hasBudget = project.budget_amount;
+    const hasRouteMap = project.githubUrl || project.route_map_url;
+    const hasSeason = project.best_season;
+
+    if (!hasDuration && !hasBudget && !hasRouteMap && !hasSeason) return null;
+
+    return (
+      <div className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-primary" />
+          Trip Details
+        </h2>
+        <div className="space-y-3">
+          {hasDuration && (
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Duration:</span>
+              <span className="text-foreground font-medium">{project.duration_days} days</span>
+            </div>
+          )}
+          {hasBudget && (
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Budget:</span>
+              <span className="text-foreground font-medium">
+                {project.budget_currency || '₹'}{project.budget_amount?.toLocaleString()}
+              </span>
+            </div>
+          )}
+          {hasSeason && (
+            <div className="flex items-center gap-2 text-sm">
+              <Sun className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Best Season:</span>
+              <span className="text-foreground font-medium">{project.best_season}</span>
+            </div>
+          )}
+          {hasRouteMap && (
+            <div className="flex items-center gap-2 text-sm">
+              <Map className="h-4 w-4 text-muted-foreground" />
+              <a
+                href={project.githubUrl || project.route_map_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                View Route Map →
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderHackathonCard = () => {
     if (
       !(
@@ -586,7 +644,7 @@ export default function ProjectDetail() {
                   Pitch Deck
                 </a>
               )}
-                <BadgeAwarder projectId={project.id} />
+                {/* <BadgeAwarder projectId={project.id} /> */}
                 {user?.id !== project.authorId && (
                   <IntroRequest projectId={project.id} builderId={project.authorId} />
                 )}
@@ -674,6 +732,7 @@ export default function ProjectDetail() {
               {renderCreatorCard()}
               {renderTeamCard()}
               {renderCategoriesCard()}
+              {renderItineraryDetailsCard()}
               {renderTechStackCard()}
               {renderHackathonCard()}
             </div>

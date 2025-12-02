@@ -84,6 +84,7 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/offline" element={<NetworkIssue />} />
               <Route path="/itinerary/:id" element={<ProjectDetail />} />
+              <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/u/:username" element={<UserProfile />} />
               <Route path="/search" element={<Search />} />
               <Route path="/about" element={<About />} />

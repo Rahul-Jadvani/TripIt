@@ -715,3 +715,114 @@ def get_most_requested_itineraries(user_id):
 
     except Exception as e:
         return error_response('Error', str(e), 500)
+
+@itineraries_bp.route('/<itinerary_id>/upvote', methods=['POST'])
+@token_required
+def upvote_itinerary(user_id, itinerary_id):
+    """Upvote an itinerary"""
+    try:
+        from models.vote import Vote
+
+        itinerary = Itinerary.query.get(itinerary_id)
+        if not itinerary or itinerary.is_deleted:
+            return error_response('Not found', 'Itinerary not found', 404)
+
+        # Check if vote exists
+        existing_vote = Vote.query.filter_by(user_id=user_id, project_id=itinerary_id).first()
+
+        if existing_vote:
+            # If already upvoted, remove vote
+            if existing_vote.vote_type == 'up':
+                db.session.delete(existing_vote)
+            else:
+                # Change from downvote to upvote
+                existing_vote.vote_type = 'up'
+        else:
+            # Create new upvote
+            vote = Vote(user_id=user_id, project_id=itinerary_id, vote_type='up')
+            db.session.add(vote)
+
+        db.session.commit()
+        CacheService.invalidate_itinerary(itinerary_id)
+        CacheService.invalidate_itinerary_feed()
+
+        # Emit Socket.IO event for real-time vote updates
+        from services.socket_service import SocketService
+        SocketService.emit_vote_cast(itinerary_id, 'up', itinerary.proof_score)
+
+        return success_response(itinerary.to_dict(include_creator=True, user_id=user_id), 'Itinerary upvoted', 200)
+    except Exception as e:
+        db.session.rollback()
+        return error_response('Error', str(e), 500)
+
+
+@itineraries_bp.route('/<itinerary_id>/downvote', methods=['POST'])
+@token_required
+def downvote_itinerary(user_id, itinerary_id):
+    """Downvote an itinerary"""
+    try:
+        from models.vote import Vote
+
+        itinerary = Itinerary.query.get(itinerary_id)
+        if not itinerary or itinerary.is_deleted:
+            return error_response('Not found', 'Itinerary not found', 404)
+
+        # Check if vote exists
+        existing_vote = Vote.query.filter_by(user_id=user_id, project_id=itinerary_id).first()
+
+        if existing_vote:
+            # If already downvoted, remove vote
+            if existing_vote.vote_type == 'down':
+                db.session.delete(existing_vote)
+            else:
+                # Change from upvote to downvote
+                existing_vote.vote_type = 'down'
+        else:
+            # Create new downvote
+            vote = Vote(user_id=user_id, project_id=itinerary_id, vote_type='down')
+            db.session.add(vote)
+
+        db.session.commit()
+        CacheService.invalidate_itinerary(itinerary_id)
+        CacheService.invalidate_itinerary_feed()
+
+        # Emit Socket.IO event for real-time vote updates
+        from services.socket_service import SocketService
+        SocketService.emit_vote_cast(itinerary_id, 'down', itinerary.proof_score)
+
+        return success_response(itinerary.to_dict(include_creator=True, user_id=user_id), 'Itinerary downvoted', 200)
+    except Exception as e:
+        db.session.rollback()
+        return error_response('Error', str(e), 500)
+
+
+@itineraries_bp.route('/<itinerary_id>/vote', methods=['DELETE'])
+@token_required
+def remove_vote(user_id, itinerary_id):
+    """Remove vote from itinerary"""
+    try:
+        from models.vote import Vote
+
+        itinerary = Itinerary.query.get(itinerary_id)
+        if not itinerary or itinerary.is_deleted:
+            return error_response('Not found', 'Itinerary not found', 404)
+
+        # Find and remove vote
+        vote = Vote.query.filter_by(user_id=user_id, project_id=itinerary_id).first()
+
+        if not vote:
+            return error_response('Not found', 'No vote to remove', 404)
+
+        db.session.delete(vote)
+        db.session.commit()
+        CacheService.invalidate_itinerary(itinerary_id)
+        CacheService.invalidate_itinerary_feed()
+
+        # Emit Socket.IO event for real-time vote updates
+        from services.socket_service import SocketService
+        SocketService.emit_vote_removed(itinerary_id)
+
+        return success_response(None, 'Vote removed', 200)
+    except Exception as e:
+        db.session.rollback()
+        return error_response('Error', str(e), 500)
