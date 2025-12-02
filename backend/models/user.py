@@ -24,11 +24,6 @@ class User(db.Model):
     oxcert_token_id = db.Column(db.String(100), nullable=True)  # NFT token ID
     oxcert_metadata = db.Column(db.JSON, nullable=True)  # NFT metadata (name, image, attributes)
 
-    # GitHub
-    github_username = db.Column(db.String(255), nullable=True)
-    github_connected = db.Column(db.Boolean, default=False)
-    github_access_token = db.Column(db.Text, nullable=True)  # For AI scoring GitHub API calls
-
     # Profile
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
     display_name = db.Column(db.String(100))
@@ -98,8 +93,6 @@ class User(db.Model):
             'oxcert_tx_hash': self.oxcert_tx_hash,
             'oxcert_token_id': self.oxcert_token_id,
             'oxcert_metadata': self.oxcert_metadata,
-            'github_connected': self.github_connected,
-            'github_username': self.github_username,
             'wallet_address': self.wallet_address[:6] + '...' + self.wallet_address[-4:] if self.wallet_address else None,
             'full_wallet_address': self.wallet_address,  # Full address for explorer links
             'created_at': self.created_at.isoformat(),

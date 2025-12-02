@@ -63,14 +63,11 @@ export default function Login() {
     }, 3000);
   };
 
-  const handleOAuth = (provider: 'Google' | 'GitHub') => {
+  const handleOAuth = (provider: 'Google') => {
     setOauthProvider(provider);
     if (oauthTimerRef.current) window.clearTimeout(oauthTimerRef.current);
 
-    const target =
-      provider === 'Google'
-        ? `${API_BASE}/auth/google/login`
-        : `${API_BASE}/auth/github/login`;
+    const target = `${API_BASE}/auth/google/login`;
 
     // Small delay so overlay renders before redirect
     oauthTimerRef.current = window.setTimeout(() => {
@@ -169,14 +166,6 @@ export default function Login() {
                 disabled={!!oauthProvider}
               >
                 Continue with Google
-              </button>
-              <button
-                type="button"
-                className="btn-secondary w-full mb-3 sm:mb-4 text-sm sm:text-base"
-                onClick={() => handleOAuth('GitHub')}
-                disabled={!!oauthProvider}
-              >
-                Continue with GitHub
               </button>
 
               {/* Sign Up Link */}

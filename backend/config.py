@@ -173,11 +173,6 @@ class Config:
     ZEPTO_SENDER_NAME = os.getenv('ZEPTO_SENDER_NAME') or os.getenv('ZEPTOMAIL_FROM_NAME') or 'Team Zer0'
     ZEPTO_MAIL_AGENT_ALIAS = os.getenv('ZEPTO_MAIL_AGENT_ALIAS') or os.getenv('ZEPTOMAIL_MAIL_AGENT_ALIAS')
 
-    # GitHub OAuth
-    GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
-    GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
-    GITHUB_REDIRECT_URI = os.getenv('GITHUB_REDIRECT_URI', 'http://localhost:5000/api/auth/github/callback')
-
     # Google OAuth
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
