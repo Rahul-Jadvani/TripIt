@@ -97,13 +97,17 @@ export const communityApi = {
       message?: string;
     }
   ): Promise<{ data: any }> {
-    const response = await api.post(`/communities/${slug}/itineraries`, data);
+    // Convert itinerary_id to project_id for backend compatibility
+    const response = await api.post(`/communities/${slug}/projects`, {
+      project_id: data.itinerary_id,
+      message: data.message
+    });
     return response.data;
   },
 
   // Remove itinerary from community
   async removeItineraryFromCommunity(slug: string, itineraryId: string): Promise<{ data: null }> {
-    const response = await api.delete(`/communities/${slug}/itineraries/${itineraryId}`);
+    const response = await api.delete(`/communities/${slug}/projects/${itineraryId}`);
     return response.data;
   },
 
@@ -137,13 +141,13 @@ export const communityApi = {
     if (filters?.min_trust_score) params.append('min_trust_score', filters.min_trust_score.toString());
     if (filters?.pinned_only) params.append('pinned_only', filters.pinned_only.toString());
 
-    const response = await api.get(`/communities/${slug}/itineraries?${params.toString()}`);
+    const response = await api.get(`/communities/${slug}/projects?${params.toString()}`);
     return response.data;
   },
 
   // Pin/unpin itinerary
   async togglePinItinerary(slug: string, itineraryId: string): Promise<{ data: { is_pinned: boolean } }> {
-    const response = await api.post(`/communities/${slug}/itineraries/${itineraryId}/pin`);
+    const response = await api.post(`/communities/${slug}/projects/${itineraryId}/pin`);
     return response.data;
   },
 

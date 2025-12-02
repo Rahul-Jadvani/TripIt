@@ -26,7 +26,8 @@
       "Bash(frontend/src/components/ChainHeaderSkeleton.tsx )",
       "Bash(frontend/src/components/ChainPostCard.tsx )",
       "Bash(frontend/src/components/ChainPostList.tsx )",
-      "Bash(frontend/src/components/ChainSelector.tsx)"
+      "Bash(frontend/src/components/ChainSelector.tsx)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

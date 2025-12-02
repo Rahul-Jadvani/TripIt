@@ -42,7 +42,7 @@ export function AddItineraryToCommunityDialog({
   const [message, setMessage] = useState('');
 
   const { data: projectsData, isLoading: projectsLoading } = useUserProjects(user?.id || '');
-  const addProjectMutation = useAddProjectToChain();
+  const addProjectMutation = useAddItineraryToCommunity();
 
   const projects = projectsData?.data || [];
   const filteredProjects = projects.filter((project) =>
@@ -60,7 +60,7 @@ export function AddItineraryToCommunityDialog({
     try {
       await addProjectMutation.mutateAsync({
         slug: communitySlug,
-        projectId: selectedProjectId,
+        itineraryId: selectedProjectId,
         message: message.trim() || undefined,
       });
 
@@ -211,7 +211,7 @@ export function AddItineraryToCommunityDialog({
             ) : requiresApproval ? (
               'Submit for Approval'
             ) : (
-              'Add to layerz'
+              'Add to Community'
             )}
           </Button>
         </DialogFooter>
