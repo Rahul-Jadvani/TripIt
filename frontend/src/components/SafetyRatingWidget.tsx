@@ -38,24 +38,24 @@ export function SafetyRatingWidget({
         rating_type: 'overall',
       }),
     onSuccess: (_res, score) => {
-      toast.success('\''Safety rating submitted'\'');
+      toast.success('Safety rating submitted');
       setLocalRating(score);
       onRatingChange?.(score);
-      queryClient.invalidateQueries({ queryKey: ['\''itinerary'\'', itineraryId] });
-      queryClient.invalidateQueries({ queryKey: ['\''itineraries'\''] });
+      queryClient.invalidateQueries({ queryKey: ['itinerary', itineraryId] });
+      queryClient.invalidateQueries({ queryKey: ['itineraries'] });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || '\''Unable to submit rating'\'');
+      toast.error(error?.response?.data?.message || 'Unable to submit rating');
     },
   });
 
   const handleRate = (value: number) => {
     if (!user) {
-      navigate('\''/login'\'');
+      navigate('/login');
       return;
     }
     if (itineraryOwnerId && user.id === itineraryOwnerId) {
-      toast.info('\''You can'\'''\''t rate your own itinerary'\'');
+      toast.info("You can't rate your own itinerary");
       return;
     }
     rateMutation.mutate(value);
@@ -80,10 +80,14 @@ export function SafetyRatingWidget({
             }}
             disabled={disabled}
             className="h-8 w-8 rounded-md flex items-center justify-center transition-transform duration-150 hover:scale-105 disabled:opacity-60"
-            title={}
+            title={`Rate ${value} stars`}
           >
             <Star
-              className={}
+              className={`h-5 w-5 transition-colors ${
+                displayScore >= value
+                  ? 'fill-primary text-primary'
+                  : 'text-muted-foreground'
+              }`}
             />
           </button>
         ))}
@@ -92,10 +96,10 @@ export function SafetyRatingWidget({
       <div className="flex flex-col leading-tight">
         <div className="flex items-center gap-1 text-sm font-semibold">
           <ShieldCheck className="h-4 w-4 text-primary" />
-          <span>{displayScore ? displayScore.toFixed(1) : '\''Not rated'\''}</span>
+          <span>{displayScore ? displayScore.toFixed(1) : 'Not rated'}</span>
         </div>
         <span className="text-[11px] text-muted-foreground">
-          {ratingCount} rating{ratingCount === 1 ? '\'''\'' : '\''s'\''}
+          {ratingCount} rating{ratingCount === 1 ? '' : 's'}
         </span>
       </div>
     </div>

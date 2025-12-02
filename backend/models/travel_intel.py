@@ -14,7 +14,8 @@ class TravelIntel(db.Model):
     # Identity
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid4()))
     itinerary_id = db.Column(db.String(36), db.ForeignKey('itineraries.id', ondelete='CASCADE'), nullable=False, index=True)
-    traveler_sbt_id = db.Column(db.String(256), nullable=False, index=True)
+    traveler_id = db.Column(db.String(36), db.ForeignKey('travelers.id', ondelete='CASCADE'), nullable=False, index=True)
+    traveler_sbt_id = db.Column(db.String(256), nullable=True, index=True)
 
     # Content
     intel_type = db.Column(db.String(50), nullable=False, index=True)  # question, update, warning, recommendation, local_insight

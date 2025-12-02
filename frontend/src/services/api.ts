@@ -213,6 +213,7 @@ export const usersService = {
   update: (data: any) => api.put('/users/profile', data),
   getProfile: () => api.get('/auth/me'),
   getStats: () => api.get('/users/stats'),
+  searchTravelers: (query: string) => api.get(`/users/search?q=${encodeURIComponent(query)}`),
 };
 
 // Wallet & Verification
@@ -426,6 +427,125 @@ export const messagesService = {
   send: (recipientId: string, message: string) =>
     api.post('/messages/send', { recipient_id: recipientId, message }),
   markRead: (messageId: string) => api.put(`/messages/${messageId}/read`),
+};
+
+// Travel Groups
+export const travelGroupsService = {
+  getGroups: (params?: any) => {
+    const queryParams = new URLSearchParams();
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.destination) queryParams.append('destination', params.destination);
+    if (params?.group_type) queryParams.append('group_type', params.group_type);
+    if (params?.activity && params.activity.length > 0) {
+      params.activity.forEach((a: string) => queryParams.append('activity', a));
+    }
+    if (params?.women_safe !== undefined) queryParams.append('women_safe', String(params.women_safe));
+    if (params?.has_availability !== undefined) queryParams.append('has_availability', String(params.has_availability));
+    if (params?.sort) queryParams.append('sort', params.sort);
+    if (params?.page) queryParams.append('page', String(params.page));
+    if (params?.limit) queryParams.append('limit', String(params.limit));
+    return api.get(`/travel-groups?${queryParams.toString()}`);
+  },
+  getGroupById: (groupId: string) => api.get(`/travel-groups/${groupId}`),
+  createGroup: (data: any) => api.post('/travel-groups', data),
+  updateGroup: (groupId: string, data: any) => api.put(`/travel-groups/${groupId}`, data),
+  deleteGroup: (groupId: string) => api.delete(`/travel-groups/${groupId}`),
+  joinGroup: (groupId: string) => api.post(`/travel-groups/${groupId}/join`),
+  leaveGroup: (groupId: string) => api.post(`/travel-groups/${groupId}/leave`),
+  getMembers: (groupId: string, page?: number) =>
+    api.get(`/travel-groups/${groupId}/members${page ? `?page=${page}` : ''}`),
+  inviteMember: (groupId: string, travelerId: string) =>
+    api.post(`/travel-groups/${groupId}/invite`, { traveler_id: travelerId }),
+  removeMember: (groupId: string, memberId: string) =>
+    api.delete(`/travel-groups/${groupId}/members/${memberId}`),
+  updateMemberRole: (groupId: string, memberId: string, role: string) =>
+    api.put(`/travel-groups/${groupId}/members/${memberId}/role`, { role }),
+  getGroupInvites: (groupId: string) =>
+    api.get(`/travel-groups/${groupId}/invites`),
+  cancelInvite: (groupId: string, inviteId: string) =>
+    api.delete(`/travel-groups/${groupId}/invites/${inviteId}`),
+  getMatching: (page?: number) =>
+    api.get(`/travel-groups/matching${page ? `?page=${page}` : ''}`),
+};
+
+// Women Safety
+export const womenSafetyService = {
+  // Guides
+  getGuides: (params?: URLSearchParams) =>
+    api.get(`/women-safety/guides${params ? `?${params.toString()}` : ''}`),
+  getGuide: (guideId: string) => api.get(`/women-safety/guides/${guideId}`),
+  bookGuide: (guideId: string, data: any) =>
+    api.post(`/women-safety/guides/${guideId}/book`, data),
+  submitGuideReview: (guideId: string, data: any) =>
+    api.post(`/women-safety/guides/${guideId}/reviews`, data),
+
+  // Resources
+  getResources: (params?: URLSearchParams) =>
+    api.get(`/women-safety/resources${params ? `?${params.toString()}` : ''}`),
+  markResourceHelpful: (resourceId: string) =>
+    api.post(`/women-safety/resources/${resourceId}/helpful`),
+
+  // Settings
+  getSettings: () => api.get('/women-safety/settings'),
+  updateSettings: (data: any) => api.put('/women-safety/settings', data),
+};
+
+// Women's Safety Feature
+export const womenSafetyService = {
+  // Women Guides
+  getGuides: (params?: any) => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+    if (params?.sort) queryParams.append('sort', params.sort);
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.location) queryParams.append('location', params.location);
+    if (params?.language) queryParams.append('language', params.language);
+    if (params?.specialization) queryParams.append('specialization', params.specialization);
+    if (params?.verified_only) queryParams.append('verified_only', params.verified_only);
+    if (params?.min_rating) queryParams.append('min_rating', params.min_rating.toString());
+    return api.get(`/women-safety/guides?${queryParams.toString()}`);
+  },
+  getGuideById: (guideId: string) => api.get(`/women-safety/guides/${guideId}`),
+  getGuideReviews: (guideId: string, page: number = 1, perPage: number = 20) =>
+    api.get(`/women-safety/guides/${guideId}/reviews?page=${page}&per_page=${perPage}`),
+
+  // Guide Bookings
+  createBooking: (data: any) => api.post('/women-safety/bookings', data),
+  getMyBookings: (page: number = 1, perPage: number = 20) =>
+    api.get(`/women-safety/bookings?page=${page}&per_page=${perPage}`),
+  getBookingById: (bookingId: string) => api.get(`/women-safety/bookings/${bookingId}`),
+  updateBooking: (bookingId: string, data: any) =>
+    api.put(`/women-safety/bookings/${bookingId}`, data),
+  cancelBooking: (bookingId: string) => api.delete(`/women-safety/bookings/${bookingId}`),
+
+  // Guide Reviews
+  createReview: (data: any) => api.post('/women-safety/reviews', data),
+  updateReview: (reviewId: string, data: any) =>
+    api.put(`/women-safety/reviews/${reviewId}`, data),
+  deleteReview: (reviewId: string) => api.delete(`/women-safety/reviews/${reviewId}`),
+  markReviewHelpful: (reviewId: string) =>
+    api.post(`/women-safety/reviews/${reviewId}/helpful`),
+
+  // Safety Resources
+  getResources: (params?: any) => {
+    const queryParams = new URLSearchParams();
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.country) queryParams.append('country', params.country);
+    if (params?.search) queryParams.append('search', params.search);
+    return api.get(`/women-safety/resources?${queryParams.toString()}`);
+  },
+  getResourceById: (resourceId: string) => api.get(`/women-safety/resources/${resourceId}`),
+  markResourceHelpful: (resourceId: string) =>
+    api.post(`/women-safety/resources/${resourceId}/helpful`),
+
+  // Safety Settings
+  getSettings: () => api.get('/women-safety/settings'),
+  updateSettings: (data: any) => api.put('/women-safety/settings', data),
+
+  // Emergency Alerts
+  triggerEmergencyAlert: (data: { location?: string; message?: string }) =>
+    api.post('/women-safety/emergency-alert', data),
 };
 
 export default api;

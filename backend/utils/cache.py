@@ -187,6 +187,47 @@ class CacheService:
         CacheService.clear_pattern("count:*")
 
     # ============================================================================
+    # ITINERARY CACHING (TripIt)
+    # ============================================================================
+
+    @staticmethod
+    def cache_itinerary(itinerary_id: str, data: dict, ttl: int = 3600):
+        """Cache itinerary details (1 hour)"""
+        key = f"itinerary:{itinerary_id}"
+        return CacheService.set(key, data, ttl)
+
+    @staticmethod
+    def get_cached_itinerary(itinerary_id: str):
+        """Get cached itinerary"""
+        key = f"itinerary:{itinerary_id}"
+        return CacheService.get(key)
+
+    @staticmethod
+    def invalidate_itinerary(itinerary_id: str):
+        """Invalidate itinerary cache and related feeds"""
+        CacheService.delete(f"itinerary:{itinerary_id}")
+        CacheService.invalidate_itinerary_feed()
+        CacheService.invalidate_itinerary_intel(itinerary_id)
+
+    @staticmethod
+    def invalidate_itinerary_feed():
+        """Invalidate all itinerary feed caches when itineraries change"""
+        CacheService.clear_pattern("itinerary_feed:*")
+        CacheService.delete("featured_itineraries")
+        CacheService.delete("rising_stars_itineraries")
+
+    @staticmethod
+    def invalidate_user_itineraries(user_id: str):
+        """Invalidate a user's itineraries cache"""
+        CacheService.clear_pattern(f"user_itineraries:{user_id}:*")
+
+    @staticmethod
+    def invalidate_itinerary_intel(itinerary_id: str):
+        """Invalidate itinerary intel caches"""
+        CacheService.clear_pattern(f"itinerary_intel:{itinerary_id}:*")
+        CacheService.clear_pattern(f"travel_intel:{itinerary_id}:*")
+
+    # ============================================================================
     # CHAIN CACHING
     # ============================================================================
 

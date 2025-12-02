@@ -8,15 +8,15 @@ const TopRatedCarousel = lazy(() =>
   import('@/components/TopRatedCarousel').then((m) => ({ default: m.TopRatedCarousel }))
 );
 import { ProjectCardSkeletonGrid, TopRatedCarouselSkeleton } from '@/components/ProjectCardSkeleton';
-import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle } from 'lucide-react';
-import { useProjects, useItineraries, transformProject, transformItinerary } from '@/hooks/useProjects';
+import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield } from 'lucide-react';
+import { useItineraries, transformProject } from '@/hooks/useProjects';
 import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
 import { usePublicInvestors } from '@/hooks/useInvestors';
 import { useDashboardStats } from '@/hooks/useStats';
 import { useMostRequestedProjects, useRecentConnections, useFeaturedProjects, useRisingStars, useCategoryProjects } from '@/hooks/useFeed';
 import { useAuth } from '@/context/AuthContext';
 import { itinerariesService } from '@/services/api';
-import { Project, Itinerary } from '@/types';
+import { Itinerary } from '@/types';
 import { FeedMiniThread } from '@/components/FeedMiniThread';
 import { FeedLeaderTagCard } from '@/components/FeedLeaderTagCard';
 // import { FeedTopInvestorCard } from '@/components/FeedTopInvestorCard';
@@ -62,9 +62,9 @@ export default function Feed() {
   const queryClient = useQueryClient();
 
   // PROGRESSIVE LOADING: Load trending & top-rated first (priority), newest loads immediately after
-  const { data: hotData, isLoading: hotLoading } = useProjects('trending', 1);
-  const { data: topData, isLoading: topLoading } = useProjects('top-rated', 1);
-  const { data: newData, isLoading: newLoading } = useProjects('newest', 1);
+  const { data: hotData, isLoading: hotLoading } = useItineraries('trending', 1);
+  const { data: topData, isLoading: topLoading } = useItineraries('top-rated', 1);
+  const { data: newData, isLoading: newLoading } = useItineraries('newest', 1);
   const { data: topBuilders = [] } = useBuildersLeaderboard(8);
   const { data: buildersForCount = [] } = useBuildersLeaderboard(50);
   const { data: investors = [] } = usePublicInvestors();
@@ -100,7 +100,7 @@ export default function Feed() {
         // Prefetch page 3 only (page 2 handled by usePrefetch idle batch)
         for (const sort of ['trending', 'top-rated', 'newest']) {
           queryClient.prefetchQuery({
-            queryKey: ['projects', sort, 3],
+            queryKey: ['itineraries', sort, 3],
             queryFn: async () => {
               const response = await itinerariesService.getAll(sort, 3);
               return {
@@ -148,8 +148,8 @@ export default function Feed() {
 
   // Merge all feed projects once to power stats + tag leader without duplicates
   const visibleFeedProjects = useMemo(() => {
-    const unique = new Map<string, Project>();
-    const addProjects = (projects?: Project[]) => {
+    const unique = new Map<string, Itinerary>();
+    const addProjects = (projects?: Itinerary[]) => {
       if (!projects) return;
       for (const project of projects) {
         if (!project?.id || unique.has(project.id)) continue;
@@ -214,22 +214,29 @@ export default function Feed() {
   // Removed old filter functions - now using real category-based data from backend
 
   return (
-    <div className="min-h-screen overflow-hidden">
+    <div className="min-h-screen overflow-hidden bg-gradient-to-b from-background via-background to-background/80">
       <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 overflow-hidden max-w-7xl relative">
-        {/* Hero Header */}
+        {/* Hero Header - Travel Focused */}
         <div className="mb-12 sm:mb-16">
-          <div className="relative card-elevated p-6 sm:p-8 rounded-2xl overflow-hidden">
-            <div className="flex items-start gap-4 mb-4">
+          <div className="relative card-elevated p-6 sm:p-8 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-900/20 via-card to-accent/10 border border-primary/20">
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-primary rounded-full mix-blend-multiply filter blur-3xl"></div>
+            </div>
+            <div className="flex items-start gap-4 mb-4 relative z-10">
               <div className="badge-primary flex items-center justify-center h-12 w-12 flex-shrink-0 rounded-[15px] shadow-lg">
-                <Zap className="h-6 w-6 text-black font-bold" />
+                <Sparkles className="h-6 w-6 text-black font-bold" />
               </div>
               <div className="flex-1">
                 <h1 className="text-2xl sm:text-4xl font-black text-foreground mb-2">
-                  Discover Itineraries
+                  Plan Your Perfect Adventure
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-2xl">
-                  Explore amazing travel itineraries with safety-verified credibility. Find inspiring travelers, track their journeys, and connect.
+                  Discover safety-verified itineraries from trusted travelers. Find your next journey, join fellow adventurers, and explore the world with confidence.
                 </p>
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <button className="badge badge-primary text-xs font-bold px-3 py-1.5">Plan This Trip</button>
+                  <button className="badge badge-secondary text-xs font-bold px-3 py-1.5">Find Companions</button>
+                </div>
               </div>
             </div>
           </div>
@@ -323,24 +330,26 @@ export default function Feed() {
           </div>
         ) : (
           <div className="space-y-12 sm:space-y-16 pb-12">
-            {/* Quick Section Nav */}
+            {/* Quick Section Nav - Travel Focused */}
             <nav aria-label="Quick sections" className="feed-quick-nav -mt-6">
               <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-                <a href="#top-rated" className="badge badge-dash badge-secondary hover:opacity-90">Top Rated ({categorizedProjects.topScored.length})</a>
-                {categorizedProjects.featured.length > 0 && <a href="#featured" className="badge badge-dash badge-primary hover:opacity-90">Featured ({categorizedProjects.featured.length})</a>}
-                <a href="#trending" className="badge badge-dash badge-secondary hover:opacity-90">Trending ({categorizedProjects.hot.length})</a>
-                {categorizedProjects.risingStars.length > 0 && <a href="#rising-stars" className="badge badge-dash badge-accent hover:opacity-90">Rising Stars ({categorizedProjects.risingStars.length})</a>}
-                <a href="#new-launches" className="badge badge-dash badge-secondary hover:opacity-90">New Launches ({categorizedProjects.newLaunches.length})</a>
-                {categorizedProjects.defi.length > 0 && <a href="#defi" className="badge badge-dash badge-secondary hover:opacity-90">DeFi ({categorizedProjects.defi.length})</a>}
-                {categorizedProjects.aiMl.length > 0 && <a href="#ai-ml" className="badge badge-dash badge-secondary hover:opacity-90">AI/ML ({categorizedProjects.aiMl.length})</a>}
-                {categorizedProjects.gaming.length > 0 && <a href="#gaming" className="badge badge-dash badge-secondary hover:opacity-90">Gaming ({categorizedProjects.gaming.length})</a>}
-                {categorizedProjects.saas.length > 0 && <a href="#saas" className="badge badge-dash badge-secondary hover:opacity-90">SaaS ({categorizedProjects.saas.length})</a>}
-                {categorizedProjects.mostRequested.length > 0 && <a href="#most-requested" className="badge badge-dash badge-secondary hover:opacity-90">Most Requested ({categorizedProjects.mostRequested.length})</a>}
+                <a href="#top-rated" className="badge badge-dash badge-primary hover:opacity-90">Highest-Rated ({categorizedProjects.topScored.length})</a>
+                {categorizedProjects.featured.length > 0 && <a href="#women-safe" className="badge badge-dash badge-accent hover:opacity-90">Women-Safe ({categorizedProjects.featured.length})</a>}
+                <a href="#trending" className="badge badge-dash badge-secondary hover:opacity-90">Trending Destinations ({categorizedProjects.hot.length})</a>
+                {categorizedProjects.risingStars.length > 0 && <a href="#hidden-gems" className="badge badge-dash badge-secondary hover:opacity-90">Hidden Gems ({categorizedProjects.risingStars.length})</a>}
+                <a href="#new-launches" className="badge badge-dash badge-secondary hover:opacity-90">Latest Adventures ({categorizedProjects.newLaunches.length})</a>
               </div>
             </nav>
-            {/* Top Rated Projects Carousel - Featured first */}
+            {/* Highest-Rated Journeys Carousel */}
             {categorizedProjects.topScored.length > 0 && (
               <section id="top-rated" className="scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                    Highest-Rated Journeys
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Most trusted experiences from verified travelers</p>
+                </div>
                 <LazyOnVisible placeholder={
                   <div className="flex justify-center">
                     <div className="w-full sm:w-[760px] h-[380px]">
@@ -405,16 +414,23 @@ export default function Feed() {
               )}
             </div>
 
-            {/* Trending Carousel */}
+            {/* Trending Destinations Carousel */}
             {categorizedProjects.hot.length > 0 && (
               <section id="trending" className="carousel-cinema scroll-mt-24">
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}> 
+                <div className="mb-4">
+                  <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
+                    <TrendingUp className="h-6 w-6 text-accent" />
+                    Trending Destinations
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Popular adventures gaining momentum this week</p>
+                </div>
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
                     <ProjectCarousel
                       projects={categorizedProjects.hot}
                       categoryTitle="Trending"
                       categoryName="trending"
-                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      categoryIcon={<TrendingUp className="h-5 w-5" />}
                       autoplay={true}
                     />
                   </Suspense>
@@ -442,16 +458,23 @@ export default function Feed() {
               )}
             </div>
 
-            {/* Featured Itineraries Carousel */}
+            {/* Women-Safe Certified Carousel */}
             {categorizedProjects.featured.length > 0 && (
-              <section id="featured" className="carousel-cinema scroll-mt-24">
+              <section id="women-safe" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
+                    <Shield className="h-6 w-6 text-accent" />
+                    Women-Safe Certified
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Itineraries verified as women-safe and well-documented</p>
+                </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
                     <ProjectCarousel
                       projects={categorizedProjects.featured}
-                      categoryTitle="Featured Itineraries"
-                      categoryName="featured"
-                      categoryIcon={<Sparkles className="h-5 w-5" />}
+                      categoryTitle="Women-Safe"
+                      categoryName="women-safe"
+                      categoryIcon={<Shield className="h-5 w-5" />}
                       autoplay={true}
                     />
                   </Suspense>
@@ -459,16 +482,23 @@ export default function Feed() {
               </section>
             )}
 
-            {/* Rising Stars Carousel - New projects with high engagement */}
+            {/* Hidden Gems Carousel - Off-the-beaten-path adventures */}
             {categorizedProjects.risingStars.length > 0 && (
-              <section id="rising-stars" className="carousel-cinema scroll-mt-24">
+              <section id="hidden-gems" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
+                    <Flame className="h-6 w-6 text-orange-500" />
+                    Hidden Gems
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Discover lesser-known adventures with growing interest</p>
+                </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
                     <ProjectCarousel
                       projects={categorizedProjects.risingStars}
-                      categoryTitle="Rising Stars"
-                      categoryName="rising-stars"
-                      categoryIcon={<TrendingUp className="h-5 w-5" />}
+                      categoryTitle="Hidden Gems"
+                      categoryName="hidden-gems"
+                      categoryIcon={<Flame className="h-5 w-5" />}
                       autoplay={true}
                     />
                   </Suspense>
@@ -476,14 +506,21 @@ export default function Feed() {
               </section>
             )}
 
-            {/* Latest Itineraries Carousel */}
+            {/* Latest Adventures Carousel */}
             {categorizedProjects.newLaunches.length > 0 && (
               <section id="new-launches" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
+                    <Clock className="h-6 w-6 text-primary" />
+                    Latest Adventures
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Recently shared itineraries from the community</p>
+                </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
                     <ProjectCarousel
                       projects={categorizedProjects.newLaunches}
-                      categoryTitle="Latest Itineraries"
+                      categoryTitle="Latest Adventures"
                       categoryName="new-launches"
                       categoryIcon={<Clock className="h-5 w-5" />}
                       autoplay={true}
@@ -701,13 +738,16 @@ export default function Feed() {
 
             {/* Empty State */}
             {Object.values(categorizedProjects).every(cat => cat.length === 0) && (
-              <div className="card-elevated py-20 text-center p-8 rounded-2xl">
+              <div className="card-elevated py-20 text-center p-8 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20">
                 <div className="space-y-4">
-                  <div className="text-6xl">🗺️</div>
-                  <p className="text-2xl font-black text-foreground">No itineraries found</p>
-                  <p className="text-base text-muted-foreground">
-                    Be the first to publish your amazing travel itinerary!
+                  <div className="text-6xl">✈️</div>
+                  <p className="text-2xl font-black text-foreground">Ready for your next adventure?</p>
+                  <p className="text-base text-muted-foreground mb-6">
+                    No itineraries yet. Be the first to share your travel journey with our community!
                   </p>
+                  <button className="badge badge-primary text-sm font-bold px-6 py-2 hover:opacity-90">
+                    Share Your Itinerary
+                  </button>
                 </div>
               </div>
             )}

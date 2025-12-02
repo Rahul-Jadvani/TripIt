@@ -4,8 +4,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Medal, Loader2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { FeaturedItinerariesSkeleton } from '@/components/FeaturedItinerariesSkeleton';
-import { useItinerariesLeaderboard, useBuildersLeaderboard, useFeaturedLeaderboard } from '@/hooks/useLeaderboard';
+import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
+import { useProjectsLeaderboard, useBuildersLeaderboard, useFeaturedLeaderboard } from '@/hooks/useLeaderboard';
 
 type LeaderboardTab = 'itineraries' | 'builders' | 'featured';
 
@@ -18,7 +18,7 @@ export default function Leaderboard() {
     setTab(t);
   }, [searchParams]);
 
-  const { data: itinerariesData, isLoading: itinerariesLoading, error: itinerariesError } = useItinerariesLeaderboard();
+  const { data: itinerariesData, isLoading: itinerariesLoading, error: itinerariesError } = useProjectsLeaderboard();
   const { data: buildersData, isLoading: buildersLoading, error: buildersError } = useBuildersLeaderboard();
   const { data: featuredData, isLoading: featuredLoading, error: featuredError } = useFeaturedLeaderboard(30);
 

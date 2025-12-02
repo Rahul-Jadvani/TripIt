@@ -31,7 +31,7 @@ def import_models():
     from models.notification import Notification
     from models.admin_scoring_config import AdminScoringConfig
 
-    # TripIt Models (Phase 1)
+    # TripIt Models (Phase 1, 3, & 5)
     from models.traveler import Traveler
     from models.itinerary import Itinerary
     from models.safety_rating import SafetyRating
@@ -43,6 +43,11 @@ def import_models():
     from models.traveler_certification import TravelerCertification
     from models.sbt_verification import SBTVerification
     from models.travel_group import TravelGroup
+    from models.travel_group_member import TravelGroupMember
+    from models.women_guide import WomenGuide
+    from models.guide_booking import GuideBooking
+    from models.guide_review import GuideReview
+    from models.women_safety_resource import WomenSafetyResource
 
     return True
 
@@ -391,10 +396,12 @@ def register_blueprints(app):
     from routes.notifications import notifications_bp
     from routes.scoring import scoring_bp
 
-    # TripIt Routes (Phase 2)
+    # TripIt Routes (Phase 2, 3, & 5)
     from routes.itineraries import itineraries_bp
     from routes.safety_ratings import safety_ratings_bp
     from routes.travel_intel import travel_intel_bp
+    from routes.travel_groups import travel_groups_bp
+    from routes.women_safety import women_safety_bp
 
     # PERFORMANCE: Ultra-fast optimized routes
     from routes.prefetch import prefetch_bp
@@ -429,6 +436,8 @@ def register_blueprints(app):
     app.register_blueprint(itineraries_bp, url_prefix='/api/itineraries')
     app.register_blueprint(safety_ratings_bp, url_prefix='/api/safety-ratings')
     app.register_blueprint(travel_intel_bp, url_prefix='/api/travel-intel')
+    app.register_blueprint(travel_groups_bp, url_prefix='/api/travel-groups')
+    app.register_blueprint(women_safety_bp, url_prefix='/api/women-safety')
 
     # PERFORMANCE: Ultra-fast optimized endpoints
     app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')

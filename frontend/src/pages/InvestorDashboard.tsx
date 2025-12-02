@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { adminService, itinerariesService, introsService, savedItinerariesService } from '@/services/api';
-import { transformItinerary } from '@/hooks/useItineraries';
+import { transformProject } from '@/hooks/useProjects';
 import { matchItinerariesToInvestor } from '@/utils/investorMatching';
-import { ItineraryCard } from '@/components/ProjectCard';
-import { ItineraryCardSkeletonGrid } from '@/components/ItineraryCardSkeleton';
+import { ItineraryCard } from '@/components/ItineraryCard';
+import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,7 @@ export default function InvestorDashboard() {
         const response = await itinerariesService.getInvestorMatches(1, 50, 20);
         const payload = response.data || {};
         const transformeditinerarys = Array.isArray(payload.data)
-          ? payload.data.map(transformItinerary)
+          ? payload.data.map(transformProject)
           : [];
         return {
           ...payload,
@@ -397,7 +397,7 @@ export default function InvestorDashboard() {
                   </Button>
                 </div>
                 {matchedLoading ? (
-                  <ItineraryCardSkeletonGrid count={3} />
+                  <ProjectCardSkeletonGrid count={3} />
                 ) : filtereditinerarys.length > 0 ? (
                   <div className="space-y-4">
                     {filtereditinerarys.slice(0, 3).map((itinerary: any) => (
@@ -466,7 +466,7 @@ export default function InvestorDashboard() {
 
               {/* itinerarys List */}
               {matchedLoading ? (
-                <ItineraryCardSkeletonGrid count={6} />
+                <ProjectCardSkeletonGrid count={6} />
               ) : filtereditinerarys.length > 0 ? (
                 <div className="space-y-4">
                   {filtereditinerarys.map((itinerary: any) => (
@@ -487,7 +487,7 @@ export default function InvestorDashboard() {
           {/* Saved itinerarys Tab */}
           <TabsContent value="saved">
             {savedLoading ? (
-              <ItineraryCardSkeletonGrid count={3} />
+              <ProjectCardSkeletonGrid count={3} />
             ) : saveditinerarys && saveditinerarys.length > 0 ? (
               <div className="space-y-4">
                 {saveditinerarys.map((item: any) => {

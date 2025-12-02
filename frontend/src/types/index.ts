@@ -509,6 +509,213 @@ export type NotificationType =
   | 'badge'
   | 'intro_request';
 
+// ============================================================================
+// PHASE 3: TRAVEL GROUPS
+// ============================================================================
+
+export interface TravelGroup {
+  id: string;
+  uuid: string;
+  name: string;
+  description?: string;
+  destination: string;
+  start_date: string; // ISO date
+  end_date: string; // ISO date
+  group_type?: 'interest_based' | 'safety_focused' | 'women_only' | 'location_based';
+  max_members: number;
+  current_members_count: number;
+  activity_tags: string[]; // ['trekking', 'photography', 'food', etc.]
+  is_women_only: boolean;
+  group_chat_room_id?: string;
+  live_location_sharing_enabled: boolean;
+  emergency_alert_enabled: boolean;
+  is_active: boolean;
+  is_featured: boolean;
+  created_by_traveler_id: string;
+  creator?: Traveler;
+  members?: TravelGroupMember[];
+  itineraries?: Itinerary[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TravelGroupMember {
+  id: string;
+  group_id: string;
+  traveler_id: string;
+  role: 'member' | 'organizer' | 'moderator' | 'guest';
+  join_status: 'pending' | 'accepted' | 'rejected' | 'left' | 'blocked';
+  joined_date: string;
+  traveler_reputation_at_join: number;
+  traveler_safety_score_at_join: number;
+  has_shared_location: boolean;
+  notifications_enabled: boolean;
+  is_active: boolean;
+  traveler?: Traveler;
+}
+
+export interface TravelGroupFilters {
+  search?: string;
+  destination?: string;
+  group_type?: string;
+  activity?: string[];
+  women_safe?: boolean;
+  has_availability?: boolean;
+  sort?: 'newest' | 'popular' | 'starting_soon';
+}
+
+// ============================================================================
+// PHASE 5: WOMEN SAFETY
+// ============================================================================
+
+export interface WomenGuide {
+  id: string;
+  traveler_id: string;
+  is_verified: boolean;
+  verification_level?: 'bronze' | 'silver' | 'gold' | 'platinum';
+  years_of_experience: number;
+  languages_spoken: string[];
+  specializations: string[]; // ['women_safety', 'budget_travel', 'adventure', etc.]
+  favorite_destinations: string[];
+  average_rating: number;
+  total_reviews: number;
+  women_travelers_guided: number;
+  successful_trips_count: number;
+  hourly_rate_usd?: number;
+  availability_status: 'available' | 'unavailable' | 'on_leave';
+  service_locations: string[]; // Cities/regions where guide operates
+  max_group_size: number;
+  offers_accommodation: boolean;
+  offers_meals: boolean;
+  emergency_response_training: boolean;
+  first_aid_certified: boolean;
+  background_check_completed: boolean;
+  is_active: boolean;
+  is_featured: boolean;
+  traveler?: Traveler;
+  reviews?: GuideReview[];
+}
+
+export interface GuideBooking {
+  id: string;
+  guide_id: string;
+  traveler_id: string;
+  destination: string;
+  start_date: string; // ISO date
+  end_date: string; // ISO date
+  group_size: number;
+  activity_type?: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  total_cost_usd?: number;
+  payment_status: 'pending' | 'paid' | 'refunded';
+  special_requirements?: string;
+  emergency_contacts_shared: boolean;
+  insurance_provided: boolean;
+  created_at: string;
+  confirmation_date?: string;
+  guide?: WomenGuide;
+  traveler?: Traveler;
+}
+
+export interface GuideReview {
+  id: string;
+  guide_id: string;
+  traveler_id: string;
+  booking_id?: string;
+  rating: number; // 1-5
+  review_title?: string;
+  review_text: string;
+  safety_rating?: number;
+  knowledge_rating?: number;
+  communication_rating?: number;
+  professionalism_rating?: number;
+  value_for_money_rating?: number;
+  verified_traveler: boolean;
+  tour_type?: string;
+  helpful_count: number;
+  created_at: string;
+  traveler?: Partial<Traveler>;
+}
+
+export interface WomenSafetyResource {
+  id: string;
+  title: string;
+  description?: string;
+  content: string;
+  category: 'tips' | 'emergency' | 'legal' | 'health' | 'packing' | 'cultural' | 'navigation';
+  target_region?: string;
+  target_countries: string[];
+  urgency_level: 'low' | 'medium' | 'high' | 'critical';
+  is_featured: boolean;
+  is_pinned: boolean;
+  external_links: Array<{
+    title: string;
+    url: string;
+    source?: string;
+  }>;
+  helpline_numbers: Array<{
+    country: string;
+    service: string;
+    number: string;
+  }>;
+  view_count: number;
+  helpful_count: number;
+  language: string;
+  created_at: string;
+}
+
+export interface WomenSafetySettings {
+  women_only_group_preference: boolean;
+  location_sharing_enabled: boolean;
+  emergency_contacts: Array<{
+    name?: string;
+    phone?: string;
+  }>;
+  medical_conditions?: string;
+  insurance_provider?: string;
+}
+
+// ============================================================================
+// ENUMS & CONSTANTS
+// ============================================================================
+
+export enum DifficultyLevel {
+  EASY = 'easy',
+  MEDIUM = 'medium',
+  HARD = 'hard',
+  EXPERT = 'expert',
+}
+
+export enum TravelType {
+  SOLO = 'solo',
+  GROUP = 'group',
+  FAMILY = 'family',
+  ADVENTURE = 'adventure',
+}
+
+export enum SafetyRatingType {
+  OVERALL = 'overall',
+  ACCOMMODATION = 'accommodation',
+  ROUTE = 'route',
+  COMMUNITY = 'community',
+  WOMEN_SAFETY = 'women_safety',
+}
+
+export enum TravelIntelType {
+  QUESTION = 'question',
+  UPDATE = 'update',
+  WARNING = 'warning',
+  RECOMMENDATION = 'recommendation',
+  LOCAL_INSIGHT = 'local_insight',
+}
+
+export enum GroupType {
+  INTEREST_BASED = 'interest_based',
+  SAFETY_FOCUSED = 'safety_focused',
+  WOMEN_ONLY = 'women_only',
+  LOCATION_BASED = 'location_based',
+}
+
 export interface PaginatedResponse<T> {
   data: T;
   pagination: {

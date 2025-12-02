@@ -104,7 +104,7 @@ def create_travel_intel(user_id):
         # Create travel intel
         intel = TravelIntel(
             itinerary_id=itinerary_id,
-            traveler_sbt_id=user_id,
+            traveler_id=user_id,
             parent_intel_id=data.get('parent_intel_id'),
             intel_type=data.get('intel_type', 'update').lower(),
             title=data.get('title'),
@@ -142,9 +142,9 @@ def create_travel_intel(user_id):
                 # If it's a reply to another intel, notify the parent intel author
                 if data.get('parent_intel_id'):
                     parent_intel = TravelIntel.query.get(data['parent_intel_id'])
-                    if parent_intel and parent_intel.traveler_sbt_id != user_id:
+                    if parent_intel and parent_intel.traveler_id != user_id:
                         notify_intel_reply(
-                            parent_intel.traveler_sbt_id,
+                            parent_intel.traveler_id,
                             parent_intel,
                             intel,
                             traveler
@@ -207,7 +207,7 @@ def update_travel_intel(user_id, intel_id):
         if not intel:
             return error_response('Not found', 'Travel intel not found', 404)
 
-        if intel.traveler_sbt_id != user_id:
+        if intel.traveler_id != user_id:
             return error_response('Forbidden', 'You can only edit your own intel', 403)
 
         data = request.get_json()
@@ -262,7 +262,7 @@ def delete_travel_intel(user_id, intel_id):
         if not intel:
             return error_response('Not found', 'Travel intel not found', 404)
 
-        if intel.traveler_sbt_id != user_id:
+        if intel.traveler_id != user_id:
             return error_response('Forbidden', 'You can only delete your own intel', 403)
 
         intel.is_deleted = True
@@ -342,7 +342,7 @@ def get_user_travel_intel(user_id):
     try:
         page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
 
-        query = TravelIntel.query.filter_by(traveler_sbt_id=user_id, is_deleted=False)
+        query = TravelIntel.query.filter_by(traveler_id=user_id, is_deleted=False)
         total = query.count()
 
         intel_items = query.order_by(

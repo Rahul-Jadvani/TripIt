@@ -6,6 +6,7 @@ from extensions import db
 from models.project import Project
 from models.user import User
 from services.scoring.score_engine import ScoringEngine
+from models.itinerary import Itinerary
 from datetime import datetime, timedelta
 from flask import current_app
 import traceback
@@ -138,7 +139,90 @@ def score_project_task(self, project_id):
                 retry_delay = base_delay * (2 ** project.scoring_retry_count)
 
                 # Retry the task
-                raise self.retry(exc=e, countdown=retry_delay)
+        raise self.retry(exc=e, countdown=retry_delay)
+
+
+@celery.task(bind=True, max_retries=3, default_retry_delay=300)
+def score_itinerary_task(self, itinerary_id):
+    """
+    Basic async scoring for itineraries.
+
+    This is a lightweight scorer meant to keep TripIt routes working until a
+    dedicated itinerary scoring engine is shipped.
+    """
+    try:
+        itinerary = Itinerary.query.get(itinerary_id)
+        if not itinerary:
+            return {
+                'success': False,
+                'error': 'Itinerary not found',
+                'itinerary_id': itinerary_id
+            }
+
+        # Simple heuristics based on available fields (no external calls)
+        description_len = len(itinerary.description or '')
+        quality_score = min(30.0, round(description_len / 20.0, 2))
+
+        # Safety input is already a 0-100 score; normalize to a 0-20 component
+        safety_component = min(20.0, round((itinerary.safety_score or 0) * 0.2, 2))
+
+        # Engagement: helpful_votes + view_count (very light-weight)
+        community_score = min(
+            20.0,
+            round((itinerary.helpful_votes or 0) * 0.5 + (itinerary.view_count or 0) * 0.01, 2)
+        )
+
+        itinerary.quality_score = quality_score
+        itinerary.safety_score_component = safety_component
+        itinerary.community_score = community_score
+
+        # Recalculate aggregate proof score using the model helper
+        itinerary.calculate_proof_score()
+
+        # Mirror proof_score into travel_credibility_score if that field exists
+        try:
+            itinerary.travel_credibility_score = itinerary.proof_score
+        except Exception:
+            # Field may not be present on older schemas; ignore
+            pass
+
+        db.session.commit()
+
+        # Best-effort cache invalidation for itinerary-related keys
+        try:
+            from utils.cache import CacheService
+            if hasattr(CacheService, 'invalidate_itinerary'):
+                CacheService.invalidate_itinerary(itinerary_id)
+            if hasattr(CacheService, 'invalidate_itinerary_feed'):
+                CacheService.invalidate_itinerary_feed()
+            if hasattr(CacheService, 'invalidate_leaderboard'):
+                CacheService.invalidate_leaderboard()
+        except Exception:
+            # Cache is best-effort; swallow errors to avoid task failures
+            pass
+
+        return {
+            'success': True,
+            'itinerary_id': itinerary_id,
+            'proof_score': itinerary.proof_score,
+            'quality_score': quality_score,
+            'community_score': community_score,
+            'safety_component': safety_component
+        }
+
+    except Exception as e:
+        db.session.rollback()
+        error_msg = str(e)
+
+        # Retry with exponential backoff to align with project scoring behavior
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e)
+
+        return {
+            'success': False,
+            'error': error_msg,
+            'itinerary_id': itinerary_id
+        }
 
 
 @celery.task

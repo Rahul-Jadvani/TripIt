@@ -38,7 +38,7 @@ def add_safety_rating(user_id):
         # Check if user already rated this itinerary
         existing_rating = SafetyRating.query.filter_by(
             itinerary_id=itinerary_id,
-            traveler_sbt_id=user_id
+            traveler_id=user_id
         ).first()
 
         # Prepare rating data
@@ -72,7 +72,7 @@ def add_safety_rating(user_id):
             # Create new rating
             rating = SafetyRating(
                 itinerary_id=itinerary_id,
-                traveler_sbt_id=user_id,
+                traveler_id=user_id,
                 photo_ipfs_hashes=photo_ipfs_hashes,
                 **rating_data
             )
@@ -175,7 +175,7 @@ def update_safety_rating(user_id, rating_id):
         if not rating:
             return error_response('Not found', 'Safety rating not found', 404)
 
-        if rating.traveler_sbt_id != user_id:
+        if rating.traveler_id != user_id:
             return error_response('Forbidden', 'You can only edit your own ratings', 403)
 
         data = request.get_json()
@@ -233,7 +233,7 @@ def delete_safety_rating(user_id, rating_id):
         if not rating:
             return error_response('Not found', 'Safety rating not found', 404)
 
-        if rating.traveler_sbt_id != user_id:
+        if rating.traveler_id != user_id:
             return error_response('Forbidden', 'You can only delete your own ratings', 403)
 
         itinerary_id = rating.itinerary_id
@@ -269,7 +269,7 @@ def get_user_safety_ratings(user_id):
     try:
         page, per_page = get_pagination_params(request, default_per_page=20, max_per_page=100)
 
-        query = SafetyRating.query.filter_by(traveler_sbt_id=user_id)
+        query = SafetyRating.query.filter_by(traveler_id=user_id)
         total = query.count()
 
         ratings = query.order_by(

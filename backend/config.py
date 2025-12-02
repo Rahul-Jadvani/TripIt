@@ -198,6 +198,10 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)
+    # Override engine options for SQLite (doesn't support connection pooling)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'connect_args': {'check_same_thread': False}
+    }
 
 
 class ProductionConfig(Config):

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { publishProjectSchema, PublishProjectInput } from '@/lib/schemas';
-import { useCreateItinerary } from '@/hooks/useProjects';
+import { useCreateProject } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

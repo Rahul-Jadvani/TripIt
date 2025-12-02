@@ -319,3 +319,6 @@ export function useRescoreProject() {
     },
   });
 }
+
+// Alias for terminology migration (Zer0 → TripIt)
+export const useItineraries = useProjects;

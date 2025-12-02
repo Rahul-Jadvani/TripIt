@@ -39,6 +39,11 @@ from .safety_alert import SafetyAlert
 from .traveler_certification import TravelerCertification
 from .sbt_verification import SBTVerification
 from .travel_group import TravelGroup, travel_group_itineraries
+from .travel_group_member import TravelGroupMember
+from .women_guide import WomenGuide
+from .guide_booking import GuideBooking
+from .guide_review import GuideReview
+from .women_safety_resource import WomenSafetyResource
 
 __all__ = [
     # Legacy Zer0 Models
@@ -85,5 +90,10 @@ __all__ = [
     'TravelerCertification',
     'SBTVerification',
     'TravelGroup',
+    'TravelGroupMember',
+    'WomenGuide',
+    'GuideBooking',
+    'GuideReview',
+    'WomenSafetyResource',
     'travel_group_itineraries'
 ]

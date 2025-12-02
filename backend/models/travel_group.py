@@ -58,9 +58,13 @@ class TravelGroup(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def to_dict(self):
+    # Relationships
+    creator = db.relationship('Traveler', backref='created_travel_groups', foreign_keys=[created_by_traveler_id])
+    itineraries = db.relationship('Itinerary', secondary=travel_group_itineraries, backref='travel_groups')
+
+    def to_dict(self, include_members=False, include_itineraries=False):
         """Convert to dictionary"""
-        return {
+        data = {
             'id': self.id,
             'uuid': self.uuid,
             'name': self.name,
@@ -71,8 +75,21 @@ class TravelGroup(db.Model):
             'end_date': self.end_date.isoformat() if self.end_date else None,
             'max_members': self.max_members,
             'current_members_count': self.current_members_count,
+            'activity_tags': self.activity_tags,
             'is_women_only': self.is_women_only,
+            'group_chat_room_id': self.group_chat_room_id,
+            'live_location_sharing_enabled': self.live_location_sharing_enabled,
+            'emergency_alert_enabled': self.emergency_alert_enabled,
             'is_active': self.is_active,
             'is_featured': self.is_featured,
+            'created_by_traveler_id': self.created_by_traveler_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+        if include_members and self.members:
+            data['members'] = [m.to_dict(include_traveler=True) for m in self.members]
+
+        if include_itineraries and self.itineraries:
+            data['itineraries'] = [i.to_dict() for i in self.itineraries]
+
+        return data
