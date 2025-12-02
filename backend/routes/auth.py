@@ -369,17 +369,21 @@ def google_callback():
         frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
 
         if error:
+            print(f"[Google OAuth] Error from Google: {error}")
             return redirect(f"{frontend_url}/login?google_error={error}")
 
         if not code or not state:
+            print(f"[Google OAuth] Missing code or state: code={bool(code)}, state={bool(state)}")
             return redirect(f"{frontend_url}/login?google_error=missing_code_or_state")
 
         # Validate state (get_oauth_state deletes it automatically)
         stored = get_oauth_state(state)
         if not stored:
+            print(f"[Google OAuth] Invalid state token")
             return redirect(f"{frontend_url}/login?google_error=invalid_state")
 
         # Exchange code for tokens
+        print(f"[Google OAuth] Exchanging code for tokens...")
         session = get_retry_session(retries=3, backoff_factor=1.0)
         token_response = session.post(
             'https://oauth2.googleapis.com/token',
@@ -391,7 +395,7 @@ def google_callback():
                 'redirect_uri': current_app.config.get('GOOGLE_REDIRECT_URI'),
             },
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
-            timeout=30  # Increased timeout for DNS resolution in Docker
+            timeout=30
         )
 
         token_data = token_response.json()
@@ -399,13 +403,17 @@ def google_callback():
 
         if not access_token:
             err = token_data.get('error', 'token_failed')
+            print(f"[Google OAuth] Failed to get access token: {err}")
+            print(f"[Google OAuth] Token response: {token_data}")
             return redirect(f"{frontend_url}/login?google_error={err}")
+
+        print(f"[Google OAuth] Successfully got access token, fetching user info...")
 
         # Get user info
         userinfo_resp = session.get(
             'https://www.googleapis.com/oauth2/v3/userinfo',
             headers={'Authorization': f'Bearer {access_token}'},
-            timeout=30  # Increased timeout for DNS resolution in Docker
+            timeout=30
         )
         profile = userinfo_resp.json()
 
@@ -415,11 +423,15 @@ def google_callback():
         picture = profile.get('picture')
 
         if not email:
+            print(f"[Google OAuth] No email in user profile")
             return redirect(f"{frontend_url}/login?google_error=no_email")
+
+        print(f"[Google OAuth] Got user email: {email}")
 
         # Find or create user
         user = User.query.filter_by(email=email).first()
         if not user:
+            print(f"[Google OAuth] Creating new user for {email}")
             # Generate a username from email
             base_username = email.split('@')[0][:20] or 'user'
             candidate = base_username
@@ -440,6 +452,8 @@ def google_callback():
             db.session.add(user)
             db.session.commit()
 
+            print(f"[Google OAuth] New user created: {candidate}")
+
             # Invalidate search cache when a new user is created via OAuth
             CacheService.invalidate_search_results()
 
@@ -449,19 +463,28 @@ def google_callback():
                 EmailService.send_welcome_email(user=user)
             except Exception as email_err:
                 print(f"[Auth] Warning: failed to send welcome email for Google OAuth: {email_err}")
+        else:
+            print(f"[Google OAuth] Existing user found: {user.username}")
 
         if not user.is_active:
+            print(f"[Google OAuth] User account is disabled: {user.username}")
             return redirect(f"{frontend_url}/login?google_error=account_disabled")
 
         # Issue JWT tokens
+        print(f"[Google OAuth] Creating JWT tokens for user: {user.id}")
         access = create_access_token(identity=user.id)
         refresh = create_refresh_token(identity=user.id)
 
+        print(f"[Google OAuth] Successfully completed OAuth flow for {email}")
         # Redirect to frontend callback to store tokens
         return redirect(f"{frontend_url}/auth/callback?provider=google&access={access}&refresh={refresh}")
 
     except Exception as e:
+        import traceback
         db.session.rollback()
+        error_traceback = traceback.format_exc()
+        print(f"[Google OAuth] Exception occurred: {str(e)}")
+        print(f"[Google OAuth] Traceback:\n{error_traceback}")
         frontend_url = current_app.config.get('CORS_ORIGINS', ['http://localhost:8080'])[0]
         return redirect(f"{frontend_url}/login?google_error=callback_failed")
 
