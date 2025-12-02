@@ -468,28 +468,6 @@ export const travelGroupsService = {
     api.get(`/travel-groups/matching${page ? `?page=${page}` : ''}`),
 };
 
-// Women Safety
-export const womenSafetyService = {
-  // Guides
-  getGuides: (params?: URLSearchParams) =>
-    api.get(`/women-safety/guides${params ? `?${params.toString()}` : ''}`),
-  getGuide: (guideId: string) => api.get(`/women-safety/guides/${guideId}`),
-  bookGuide: (guideId: string, data: any) =>
-    api.post(`/women-safety/guides/${guideId}/book`, data),
-  submitGuideReview: (guideId: string, data: any) =>
-    api.post(`/women-safety/guides/${guideId}/reviews`, data),
-
-  // Resources
-  getResources: (params?: URLSearchParams) =>
-    api.get(`/women-safety/resources${params ? `?${params.toString()}` : ''}`),
-  markResourceHelpful: (resourceId: string) =>
-    api.post(`/women-safety/resources/${resourceId}/helpful`),
-
-  // Settings
-  getSettings: () => api.get('/women-safety/settings'),
-  updateSettings: (data: any) => api.put('/women-safety/settings', data),
-};
-
 // Women's Safety Feature
 export const womenSafetyService = {
   // Women Guides
