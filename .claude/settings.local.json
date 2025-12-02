@@ -27,7 +27,10 @@
       "Bash(frontend/src/components/ChainPostCard.tsx )",
       "Bash(frontend/src/components/ChainPostList.tsx )",
       "Bash(frontend/src/components/ChainSelector.tsx)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
