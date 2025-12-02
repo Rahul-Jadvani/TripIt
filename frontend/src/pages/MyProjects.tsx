@@ -4,8 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Eye, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserItineraries, useDeleteItinerary } from '@/hooks/useProjects';
-import { ProjectCard } from '@/components/ProjectCard';
-import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
+import { ItineraryCard } from '@/components/ItineraryCard';
+
+// Simple skeleton component for loading states
+const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
+  <div className="grid grid-cols-1 gap-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+    ))}
+  </div>
+);
 import { PostUpdateModal } from '@/components/PostUpdateModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
@@ -64,9 +72,8 @@ export default function MyProjects() {
             <div className="space-y-6">
               {data?.data && data.data.length > 0 ? (
                 data.data.map((project: any) => (
-                  <div key={project.id} className="card-elevated overflow-hidden">
-                    {/* Use the same ProjectCard as feed */}
-                    <ProjectCard project={project} />
+                  <div key={project.id}>
+                    <ItineraryCard itinerary={project} />
 
                     {/* Action buttons section - separate area below card */}
                     <div className="border-t-2 border-border bg-secondary/20 p-4">

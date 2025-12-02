@@ -1,13 +1,21 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 // Lazy load heavy carousels (named exports -> map to default)
-const ProjectCarousel = lazy(() =>
-  import('@/components/ProjectCarousel').then((m) => ({ default: m.ProjectCarousel }))
-);
 const TopRatedCarousel = lazy(() =>
   import('@/components/TopRatedCarousel').then((m) => ({ default: m.TopRatedCarousel }))
 );
-import { ProjectCardSkeletonGrid, TopRatedCarouselSkeleton } from '@/components/ProjectCardSkeleton';
+// Simple skeleton components for loading states
+const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+    ))}
+  </div>
+);
+
+const TopRatedCarouselSkeleton = () => (
+  <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+);
 import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield } from 'lucide-react';
 import { useItineraries, transformProject } from '@/hooks/useProjects';
 import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
@@ -398,10 +406,10 @@ export default function Feed() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {topBuilders[0] && (
                 <FeedMiniThread
-                  title={`Builder of the Week: @${topBuilders[0].username}`}
-                  subtitle={`${topBuilders[0].projects} projects • ${topBuilders[0].score} karma`}
+                  title={`Top Travel Creator: @${topBuilders[0].username}`}
+                  subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} community score`}
                   href={`/u/${topBuilders[0].username}`}
-                  badge="Spotlight"
+                  badge="Featured"
                 />
               )}
               {hotData?.data?.[0] && (
@@ -424,17 +432,10 @@ export default function Feed() {
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">Popular adventures gaining momentum this week</p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
-                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.hot}
-                      categoryTitle="Trending"
-                      categoryName="trending"
-                      categoryIcon={<TrendingUp className="h-5 w-5" />}
-                      autoplay={true}
-                    />
-                  </Suspense>
-                </LazyOnVisible>
+                {/* TODO: Implement itinerary carousel for trending items */}
+                <div className="p-8 text-center text-muted-foreground">
+                  Loading trending destinations...
+                </div>
               </section>
             )}
 
@@ -443,9 +444,9 @@ export default function Feed() {
               {topBuilders[0] && (
                 <FeedMiniThread
                   title={`@${topBuilders[0].username}`}
-                  subtitle={`${topBuilders[0].projects} projects • ${topBuilders[0].score} karma`}
+                  subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} community score`}
                   href={`/u/${topBuilders[0].username}`}
-                  badge="Top Builder"
+                  badge="Top Travel Creator"
                 />
               )}
               {investorsList[0] && investorsList[0].user?.username && (
@@ -470,13 +471,6 @@ export default function Feed() {
                 </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.featured}
-                      categoryTitle="Women-Safe"
-                      categoryName="women-safe"
-                      categoryIcon={<Shield className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -494,13 +488,6 @@ export default function Feed() {
                 </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.risingStars}
-                      categoryTitle="Hidden Gems"
-                      categoryName="hidden-gems"
-                      categoryIcon={<Flame className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -518,13 +505,6 @@ export default function Feed() {
                 </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.newLaunches}
-                      categoryTitle="Latest Adventures"
-                      categoryName="new-launches"
-                      categoryIcon={<Clock className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -535,13 +515,6 @@ export default function Feed() {
               <section id="defi" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.defi}
-                      categoryTitle="DeFi"
-                      categoryName="defi"
-                      categoryIcon={<Sparkles className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -562,13 +535,6 @@ export default function Feed() {
               <section id="ai-ml" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.aiMl}
-                      categoryTitle="AI/ML"
-                      categoryName="ai-ml"
-                      categoryIcon={<Sparkles className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -589,13 +555,6 @@ export default function Feed() {
               <section id="gaming" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.gaming}
-                      categoryTitle="Gaming"
-                      categoryName="gaming"
-                      categoryIcon={<Sparkles className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -616,13 +575,6 @@ export default function Feed() {
               <section id="saas" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.saas}
-                      categoryTitle="SaaS"
-                      categoryName="saas"
-                      categoryIcon={<Sparkles className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -653,13 +605,6 @@ export default function Feed() {
               <section id="most-requested" className="carousel-cinema scroll-mt-24">
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <ProjectCarousel
-                      projects={categorizedProjects.mostRequested}
-                      categoryTitle="Most Requested Intros"
-                      categoryName="most-requested"
-                      categoryIcon={<MessageCircle className="h-5 w-5" />}
-                      autoplay={true}
-                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -667,12 +612,12 @@ export default function Feed() {
 
             {/* Removed Top Investor card per request */}
 
-            {/* Community Highlights: Top Builders, Open Investors, Recent Connections */}
+            {/* Community Highlights: Top Travel Creators, Open Investors, Recent Connections */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Top Builders */}
+              {/* Top Travel Creators */}
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-black">Top Builders</h3>
+                  <h3 className="text-xl font-black">Top Travel Creators</h3>
                 </div>
                 <div className="space-y-3">
                   {topBuilders.slice(0,6).map((b: any, i: number) => (
@@ -680,7 +625,7 @@ export default function Feed() {
                       <div className="h-9 w-9 rounded-full bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black text-black">{i+1}</div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-foreground truncate">{b.username}</p>
-                        <p className="text-xs text-muted-foreground truncate">{b.projects} projects • {b.score} karma</p>
+                        <p className="text-xs text-muted-foreground truncate">{b.projects} itineraries • {b.score} score</p>
                       </div>
                     </a>
                   ))}

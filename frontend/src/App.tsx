@@ -22,7 +22,6 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
 const Search = lazy(() => import("./pages/Search"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const About = lazy(() => import("./pages/About"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -32,25 +31,15 @@ const Publish = lazy(() => import("./pages/Publish"));
 const EditProject = lazy(() => import("./pages/EditProject"));
 const Intros = lazy(() => import("./pages/Intros"));
 const Admin = lazy(() => import("./pages/Admin"));
-const AdminRescore = lazy(() => import("./pages/AdminRescore"));
-const AdminValidator = lazy(() => import("./pages/AdminValidator"));
-const Validator = lazy(() => import("./pages/Validator"));
-const InvestorPlans = lazy(() => import("./pages/InvestorPlans"));
-const InvestorDashboard = lazy(() => import("./pages/InvestorDashboard"));
-const InvestorDirectory = lazy(() => import("./pages/InvestorDirectory"));
-const Investors = lazy(() => import("./pages/Investors"));
 const DirectMessages = lazy(() => import("./pages/DirectMessages"));
-const GalleryView = lazy(() => import("./pages/GalleryView"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const NetworkIssue = lazy(() => import("./pages/NetworkIssue"));
-const ChainsListPage = lazy(() => import("./pages/ChainsListPage"));
-const ChainDetailPage = lazy(() => import("./pages/ChainDetailPage"));
-const ChainAnalytics = lazy(() => import("./pages/ChainAnalytics"));
-const CreateChainPage = lazy(() => import("./pages/CreateChainPage"));
-const EditChainPage = lazy(() => import("./pages/EditChainPage"));
-const ChainRequestsPage = lazy(() => import("./pages/ChainRequestsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
-const Gallery = lazy(() => import("./pages/Gallery"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const CommunitiesListPage = lazy(() => import("./pages/CommunitiesListPage"));
+const CommunityDetailPage = lazy(() => import("./pages/CommunityDetailPage"));
+const CreateCommunityPage = lazy(() => import("./pages/CreateCommunityPage"));
+const EditCommunityPage = lazy(() => import("./pages/EditCommunityPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,21 +61,6 @@ function PrefetchWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Public investors route that redirects logged-in users to the protected directory
-function InvestorsGateway() {
-  const { user, isLoading } = useAuth();
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <CoffeeLoader size="sm" message="Checking your session…" />
-      </div>
-    );
-  }
-  if (user) {
-    return <Navigate to="/investor-directory" replace />;
-  }
-  return <Investors />;
-}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -105,11 +79,6 @@ const App = () => (
               {/* Public Routes */}
               <Route path="/" element={<Feed />} />
               <Route path="/feed" element={<Feed />} />
-              <Route path="/gallery/:category" element={<GalleryView />} />
-              <Route path="/explore" element={<Gallery />} />
-              <Route path="/gallery/featured" element={<Navigate to="/explore" replace />} />
-              {/* Helpful redirects */}
-              <Route path="/investor" element={<Navigate to="/investor-directory" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/register" element={<Register />} />
@@ -117,14 +86,12 @@ const App = () => (
               <Route path="/itinerary/:id" element={<ProjectDetail />} />
               <Route path="/u/:username" element={<UserProfile />} />
               <Route path="/search" element={<Search />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/about" element={<About />} />
-              <Route path="/investor-plans" element={<InvestorPlans />} />
-              <Route path="/investors" element={<InvestorsGateway />} />
-
-              {/* Layerz Routes */}
-              <Route path="/layerz" element={<ChainsListPage />} />
-              <Route path="/layerz/:slug" element={<ChainDetailPage />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/communities" element={<CommunitiesListPage />} />
+              <Route path="/community/:id" element={<CommunityDetailPage />} />
+              <Route path="/community/create" element={<ProtectedRoute><CreateCommunityPage /></ProtectedRoute>} />
+              <Route path="/community/:id/edit" element={<ProtectedRoute><EditCommunityPage /></ProtectedRoute>} />
 
               {/* Protected Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -134,21 +101,11 @@ const App = () => (
               <Route path="/publish" element={<ProtectedRoute><Publish /></ProtectedRoute>} />
               <Route path="/itinerary/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
               <Route path="/intros" element={<ProtectedRoute><Intros /></ProtectedRoute>} />
-              <Route path="/investor-dashboard" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
-              <Route path="/investor-directory" element={<ProtectedRoute><InvestorDirectory /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
-              <Route path="/layerz/create" element={<ProtectedRoute><CreateChainPage /></ProtectedRoute>} />
-              <Route path="/layerz/:slug/edit" element={<ProtectedRoute><EditChainPage /></ProtectedRoute>} />
-              <Route path="/layerz/:slug/requests" element={<ProtectedRoute><ChainRequestsPage /></ProtectedRoute>} />
-              <Route path="/layerz/:slug/analytics" element={<ProtectedRoute><ChainAnalytics /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-              <Route path="/admin/rescore" element={<AdminRoute><AdminRescore /></AdminRoute>} />
-
-              {/* Validator Route (JWT Protected) */}
-              <Route path="/validator" element={<ValidatorRoute><Validator /></ValidatorRoute>} />
 
               
 

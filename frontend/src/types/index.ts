@@ -411,7 +411,7 @@ export interface ChainStats {
   avg_proof_score: number;
 }
 
-export interface ChainFilters {
+export interface CommunityFilters {
   page?: number;
   limit?: number;
   sort?: 'trending' | 'newest' | 'most_projects' | 'most_followers' | 'alphabetical';

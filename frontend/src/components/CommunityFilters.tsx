@@ -1,10 +1,10 @@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, X, TrendingUp, Clock, Folder, Users, Star, ArrowDownAZ } from 'lucide-react';
+import { Search, X, TrendingUp, Clock, Map, Users, Star, ArrowDownAZ } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface ChainFiltersProps {
+interface CommunityFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   sort: string;
@@ -16,19 +16,21 @@ interface ChainFiltersProps {
 }
 
 const CATEGORIES = [
-  'Hackathon',
-  'DeFi',
-  'NFT',
-  'Gaming',
-  'AI/ML',
-  'Web3',
-  'Social',
-  'Tools',
-  'Education',
-  'Infrastructure',
+  'Adventure',
+  'Beach & Coast',
+  'City Breaks',
+  'Cultural',
+  'Family Travel',
+  'Food & Wine',
+  'Luxury',
+  'Nature',
+  'Road Trips',
+  'Solo Travel',
+  'Budget',
+  'Backpacking',
 ];
 
-export function ChainFilters({
+export function CommunityFilters({
   search,
   onSearchChange,
   sort,
@@ -37,14 +39,14 @@ export function ChainFilters({
   onCategoryChange,
   featuredOnly,
   onFeaturedOnlyChange,
-}: ChainFiltersProps) {
+}: CommunityFiltersProps) {
   return (
     <div className="space-y-4">
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search layerz..."
+          placeholder="Search communities..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10"
@@ -83,8 +85,8 @@ export function ChainFilters({
             </SelectItem>
             <SelectItem value="most_projects">
               <div className="flex items-center gap-2">
-                <Folder className="h-4 w-4" />
-                Most Projects
+                <Map className="h-4 w-4" />
+                Most Itineraries
               </div>
             </SelectItem>
             <SelectItem value="most_followers">

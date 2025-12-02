@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserProjects } from '@/hooks/useProjects';
-import { useAddProjectToChain } from '@/hooks/useChains';
+import { useAddItineraryToCommunity } from '@/hooks/useCommunities';
 import {
   Dialog,
   DialogContent,
@@ -21,21 +21,21 @@ import { Search, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatScore, getProjectScore } from '@/utils/score';
 
-interface AddProjectToChainDialogProps {
+interface AddItineraryToCommunityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  chainSlug: string;
-  chainName: string;
+  communitySlug: string;
+  communityName: string;
   requiresApproval: boolean;
 }
 
-export function AddProjectToChainDialog({
+export function AddItineraryToCommunityDialog({
   open,
   onOpenChange,
-  chainSlug,
-  chainName,
+  communitySlug,
+  communityName,
   requiresApproval,
-}: AddProjectToChainDialogProps) {
+}: AddItineraryToCommunityDialogProps) {
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export function AddProjectToChainDialog({
 
     try {
       await addProjectMutation.mutateAsync({
-        slug: chainSlug,
+        slug: communitySlug,
         projectId: selectedProjectId,
         message: message.trim() || undefined,
       });
@@ -67,7 +67,7 @@ export function AddProjectToChainDialog({
       if (requiresApproval) {
         toast.success('Request submitted for approval!');
       } else {
-        toast.success('Project added to chain!');
+        toast.success('Itinerary added to community!');
       }
 
       onOpenChange(false);
@@ -84,11 +84,11 @@ export function AddProjectToChainDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Add Project to {chainName}</DialogTitle>
+          <DialogTitle>Add Itinerary to {communityName}</DialogTitle>
           <DialogDescription>
             {requiresApproval
-              ? 'Select one of your published projects to submit for approval'
-              : 'Select one of your published projects to add to this chain'}
+              ? 'Select one of your published itineraries to submit for approval'
+              : 'Select one of your published itineraries to add to this community'}
           </DialogDescription>
         </DialogHeader>
 

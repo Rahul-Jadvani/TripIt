@@ -4,7 +4,6 @@ import { Rocket, FileText, ThumbsUp, MessageSquare, Users, Plus, Loader2, AlertC
 import { useDashboardStats } from '@/hooks/useStats';
 import { DashboardStatsSkeleton, DashboardHeaderSkeleton } from '@/components/DashboardStatsSkeleton';
 import { useSavedItineraries } from '@/hooks/useSavedItineraries';
-import { ProjectCard } from '@/components/ProjectCard';
 import { formatDistanceToNow } from '@/utils/date';
 
 export default function Dashboard() {

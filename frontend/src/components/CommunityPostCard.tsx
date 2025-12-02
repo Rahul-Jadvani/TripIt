@@ -13,17 +13,17 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { formatDistanceToNow } from '@/utils/date';
-import { useTogglePinPost, useToggleLockPost, useDeleteChainPost, useChainPostReplies } from '@/hooks/useChainPosts';
+import { formatDistanceToNow } from 'date-fns';
+import { useTogglePinPost, useToggleLockPost, useDeleteChainPost, useChainPostReplies } from '@/hooks/useCommunityPosts';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { ReplyForm } from './ReplyForm';
 import { MarkdownContent } from './MarkdownContent';
 import { EditPostDialog } from './EditPostDialog';
 
-interface ChainPostCardProps {
+interface CommunityPostCardProps {
   post: ChainPost;
-  chainSlug: string;
+  communitySlug: string;
   isOwner?: boolean;
   showReplies?: boolean;
   compact?: boolean;
@@ -31,29 +31,29 @@ interface ChainPostCardProps {
   expandAll?: boolean; // when true, auto-expand nested replies
 }
 
-export function ChainPostCard({
+export function CommunityPostCard({
   post,
-  chainSlug,
+  communitySlug,
   isOwner = false,
   showReplies = true,
   compact = false,
   parentAuthor,
   expandAll = false,
-}: ChainPostCardProps) {
+}: CommunityPostCardProps) {
   const { user } = useAuth();
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false); // Start collapsed; toggle to reveal
   const [showEditDialog, setShowEditDialog] = useState(false);
 
-  const pinMutation = useTogglePinPost(chainSlug);
-  const lockMutation = useToggleLockPost(chainSlug);
-  const deleteMutation = useDeleteChainPost(chainSlug);
-  const { data: repliesPayload } = useChainPostReplies(chainSlug, post.id, { per_page: 50, sort: 'top' });
+  const pinMutation = useTogglePinPost(communitySlug);
+  const lockMutation = useToggleLockPost(communitySlug);
+  const deleteMutation = useDeleteChainPost(communitySlug);
+  const { data: repliesPayload } = useChainPostReplies(communitySlug, post.id, { per_page: 50, sort: 'top' });
 
   // Persist expanded/collapsed state across refresh per-post
   useEffect(() => {
     try {
-      const k = `chain.replies.expanded.${post.id}`;
+      const k = `community.replies.expanded.${post.id}`;
       const saved = localStorage.getItem(k);
       if (saved === '1' || expandAll) setShowAllReplies(true);
     } catch {}
@@ -62,22 +62,16 @@ export function ChainPostCard({
   const isAuthor = user && post.author_id === user.id;
 
   const handlePin = () => {
-    if (!pinMutation.isPending) {
-      pinMutation.mutate(post.id);
-    }
+    pinMutation.mutate(post.id);
   };
 
   const handleLock = () => {
-    if (!lockMutation.isPending) {
-      lockMutation.mutate(post.id);
-    }
+    lockMutation.mutate(post.id);
   };
 
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this post?')) {
-      if (!deleteMutation.isPending) {
-        deleteMutation.mutate(post.id);
-      }
+      deleteMutation.mutate(post.id);
     }
   };
 
@@ -129,78 +123,33 @@ export function ChainPostCard({
               {user && (isAuthor || isOwner) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      disabled={pinMutation.isPending || lockMutation.isPending || deleteMutation.isPending}
-                    >
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {isAuthor && !post.is_deleted && (
                       <>
-                        <DropdownMenuItem
-                          onClick={() => setShowEditDialog(true)}
-                          disabled={deleteMutation.isPending}
-                        >
+                        <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={handleDelete}
-                          className="text-destructive"
-                          disabled={deleteMutation.isPending}
-                        >
-                          {deleteMutation.isPending ? (
-                            <>
-                              <div className="h-4 w-4 mr-2 border-2 border-transparent border-t-current rounded-full animate-spin" />
-                              Deleting...
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </>
-                          )}
+                        <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
                         </DropdownMenuItem>
                       </>
                     )}
                     {isOwner && !post.parent_id && (
                       <>
                         {(isAuthor || isOwner) && <DropdownMenuSeparator />}
-                        <DropdownMenuItem
-                          onClick={handlePin}
-                          disabled={pinMutation.isPending}
-                        >
-                          {pinMutation.isPending ? (
-                            <>
-                              <div className="h-4 w-4 mr-2 border-2 border-transparent border-t-current rounded-full animate-spin" />
-                              {post.is_pinned ? 'Unpinning...' : 'Pinning...'}
-                            </>
-                          ) : (
-                            <>
-                              <Pin className="h-4 w-4 mr-2" />
-                              {post.is_pinned ? 'Unpin' : 'Pin'}
-                            </>
-                          )}
+                        <DropdownMenuItem onClick={handlePin}>
+                          <Pin className="h-4 w-4 mr-2" />
+                          {post.is_pinned ? 'Unpin' : 'Pin'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={handleLock}
-                          disabled={lockMutation.isPending}
-                        >
-                          {lockMutation.isPending ? (
-                            <>
-                              <div className="h-4 w-4 mr-2 border-2 border-transparent border-t-current rounded-full animate-spin" />
-                              {post.is_locked ? 'Unlocking...' : 'Locking...'}
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="h-4 w-4 mr-2" />
-                              {post.is_locked ? 'Unlock' : 'Lock'}
-                            </>
-                          )}
+                        <DropdownMenuItem onClick={handleLock}>
+                          <Lock className="h-4 w-4 mr-2" />
+                          {post.is_locked ? 'Unlock' : 'Lock'}
                         </DropdownMenuItem>
                       </>
                     )}
@@ -264,7 +213,7 @@ export function ChainPostCard({
                   onClick={() => {
                     setShowAllReplies((v) => {
                       const nv = !v;
-                      try { localStorage.setItem(`chain.replies.expanded.${post.id}`, nv ? '1' : '0'); } catch {}
+                      try { localStorage.setItem(`community.replies.expanded.${post.id}`, nv ? '1' : '0'); } catch {}
                       return nv;
                     });
                   }}
@@ -286,7 +235,7 @@ export function ChainPostCard({
             {showReplyForm && !post.is_locked && (
               <div className="mt-3 pl-4 border-l-2 border-muted">
                 <ReplyForm
-                  chainSlug={chainSlug}
+                  chainSlug={communitySlug}
                   parentId={post.id}
                   onSuccess={() => setShowReplyForm(false)}
                   onCancel={() => setShowReplyForm(false)}
@@ -302,9 +251,9 @@ export function ChainPostCard({
                     key={reply.id}
                     className="relative pl-4 border-l-2 border-border before:absolute before:left-0 before:top-5 before:w-4 before:h-px before:bg-border"
                   >
-                    <ChainPostCard
+                    <CommunityPostCard
                       post={reply}
-                      chainSlug={chainSlug}
+                      communitySlug={communitySlug}
                       isOwner={isOwner}
                       showReplies={true}
                       compact
@@ -326,7 +275,7 @@ export function ChainPostCard({
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
           post={post}
-          chainSlug={chainSlug}
+          chainSlug={communitySlug}
         />
       )}
     </Card>

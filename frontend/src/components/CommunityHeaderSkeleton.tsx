@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function ChainHeaderSkeleton() {
+export function CommunityHeaderSkeleton() {
   return (
     <div className="space-y-6">
       {/* Banner */}

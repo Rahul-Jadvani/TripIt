@@ -17,7 +17,6 @@ import { toast } from 'sonner';
 import { UserSearchSelect } from '@/components/UserSearchSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
-import { ChainSelector } from '@/components/ChainSelector';
 import { authService } from '@/services/api';
 
 export default function Publish() {

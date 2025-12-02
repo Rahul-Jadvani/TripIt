@@ -12,7 +12,6 @@ import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
 import { IntroRequest } from '@/components/IntroRequest';
 import { InteractiveScrollBackground } from '@/components/InteractiveScrollBackground';
 import { ShareDialog } from '@/components/ShareDialog';
-import { ChainBadge } from '@/components/ChainBadge';
 import { formatScore, getProjectScore } from '@/utils/score';
 
 interface ItineraryCardProps {
@@ -173,19 +172,7 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
               </div>
             )}
 
-            {/* Chains */}
-            {project.chains && project.chains.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                {project.chains.slice(0, 3).map((chain) => (
-                  <ChainBadge key={chain.id} chain={chain} size="sm" showPin={chain.is_pinned} />
-                ))}
-                {project.chains.length > 3 && (
-                  <Badge variant="secondary" className="text-[10px] bg-secondary/50 py-0.5 px-2">
-                    +{project.chains.length - 3} more
-                  </Badge>
-                )}
-              </div>
-            )}
+            {/* Chains section removed in TripIt version */}
 
             {/* Creator info */}
             {project.author && (

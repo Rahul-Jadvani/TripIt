@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search as SearchIcon, Loader2 } from 'lucide-react';
-import { ProjectCard } from '@/components/ProjectCard';
-import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
+import { ItineraryCard } from '@/components/ItineraryCard';
+
+// Simple skeleton component for loading states
+const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+    ))}
+  </div>
+);
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
@@ -116,7 +124,7 @@ export default function Search() {
           <div className="mb-10 card-elevated p-8">
             <h1 className="text-3xl font-black text-foreground mb-2">Search</h1>
             <p className="text-sm text-muted-foreground">
-              Find Itineraries, builders, and hackathons on Zer0
+              Find itineraries, travel creators, and fellow travelers on TripIt
             </p>
           </div>
 
@@ -126,7 +134,7 @@ export default function Search() {
               <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search, builders, hackathons..."
+                placeholder="Search itineraries, creators, destinations..."
                 className="pl-12 text-base rounded-[12px] border-4 border-black shadow-[6px_6px_0_0_#000] h-12"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -146,9 +154,9 @@ export default function Search() {
             </div>
             {!query && (
               <div className="mt-4">
-                <div className="text-xs font-black text-muted-foreground mb-2">Quick Filters</div>
+                <div className="text-xs font-black text-muted-foreground mb-2">Explore by Travel Style</div>
                 <div className="flex flex-wrap gap-2">
-                  {['AI', 'Web3', 'Blockchain', 'DeFi', 'SaaS', 'Gaming'].map((t) => (
+                  {['Solo Travel', 'Adventure', 'Cultural', 'Food & Wine', 'Photography', 'Budget'].map((t) => (
                     <button
                       key={t}
                       onClick={() => { setQuery(t); setTab('Itineraries'); }}
@@ -194,7 +202,7 @@ export default function Search() {
                 <div className="mx-auto h-14 w-14 rounded-[12px] border-4 border-black bg-secondary grid place-items-center shadow-[6px_6px_0_0_#000]"><SearchIcon className="h-7 w-7 text-foreground" /></div>
                 <p className="text-lg font-bold text-foreground">Start your search</p>
                 <p className="text-sm text-muted-foreground">
-                  Enter keywords to find Itineraries, discover builders, or explore hackathons
+                  Find amazing itineraries, discover travel creators, or connect with fellow travelers
                 </p>
               </div>
             </div>
@@ -210,7 +218,7 @@ export default function Search() {
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {results.Itineraries.map((project) => (
-                      <ProjectCard key={project.id} project={project} />
+                      <ItineraryCard key={project.id} itinerary={project} />
                     ))}
                   </div>
                 </div>
@@ -220,7 +228,7 @@ export default function Search() {
               {(tab === 'all' || tab === 'users') && results.users && results.users.length > 0 && (
                 <div>
                   <h2 className="text-xl font-black mb-4">
-                    Builders ({results.users.length})
+                    Travel Creators ({results.users.length})
                   </h2>
                   <div className="grid gap-4">
                     {results.users.map((user) => (

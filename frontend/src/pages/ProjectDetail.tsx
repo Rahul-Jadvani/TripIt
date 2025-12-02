@@ -5,17 +5,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { ChainBadge } from '@/components/ChainBadge';
 import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
 import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
 import { TravelIntelSection } from '@/components/TravelIntelSection';
-import { BadgeAwarder } from '@/components/BadgeAwarder';
-import { ProjectBadges } from '@/components/ProjectBadges';
 import { IntroRequest } from '@/components/IntroRequest';
-import { AIScoringBreakdownCard } from '@/components/AIScoringBreakdownCard';
-import { ProjectDetailSkeleton } from '@/components/ProjectDetailSkeleton';
 import { ShareDialog } from '@/components/ShareDialog';
-import { ProjectUpdateSticker } from '@/components/ProjectUpdateSticker';
 import { PostUpdateModal } from '@/components/PostUpdateModal';
 import { useAuth } from '@/context/AuthContext';
 import { useProjectById } from '@/hooks/useProjects';
@@ -170,7 +164,13 @@ export default function ProjectDetail() {
 
   // Loading state
   if (isLoading) {
-    return <ProjectDetailSkeleton />;
+    return (
+      <div className="bg-background min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse text-lg text-muted-foreground">Loading itinerary details...</div>
+        </div>
+      </div>
+    );
   }
 
   // Error state
@@ -374,23 +374,7 @@ export default function ProjectDetail() {
     );
   };
 
-  const renderChainsCard = () => {
-    if (!project.chains || project.chains.length === 0) return null;
-
-    return (
-      <div className="card-elevated p-5">
-        <h3 className="text-sm font-black mb-3 text-foreground flex items-center gap-2">
-          <Link2 className="h-4 w-4 text-primary" />
-          layerz ({project.chains.length})
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {project.chains.map((chain: any) => (
-            <ChainBadge key={chain.id} chain={chain} size="sm" showPin={chain.is_pinned} />
-          ))}
-        </div>
-      </div>
-    );
-  };
+  // Chains card removed - layerz feature deprecated in TripIt
 
   const renderTechStackCard = () => {
     if (!project.techStack || project.techStack.length === 0) return null;
@@ -526,24 +510,7 @@ export default function ProjectDetail() {
   return (
     <div className="bg-background min-h-screen overflow-hidden">
       <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-6 lg:px-8 py-8 relative">
-        {/* Project Updates - Post-it stickers (draggable anywhere) */}
-        {updatesData && updatesData.length > 0 && (
-          <div className="fixed inset-0 pointer-events-none z-50">
-            {updatesData.slice(0, 5).map((update: any, index: number) => (
-              <div key={update.id} className="pointer-events-auto">
-                <ProjectUpdateSticker
-                  update={update}
-                  index={index}
-                  canDelete={user?.id === project?.authorId}
-                  onDelete={handleDeleteUpdate}
-                  position={stickerPositions[update.id] || getDefaultPosition(index)}
-                  onPositionChange={handleStickerPositionChange}
-                  noteImageSrc="/pin3.png"
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Project Updates - Post-it stickers removed in TripIt version */}
 
         <div className="space-y-8">
           {/* ===== HERO SECTION ===== */}
@@ -706,10 +673,7 @@ export default function ProjectDetail() {
             <div className="space-y-6">
               {renderCreatorCard()}
               {renderTeamCard()}
-              <AIScoringBreakdownCard project={project} />
-              <ProjectBadges projectId={project.id} />
               {renderCategoriesCard()}
-              {renderChainsCard()}
               {renderTechStackCard()}
               {renderHackathonCard()}
             </div>

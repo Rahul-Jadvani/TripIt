@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Upload, X } from 'lucide-react';
-import { useCreateChainPost } from '@/hooks/useChainPosts';
+import { useCreateChainPost } from '@/hooks/useCommunityPosts';
 import { toast } from 'sonner';
 
 interface CreatePostDialogProps {

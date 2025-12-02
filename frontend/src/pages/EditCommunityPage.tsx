@@ -1,6 +1,6 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useChain, useUpdateChain } from '@/hooks/useChains';
-import { ChainForm, ChainFormData } from '@/components/ChainForm';
+import { useChain, useUpdateChain } from '@/hooks/useCommunities';
+import { CommunityForm, CommunityFormData } from '@/components/CommunityForm';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -59,7 +59,7 @@ export default function EditChainPage() {
     );
   }
 
-  const handleSubmit = async (data: ChainFormData) => {
+  const handleSubmit = async (data: CommunityFormData) => {
     try {
       await updateChainMutation.mutateAsync({ slug: slug!, data });
       toast.success('layerz updated successfully!');
@@ -90,7 +90,7 @@ export default function EditChainPage() {
       </div>
 
       {/* Form */}
-      <ChainForm
+      <CommunityForm
         chain={chain}
         onSubmit={handleSubmit}
         isLoading={updateChainMutation.isPending}

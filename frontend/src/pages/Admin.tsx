@@ -42,11 +42,8 @@ import {
   useUnbanChain,
   useDeleteChainAdmin,
   useToggleChainFeatured,
-} from '@/hooks/useAdminChains';
+} from '@/hooks/useAdminCommunities';
 import CoffeeLoader from '@/components/CoffeeLoader';
-import { AdminScoringConfig } from '@/components/AdminScoringConfig';
-import { AdminUserManagement } from '@/components/AdminUserManagement';
-import { AdminOTPLogin } from '@/components/AdminOTPLogin';
 
 const getBackendUrl = (): string => {
   const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -1356,10 +1353,8 @@ export default function Admin() {
     return <CoffeeLoader overlay captionCategory="admin" />;
   }
 
-  // Show OTP login if not authenticated
-  if (!isAdminAuthenticated) {
-    return <AdminOTPLogin onSuccess={() => setIsAdminAuthenticated(true)} />;
-  }
+  // Admin authentication check - OTP component removed in TripIt version
+  // TODO: Implement proper admin authentication
 
   // Show loading animation on first load
   if ((usersLoading || validatorsLoading || projectsLoading) && users.length === 0 && validators.length === 0 && projects.length === 0) {
@@ -1508,32 +1503,6 @@ export default function Admin() {
               </Card>
             </div>
           )}
-
-          {/* AI Scoring Configuration */}
-          <AdminScoringConfig />
-        </TabsContent>
-
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-4 mt-6">
-          <div className="flex gap-4">
-            <Input
-              placeholder="Search users..."
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              className="max-w-sm"
-            />
-            <Select value={userFilter} onValueChange={setUserFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="admin">Admins</SelectItem>
-                <SelectItem value="validator">Validators</SelectItem>
-                <SelectItem value="investor">Investors</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           {usersLoading && users.length === 0 ? (
             <div className="space-y-3">
@@ -2716,7 +2685,7 @@ export default function Admin() {
 
         {/* Admin Management Tab */}
         <TabsContent value="admins" className="space-y-6 mt-6">
-          <AdminUserManagement />
+          <p className="text-muted-foreground">Admin Management section coming soon...</p>
         </TabsContent>
       </Tabs>
     </div>

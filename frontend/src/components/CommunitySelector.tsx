@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useChains, useChainRecommendations } from '@/hooks/useChains';
+import { useChains, useChainRecommendations } from '@/hooks/useCommunities';
 import { Chain } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

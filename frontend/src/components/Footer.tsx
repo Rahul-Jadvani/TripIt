@@ -72,10 +72,10 @@ export const Footer = memo(function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <img src="/logo.svg" alt="ZERO logo" className="h-16 w-16" />
+              <img src="/logo.svg" alt="TripIt logo" className="h-16 w-16" />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
-              Proof-weighted discovery platform for travel destination itinerarys. Connect, build, and discover innovative solutions.
+              Social platform for discovering verified travel itineraries. Connect with travelers, share adventures, and explore the world together.
             </p>
           </div>
 
@@ -89,8 +89,8 @@ export const Footer = memo(function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/leaderboard" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>Leaderboard</span>
+                <Link to="/travel-groups" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Travel Groups</span>
                 </Link>
               </li>
               <li>
@@ -99,15 +99,14 @@ export const Footer = memo(function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/gallery/travel destination" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>Explore</span>
+                <Link to="/women-guides" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Women's Guides</span>
                 </Link>
               </li>
               <li>
-                <a href="https://layerz.zer0.pro" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>Layerz</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                <Link to="/publish" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
+                  <span>Publish</span>
+                </Link>
               </li>
             </ul>
           </div>
@@ -153,18 +152,6 @@ export const Footer = memo(function Footer() {
               <li>
                 <a href="https://www.instagram.com/z_0.io/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
                   <span>Instagram</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </li>
-              <li>
-                <a href="https://www.linkedin.com/company/zer0th-protocol/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>LinkedIn</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </li>
-              <li>
-                <a href="https://www.reddit.com/u/Disastrous_Intern912/s/I5N6UZcaSL" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">
-                  <span>Reddit</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>

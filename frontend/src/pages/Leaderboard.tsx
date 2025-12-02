@@ -4,8 +4,23 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Medal, Loader2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
-import { useProjectsLeaderboard, useBuildersLeaderboard, useFeaturedLeaderboard } from '@/hooks/useLeaderboard';
+import { useItinerariesLeaderboard, useTravelersLeaderboard, useFeaturedLeaderboard } from '@/hooks/useLeaderboard';
+
+// Simple skeleton component for featured items
+const ItinerarySkeleton = () => (
+  <div className="card-elevated p-4 space-y-3 animate-pulse">
+    <div className="h-4 w-full bg-secondary rounded"></div>
+    <div className="h-3 w-3/4 bg-secondary rounded"></div>
+  </div>
+);
+
+const FeaturedItinerariesSkeleton = ({ count = 6 }: { count?: number }) => (
+  <div className="grid grid-cols-1 gap-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <ItinerarySkeleton key={i} />
+    ))}
+  </div>
+);
 
 type LeaderboardTab = 'itineraries' | 'builders' | 'featured';
 
@@ -18,8 +33,8 @@ export default function Leaderboard() {
     setTab(t);
   }, [searchParams]);
 
-  const { data: itinerariesData, isLoading: itinerariesLoading, error: itinerariesError } = useProjectsLeaderboard();
-  const { data: buildersData, isLoading: buildersLoading, error: buildersError } = useBuildersLeaderboard();
+  const { data: itinerariesData, isLoading: itinerariesLoading, error: itinerariesError } = useItinerariesLeaderboard();
+  const { data: travelersData, isLoading: travelersLoading, error: travelersError } = useTravelersLeaderboard();
   const { data: featuredData, isLoading: featuredLoading, error: featuredError } = useFeaturedLeaderboard(30);
 
   const getRankIcon = (rank: number) => {
@@ -52,7 +67,7 @@ export default function Leaderboard() {
                   itineraries
                 </TabsTrigger>
                 <TabsTrigger
-                  value="builders"
+                  value="travelers"
                   className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
                 >
                   Builders
@@ -124,23 +139,23 @@ export default function Leaderboard() {
               </>
             )}
 
-            {/* Builders Tab */}
-            {tab === 'builders' && (
+            Travelers
+            {tab === 'travelers' && (
               <>
-                {buildersLoading && (
+                {travelersLoading && (
                   <FeaturedItinerariesSkeleton count={6} />
                 )}
 
-                {buildersError && (
+                {travelersError && (
                   <div className="card-elevated p-12 text-center">
                     <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
                     <p className="text-lg font-bold text-foreground mb-2">Failed to load leaderboard</p>
-                    <p className="text-sm text-muted-foreground">{(buildersError as any)?.message || 'Please try again later'}</p>
+                    <p className="text-sm text-muted-foreground">{(travelersError as any)?.message || 'Please try again later'}</p>
                   </div>
                 )}
 
-                {!buildersLoading && !buildersError && buildersData && buildersData.length > 0 ? (
-                  buildersData.map((item: any) => (
+                {!travelersLoading && !travelersError && travelersData && travelersData.length > 0 ? (
+                  travelersData.map((item: any) => (
                     <div key={item.rank} className="card-elevated p-6">
                       <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center flex-shrink-0">
@@ -166,9 +181,9 @@ export default function Leaderboard() {
                     </div>
                   ))
                 ) : (
-                  !buildersLoading && !buildersError && (
+                  !travelersLoading && !travelersError && (
                     <div className="card-elevated p-12 text-center">
-                      <p className="text-lg font-bold text-foreground">No builders yet</p>
+                      <p className="text-lg font-bold text-foreground">No travelers yet</p>
                       <p className="text-sm text-muted-foreground mt-2">Be the first to join the community!</p>
                     </div>
                   )

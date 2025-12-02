@@ -7,9 +7,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Award, Loader2, AlertCircle, Github, ExternalLink, MapPin, Briefcase, TrendingUp, Globe, Link as LinkIcon, MessageSquare, Send, Layers } from 'lucide-react';
 import { useUserByUsername } from '@/hooks/useUser';
 import { useUserProjects, useUserTaggedProjects } from '@/hooks/useProjects';
-import { useUserOwnedChains, useUserFollowingChains } from '@/hooks/useChains';
-import { ProjectCard } from '@/components/ProjectCard';
-import { ProjectCardSkeletonGrid } from '@/components/ProjectCardSkeleton';
+import { ItineraryCard } from '@/components/ItineraryCard';
+
+// Simple skeleton component for loading states
+const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+    ))}
+  </div>
+);
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
@@ -22,8 +29,6 @@ export default function UserProfile() {
   const { data: user, isLoading: userLoading, error: userError } = useUserByUsername(username || '');
   const { data: projectsData, isLoading: projectsLoading } = useUserProjects(user?.id || '');
   const { data: taggedProjectsData, isLoading: taggedProjectsLoading } = useUserTaggedProjects(user?.id || '');
-  const { data: ownedChainsData, isLoading: ownedChainsLoading } = useUserOwnedChains(user?.id || '');
-  const { data: followingChainsData, isLoading: followingChainsLoading } = useUserFollowingChains(user?.id || '');
 
   // Fetch investor profile if user is an investor
   const { data: investorProfile } = useQuery({
@@ -449,7 +454,7 @@ export default function UserProfile() {
               ) : projectsData?.data && projectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {projectsData.data.map((project: any) => (
-                    <ProjectCard key={project.id} project={project} />
+                    <ItineraryCard key={project.id} itinerary={project} />
                   ))}
                 </div>
               ) : (
@@ -474,7 +479,7 @@ export default function UserProfile() {
               ) : taggedProjectsData?.data && taggedProjectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {taggedProjectsData.data.map((project: any) => (
-                    <ProjectCard key={project.id} project={project} />
+                    <ItineraryCard key={project.id} itinerary={project} />
                   ))}
                 </div>
               ) : (

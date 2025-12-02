@@ -8,7 +8,7 @@ import { useRef } from 'react';
 // CHAIN POST HOOKS
 // ============================================================================
 
-export function useChainPosts(slug: string, filters?: ChainPostFilters) {
+export function useCommunityPosts(slug: string, filters?: ChainPostFilters) {
   return useQuery({
     queryKey: ['chainPosts', slug, filters],
     queryFn: () => chainPostApi.getPosts(slug, filters),

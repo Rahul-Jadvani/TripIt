@@ -69,4 +69,4 @@ export const chainSchema = z.object({
     .default(''),
 });
 
-export type ChainFormInput = z.infer<typeof chainSchema>;
+export type CommunityFormInput = z.infer<typeof chainSchema>;

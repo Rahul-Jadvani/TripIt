@@ -198,7 +198,7 @@ export default function Register() {
               <div className="mb-6 sm:mb-8 text-center">
                 <h1 className="text-2xl sm:text-4xl font-black text-foreground mb-2">Create an account</h1>
                 <p className="text-xs sm:text-base text-muted-foreground">
-                  Join Zer0 and start sharing your projects
+                  Join TripIt and start sharing your travel itineraries
                 </p>
               </div>
 

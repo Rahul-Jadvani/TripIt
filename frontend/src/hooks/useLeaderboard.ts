@@ -105,3 +105,7 @@ export function useFeaturedLeaderboard(limit: number = 30) {
     placeholderData: (previousData) => previousData,
   });
 }
+
+// TripIt terminology aliases
+export const useItinerariesLeaderboard = useProjectsLeaderboard;
+export const useTravelersLeaderboard = useBuildersLeaderboard;

@@ -1,19 +1,19 @@
 import api from './api';
 import type {
-  Chain,
-  ChainFilters,
-  ChainStats,
-  ChainProjectRequest,
-  Project,
+  Community,
+  CommunityFilters,
+  CommunityStats,
+  CommunityItineraryRequest,
+  Itinerary,
   User,
   PaginatedResponse,
 } from '../types';
 
 // ============================================================================
-// CHAIN CRUD
+// COMMUNITY CRUD
 // ============================================================================
 
-export interface CreateChainData {
+export interface CreateCommunityData {
   name: string;
   description: string;
   banner_url?: string;
@@ -29,17 +29,17 @@ export interface CreateChainData {
   requires_approval?: boolean;
 }
 
-export const chainApi = {
-  // Create a new chain
-  async createChain(data: CreateChainData): Promise<{ data: { chain: Chain } }> {
-    const response = await api.post('/chains', data);
+export const communityApi = {
+  // Create a new community
+  async createCommunity(data: CreateCommunityData): Promise<{ data: { community: Community } }> {
+    const response = await api.post('/communities', data);
     return response.data;
   },
 
-  // Get all chains with filters
-  async getChains(filters?: ChainFilters): Promise<{
+  // Get all communities with filters
+  async getCommunities(filters?: CommunityFilters): Promise<{
     data: {
-      chains: Chain[];
+      communities: Community[];
       pagination: {
         page: number;
         limit: number;
@@ -58,69 +58,69 @@ export const chainApi = {
     if (filters?.featured !== undefined) params.append('featured', filters.featured.toString());
     if (filters?.creator_id) params.append('creator_id', filters.creator_id);
 
-    const response = await api.get(`/chains?${params.toString()}`);
+    const response = await api.get(`/communities?${params.toString()}`);
     return response.data;
   },
 
-  // Get chain by slug
-  async getChain(slug: string): Promise<{
+  // Get community by slug
+  async getCommunity(slug: string): Promise<{
     data: {
-      chain: Chain;
-      stats: ChainStats;
+      community: Community;
+      stats: CommunityStats;
     };
   }> {
-    const response = await api.get(`/chains/${slug}`);
+    const response = await api.get(`/communities/${slug}`);
     return response.data;
   },
 
-  // Update chain
-  async updateChain(slug: string, data: Partial<CreateChainData>): Promise<{ data: { chain: Chain } }> {
-    const response = await api.put(`/chains/${slug}`, data);
+  // Update community
+  async updateCommunity(slug: string, data: Partial<CreateCommunityData>): Promise<{ data: { community: Community } }> {
+    const response = await api.put(`/communities/${slug}`, data);
     return response.data;
   },
 
-  // Delete chain
-  async deleteChain(slug: string): Promise<{ data: null }> {
-    const response = await api.delete(`/chains/${slug}`);
+  // Delete community
+  async deleteCommunity(slug: string): Promise<{ data: null }> {
+    const response = await api.delete(`/communities/${slug}`);
     return response.data;
   },
 
   // ============================================================================
-  // CHAIN-PROJECT ASSOCIATION
+  // COMMUNITY-ITINERARY ASSOCIATION
   // ============================================================================
 
-  // Add project to chain
-  async addProjectToChain(
+  // Add itinerary to community
+  async addItineraryToCommunity(
     slug: string,
     data: {
-      project_id: string;
+      itinerary_id: string;
       message?: string;
     }
   ): Promise<{ data: any }> {
-    const response = await api.post(`/chains/${slug}/projects`, data);
+    const response = await api.post(`/communities/${slug}/itineraries`, data);
     return response.data;
   },
 
-  // Remove project from chain
-  async removeProjectFromChain(slug: string, projectId: string): Promise<{ data: null }> {
-    const response = await api.delete(`/chains/${slug}/projects/${projectId}`);
+  // Remove itinerary from community
+  async removeItineraryFromCommunity(slug: string, itineraryId: string): Promise<{ data: null }> {
+    const response = await api.delete(`/communities/${slug}/itineraries/${itineraryId}`);
     return response.data;
   },
 
-  // Get projects in chain
-  async getChainProjects(
+  // Get itineraries in community
+  async getCommunityItineraries(
     slug: string,
     filters?: {
       page?: number;
       limit?: number;
       sort?: 'trending' | 'newest' | 'top_rated' | 'most_voted' | 'pinned_first';
-      tech_stack?: string;
-      min_proof_score?: number;
+      travel_style?: string;
+      min_trust_score?: number;
       pinned_only?: boolean;
     }
   ): Promise<{
     data: {
-      projects: Project[];
+      itineraries: Itinerary[];
       pagination: {
         page: number;
         limit: number;
@@ -133,17 +133,17 @@ export const chainApi = {
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.sort) params.append('sort', filters.sort);
-    if (filters?.tech_stack) params.append('tech_stack', filters.tech_stack);
-    if (filters?.min_proof_score) params.append('min_proof_score', filters.min_proof_score.toString());
+    if (filters?.travel_style) params.append('travel_style', filters.travel_style);
+    if (filters?.min_trust_score) params.append('min_trust_score', filters.min_trust_score.toString());
     if (filters?.pinned_only) params.append('pinned_only', filters.pinned_only.toString());
 
-    const response = await api.get(`/chains/${slug}/projects?${params.toString()}`);
+    const response = await api.get(`/communities/${slug}/itineraries?${params.toString()}`);
     return response.data;
   },
 
-  // Pin/unpin project
-  async togglePinProject(slug: string, projectId: string): Promise<{ data: { is_pinned: boolean } }> {
-    const response = await api.post(`/chains/${slug}/projects/${projectId}/pin`);
+  // Pin/unpin itinerary
+  async togglePinItinerary(slug: string, itineraryId: string): Promise<{ data: { is_pinned: boolean } }> {
+    const response = await api.post(`/communities/${slug}/itineraries/${itineraryId}/pin`);
     return response.data;
   },
 
@@ -151,19 +151,19 @@ export const chainApi = {
   // APPROVAL WORKFLOW
   // ============================================================================
 
-  // Get pending requests (chain owner only)
-  async getChainRequests(slug: string, status: 'pending' | 'approved' | 'rejected' = 'pending'): Promise<{
+  // Get pending requests (community owner only)
+  async getCommunityRequests(slug: string, status: 'pending' | 'approved' | 'rejected' = 'pending'): Promise<{
     data: {
-      requests: ChainProjectRequest[];
+      requests: CommunityItineraryRequest[];
     };
   }> {
-    const response = await api.get(`/chains/${slug}/requests?status=${status}`);
+    const response = await api.get(`/communities/${slug}/requests?status=${status}`);
     return response.data;
   },
 
   // Approve request
   async approveRequest(slug: string, requestId: string): Promise<{ data: any }> {
-    const response = await api.post(`/chains/${slug}/requests/${requestId}/approve`);
+    const response = await api.post(`/communities/${slug}/requests/${requestId}/approve`);
     return response.data;
   },
 
@@ -173,7 +173,7 @@ export const chainApi = {
     requestId: string,
     reason?: string
   ): Promise<{ data: null }> {
-    const response = await api.post(`/chains/${slug}/requests/${requestId}/reject`, { reason });
+    const response = await api.post(`/communities/${slug}/requests/${requestId}/reject`, { reason });
     return response.data;
   },
 
@@ -181,20 +181,20 @@ export const chainApi = {
   // FOLLOWING
   // ============================================================================
 
-  // Follow chain
-  async followChain(slug: string): Promise<{ data: { follower_count: number } }> {
-    const response = await api.post(`/chains/${slug}/follow`);
+  // Follow community
+  async followCommunity(slug: string): Promise<{ data: { follower_count: number } }> {
+    const response = await api.post(`/communities/${slug}/follow`);
     return response.data;
   },
 
-  // Unfollow chain
-  async unfollowChain(slug: string): Promise<{ data: { follower_count: number } }> {
-    const response = await api.delete(`/chains/${slug}/follow`);
+  // Unfollow community
+  async unfollowCommunity(slug: string): Promise<{ data: { follower_count: number } }> {
+    const response = await api.delete(`/communities/${slug}/follow`);
     return response.data;
   },
 
-  // Get chain followers
-  async getChainFollowers(
+  // Get community followers
+  async getCommunityFollowers(
     slug: string,
     page: number = 1,
     limit: number = 20
@@ -212,18 +212,18 @@ export const chainApi = {
       };
     };
   }> {
-    const response = await api.get(`/chains/${slug}/followers?page=${page}&limit=${limit}`);
+    const response = await api.get(`/communities/${slug}/followers?page=${page}&limit=${limit}`);
     return response.data;
   },
 
-  // Get chains user is following
-  async getUserFollowingChains(
+  // Get communities user is following
+  async getUserFollowingCommunities(
     userId: string,
     page: number = 1,
     limit: number = 20
   ): Promise<{
     data: {
-      chains: Chain[];
+      communities: Community[];
       pagination: {
         page: number;
         limit: number;
@@ -232,7 +232,7 @@ export const chainApi = {
       };
     };
   }> {
-    const response = await api.get(`/chains/user/${userId}/following?page=${page}&limit=${limit}`);
+    const response = await api.get(`/communities/user/${userId}/following?page=${page}&limit=${limit}`);
     return response.data;
   },
 
@@ -240,25 +240,25 @@ export const chainApi = {
   // ANALYTICS
   // ============================================================================
 
-  // Get chain analytics (owner only)
-  async getChainAnalytics(slug: string): Promise<{
+  // Get community analytics (owner only)
+  async getCommunityAnalytics(slug: string): Promise<{
     data: {
-      chain: {
+      community: {
         id: string;
         name: string;
         slug: string;
         created_at: string;
       };
       overview: {
-        total_projects: number;
+        total_itineraries: number;
         total_followers: number;
         total_views: number;
-        average_project_score: number;
+        average_itinerary_score: number;
         pending_requests: number;
       };
       recent_activity: {
         followers_last_7_days: number;
-        projects_last_7_days: number;
+        itineraries_last_7_days: number;
       };
       engagement: {
         total_upvotes: number;
@@ -268,12 +268,12 @@ export const chainApi = {
       growth: {
         follower_growth: Array<{ date: string; count: number }>;
         cumulative_followers: Array<{ date: string; followers: number }>;
-        projects_added: Array<{ date: string; count: number }>;
+        itineraries_added: Array<{ date: string; count: number }>;
       };
-      top_projects: Array<{
+      top_itineraries: Array<{
         id: string;
         title: string;
-        proof_score: number;
+        trust_score: number;
         upvotes: number;
         downvotes: number;
         comment_count: number;
@@ -283,14 +283,14 @@ export const chainApi = {
       }>;
     };
   }> {
-    const response = await api.get(`/chains/${slug}/analytics`);
+    const response = await api.get(`/communities/${slug}/analytics`);
     return response.data;
   },
 
-  // Get chain recommendations based on categories
-  async getChainRecommendations(categories?: string[]): Promise<{
+  // Get community recommendations based on categories
+  async getCommunityRecommendations(categories?: string[]): Promise<{
     data: {
-      chains: Chain[];
+      communities: Community[];
       count: number;
     };
   }> {
@@ -298,7 +298,7 @@ export const chainApi = {
     if (categories && categories.length > 0) {
       categories.forEach((cat) => params.append('categories', cat));
     }
-    const response = await api.get(`/chains/recommendations?${params.toString()}`);
+    const response = await api.get(`/communities/recommendations?${params.toString()}`);
     return response.data;
   },
 
@@ -306,11 +306,11 @@ export const chainApi = {
   // ADMIN
   // ============================================================================
 
-  // Feature/unfeature chain (admin only)
-  async toggleFeatureChain(slug: string): Promise<{ data: { is_featured: boolean } }> {
-    const response = await api.post(`/chains/${slug}/feature`);
+  // Feature/unfeature community (admin only)
+  async toggleFeatureCommunity(slug: string): Promise<{ data: { is_featured: boolean } }> {
+    const response = await api.post(`/communities/${slug}/feature`);
     return response.data;
   },
 };
 
-export default chainApi;
+export default communityApi;

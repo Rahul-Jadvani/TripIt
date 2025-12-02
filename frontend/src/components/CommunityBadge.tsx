@@ -3,8 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Pin } from 'lucide-react';
 
-interface ChainBadgeProps {
-  chain: {
+interface CommunityBadgeProps {
+  community: {
     id: string;
     name: string;
     slug: string;
@@ -15,9 +15,9 @@ interface ChainBadgeProps {
   showPin?: boolean;
 }
 
-export function ChainBadge({ chain, size = 'sm', showPin = false }: ChainBadgeProps) {
+export function CommunityBadge({ community, size = 'sm', showPin = false }: CommunityBadgeProps) {
   const navigate = useNavigate();
-  
+
   const sizeClasses = {
     sm: {
       avatar: 'h-4 w-4',
@@ -42,7 +42,7 @@ export function ChainBadge({ chain, size = 'sm', showPin = false }: ChainBadgePr
     e.preventDefault();
     e.stopPropagation();
     // Navigate programmatically to avoid nested Link issue (no full page refresh)
-    navigate(`/layerz/${chain.slug}`);
+    navigate(`/communities/${community.slug}`);
   };
 
   return (
@@ -51,22 +51,22 @@ export function ChainBadge({ chain, size = 'sm', showPin = false }: ChainBadgePr
       className={`${classes.padding} flex items-center gap-1.5 hover:bg-secondary/80 transition-colors cursor-pointer`}
       onClick={handleClick}
     >
-      {chain.logo_url ? (
+      {community.logo_url ? (
         <Avatar className={classes.avatar}>
-          <AvatarImage src={chain.logo_url} alt={chain.name} />
+          <AvatarImage src={community.logo_url} alt={community.name} />
           <AvatarFallback className={classes.text}>
-            {chain.name.charAt(0).toUpperCase()}
+            {community.name.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
       ) : (
         <div className={`${classes.avatar} rounded-full bg-primary/20 flex items-center justify-center`}>
           <span className={`${classes.text} text-primary font-semibold`}>
-            {chain.name.charAt(0).toUpperCase()}
+            {community.name.charAt(0).toUpperCase()}
           </span>
         </div>
       )}
-      <span className={`${classes.text} font-medium`}>{chain.name}</span>
-      {showPin && chain.is_pinned && (
+      <span className={`${classes.text} font-medium`}>{community.name}</span>
+      {showPin && community.is_pinned && (
         <Pin className="h-3 w-3 text-primary" fill="currentColor" />
       )}
     </Badge>

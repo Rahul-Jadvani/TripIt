@@ -6,18 +6,18 @@ export default function About() {
     <div className="container mx-auto px-4 py-8">
       <div className="mx-auto max-w-4xl">
         <div className="mb-12 text-center">
-          <h1 className="mb-4 text-5xl font-bold">About Zer0</h1>
+          <h1 className="mb-4 text-5xl font-bold">About TripIt</h1>
           <p className="text-xl text-muted-foreground">
-            Proof-weighted discovery platform for travel itinerarys
+            Trust-verified social platform for sharing travel itineraries
           </p>
         </div>
 
         <Card className="mb-8 p-8">
           <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
-            Zer0 is a Reddit-style discovery platform designed specifically for travel itinerarys. We use a
-            proof-based credibility system to surface the most authentic and impactful itinerarys, helping builders
-            connect with opportunities, collaborators, and recognition they deserve.
+            TripIt is a social discovery platform designed for travelers to share, discover, and discuss authentic travel itineraries. We use a
+            trust-based credibility system to highlight verified and high-quality itineraries, helping travel creators
+            build a community and connect with fellow adventurers who value their experiences.
           </p>
         </Card>
 
@@ -79,8 +79,8 @@ export default function About() {
             <div>
               <h3 className="mb-2 text-lg font-semibold">Can I connect my wallet?</h3>
               <p className="text-muted-foreground">
-                Yes! Connect your wallet to verify your builder credentials and increase your proof score through
-                on-chain travel certificates.
+                Yes! Connect your wallet to verify your traveler identity and increase your trust score through
+                on-chain travel certificates and Soul-Bound Travel Cards.
               </p>
             </div>
           </div>

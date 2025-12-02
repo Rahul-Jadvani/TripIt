@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { chainSchema, ChainFormInput } from '@/lib/schemas';
+import { chainSchema, CommunityFormInput } from '@/lib/schemas';
 import { Chain } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,13 +14,13 @@ import { X, Loader2, Upload, Image as ImageIcon, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface ChainFormProps {
-  chain?: Chain;
-  onSubmit: (data: ChainFormData) => void;
+interface CommunityFormProps {
+  community?: Chain;
+  onSubmit: (data: CommunityFormData) => void;
   isLoading?: boolean;
 }
 
-export interface ChainFormData {
+export interface CommunityFormData {
   name: string;
   description: string;
   banner_url?: string;
@@ -37,26 +37,28 @@ export interface ChainFormData {
 }
 
 const AVAILABLE_CATEGORIES = [
-  'Hackathon',
-  'DeFi',
-  'NFT',
-  'Gaming',
-  'AI/ML',
-  'Web3',
-  'Social',
-  'Tools',
-  'Education',
-  'Infrastructure',
+  'Adventure',
+  'Beach & Coast',
+  'City Breaks',
+  'Cultural',
+  'Family Travel',
+  'Food & Wine',
+  'Luxury',
+  'Nature',
+  'Road Trips',
+  'Solo Travel',
+  'Budget',
+  'Backpacking',
 ];
 
-export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps) {
-  const [categories, setCategories] = useState<string[]>(chain?.categories || []);
-  const [bannerUrl, setBannerUrl] = useState<string>(chain?.banner_url || '');
-  const [logoUrl, setLogoUrl] = useState<string>(chain?.logo_url || '');
+export function CommunityForm({ community, onSubmit, isLoading = false }: CommunityFormProps) {
+  const [categories, setCategories] = useState<string[]>(community?.categories || []);
+  const [bannerUrl, setBannerUrl] = useState<string>(community?.banner_url || '');
+  const [logoUrl, setLogoUrl] = useState<string>(community?.logo_url || '');
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [isPublic, setIsPublic] = useState<boolean>(chain?.is_public ?? true);
-  const [requiresApproval, setRequiresApproval] = useState<boolean>(chain?.requires_approval ?? false);
+  const [isPublic, setIsPublic] = useState<boolean>(community?.is_public ?? true);
+  const [requiresApproval, setRequiresApproval] = useState<boolean>(community?.requires_approval ?? false);
 
   const {
     register,
@@ -64,35 +66,35 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
     formState: { errors },
     setValue,
     reset,
-  } = useForm<ChainFormInput>({
+  } = useForm<CommunityFormInput>({
     resolver: zodResolver(chainSchema),
     defaultValues: {
-      name: chain?.name || '',
-      description: chain?.description || '',
-      rules: chain?.rules || '',
-      website: chain?.social_links?.website || '',
-      twitter: chain?.social_links?.twitter || '',
-      discord: chain?.social_links?.discord || '',
+      name: community?.name || '',
+      description: community?.description || '',
+      rules: community?.rules || '',
+      website: community?.social_links?.website || '',
+      twitter: community?.social_links?.twitter || '',
+      discord: community?.social_links?.discord || '',
     },
   });
 
-  // Update form when chain data loads
+  // Update form when community data loads
   useEffect(() => {
-    if (chain) {
+    if (community) {
       reset({
-        name: chain.name || '',
-        description: chain.description || '',
-        rules: chain.rules || '',
-        website: chain.social_links?.website || '',
-        twitter: chain.social_links?.twitter || '',
-        discord: chain.social_links?.discord || '',
+        name: community.name || '',
+        description: community.description || '',
+        rules: community.rules || '',
+        website: community.social_links?.website || '',
+        twitter: community.social_links?.twitter || '',
+        discord: community.social_links?.discord || '',
       });
-      setIsPublic(chain.is_public ?? true);
-      setRequiresApproval(chain.requires_approval ?? false);
-      if (chain.banner_url) setBannerPreview(chain.banner_url);
-      if (chain.logo_url) setLogoPreview(chain.logo_url);
+      setIsPublic(community.is_public ?? true);
+      setRequiresApproval(community.requires_approval ?? false);
+      if (community.banner_url) setBannerUrl(community.banner_url);
+      if (community.logo_url) setLogoUrl(community.logo_url);
     }
-  }, [chain, reset]);
+  }, [community, reset]);
 
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -169,8 +171,8 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
     }
   };
 
-  const handleFormSubmit = (data: ChainFormInput) => {
-    const formData: ChainFormData = {
+  const handleFormSubmit = (data: CommunityFormInput) => {
+    const formData: CommunityFormData = {
       name: data.name,
       description: data.description,
       banner_url: bannerUrl || undefined,
@@ -196,18 +198,18 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
           <CardDescription>
-            Provide essential details about your chain
+            Provide essential details about your community
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">
-              Layerz Name <span className="text-destructive">*</span>
+              Community Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
-              placeholder="e.g., Web3 Builders"
+              placeholder="e.g., Digital Nomads in Bali"
               {...register('name')}
               className={errors.name ? 'border-destructive' : ''}
             />
@@ -223,7 +225,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
             </Label>
             <Textarea
               id="description"
-              placeholder="Describe what your chain is about..."
+              placeholder="Describe what your community is about..."
               rows={4}
               {...register('description')}
               className={errors.description ? 'border-destructive' : ''}
@@ -235,10 +237,10 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
 
           {/* Rules */}
           <div className="space-y-2">
-            <Label htmlFor="rules">Rules & Guidelines (Optional)</Label>
+            <Label htmlFor="rules">Community Guidelines (Optional)</Label>
             <Textarea
               id="rules"
-              placeholder="Set community guidelines and rules for your chain..."
+              placeholder="Set guidelines for your travel community..."
               rows={4}
               {...register('rules')}
               className={errors.rules ? 'border-destructive' : ''}
@@ -247,7 +249,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
               <p className="text-xs text-destructive">{errors.rules.message}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              These will be shown to users when they publish projects to this chain
+              These will be shown to members when they join your community
             </p>
           </div>
         </CardContent>
@@ -258,7 +260,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
         <CardHeader>
           <CardTitle>Visual Assets</CardTitle>
           <CardDescription>
-            Upload banner and logo images for your chain
+            Upload banner and logo images for your community
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -385,7 +387,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
         <CardHeader>
           <CardTitle>Categories</CardTitle>
           <CardDescription>
-            Select categories that best describe your chain
+            Select categories that best describe your community
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -409,7 +411,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
         <CardHeader>
           <CardTitle>Social Links</CardTitle>
           <CardDescription>
-            Add social media and external links for your chain
+            Add social media and external links for your community
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -453,7 +455,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
       {/* Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Layerz Settings</CardTitle>
+          <CardTitle>Community Settings</CardTitle>
           <CardDescription>
             Configure privacy and approval settings
           </CardDescription>
@@ -463,7 +465,7 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 flex-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="is_public">Public layerz</Label>
+                <Label htmlFor="is_public">Public Community</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -471,15 +473,15 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>
-                        Public layerz are visible to everyone. Private layerz are only
-                        visible to followers and the owner.
+                        Public communities are visible to everyone. Private communities are only
+                        visible to members and the owner.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <p className="text-sm text-muted-foreground">
-                Make this chain visible to everyone
+                Make this community visible to everyone
               </p>
             </div>
             <Switch
@@ -501,15 +503,15 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>
-                        When enabled, projects must be approved by you before they
-                        appear in this chain. Otherwise, projects are added instantly.
+                        When enabled, itineraries must be approved by you before they
+                        appear in this community. Otherwise, itineraries are added instantly.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <p className="text-sm text-muted-foreground">
-                Manually approve projects before they appear in this chain
+                Manually approve itineraries before they appear in this community
               </p>
             </div>
             <Switch
@@ -527,10 +529,10 @@ export function ChainForm({ chain, onSubmit, isLoading = false }: ChainFormProps
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {chain ? 'Saving...' : 'Creating...'}
+              {community ? 'Saving...' : 'Creating...'}
             </>
           ) : (
-            <>{chain ? 'Save Changes' : 'Create layerz'}</>
+            <>{community ? 'Save Changes' : 'Create Community'}</>
           )}
         </Button>
       </div>

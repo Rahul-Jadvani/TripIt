@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function ChainCardSkeleton() {
+export function CommunityCardSkeleton() {
   return (
     <Card className="card-skeleton overflow-hidden relative h-full transition-all duration-300">
       {/* Banner */}
@@ -59,12 +59,12 @@ export function ChainCardSkeleton() {
   );
 }
 
-export function ChainCardSkeletonGrid({ count = 12 }: { count?: number }) {
+export function CommunityCardSkeletonGrid({ count = 12 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array.from({ length: count }).map((_, idx) => (
         <div key={idx} className="h-full">
-          <ChainCardSkeleton />
+          <CommunityCardSkeleton />
         </div>
       ))}
     </div>

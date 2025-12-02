@@ -1,6 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { useCreateChain } from '@/hooks/useChains';
-import { ChainForm, ChainFormData } from '@/components/ChainForm';
+import { useCreateChain } from '@/hooks/useCommunities';
+import { CommunityForm, CommunityFormData } from '@/components/CommunityForm';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function CreateChainPage() {
     );
   }
 
-  const handleSubmit = async (data: ChainFormData) => {
+  const handleSubmit = async (data: CommunityFormData) => {
     try {
       const result = await createChainMutation.mutateAsync(data);
       toast.success('layerz created successfully!');
@@ -58,7 +58,7 @@ export default function CreateChainPage() {
       </div>
 
       {/* Form */}
-      <ChainForm onSubmit={handleSubmit} isLoading={createChainMutation.isPending} />
+      <CommunityForm onSubmit={handleSubmit} isLoading={createChainMutation.isPending} />
     </div>
   );
 }

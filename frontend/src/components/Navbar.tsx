@@ -28,20 +28,8 @@ export const Navbar = memo(function Navbar() {
       case '/feed':
         import('@/pages/Feed');
         break;
-      case '/leaderboard':
-        import('@/pages/Leaderboard');
-        break;
-      case '/layerz':
-        import('@/pages/ChainsListPage');
-        break;
-      case '/explore':
-        import('@/pages/Gallery');
-        break;
       case '/search':
         import('@/pages/Search');
-        break;
-      case '/investors':
-        import('@/pages/Investors');
         break;
       case '/publish':
         import('@/pages/Publish');
@@ -82,29 +70,27 @@ export const Navbar = memo(function Navbar() {
           <nav className="hidden md:flex items-center gap-1">
             <Link to="/" onMouseEnter={() => prefetchRoute('/')} onFocus={() => prefetchRoute('/')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <TrendingUp className="h-4 w-4" />
-              <span>Feed</span>
-            </Link>
-            <Link to="/leaderboard" onMouseEnter={() => prefetchRoute('/leaderboard')} onFocus={() => prefetchRoute('/leaderboard')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
-              <Trophy className="h-4 w-4" />
-              <span>Leaderboard</span>
-            </Link>
-            <Link to="/layerz" onMouseEnter={() => prefetchRoute('/layerz')} onFocus={() => prefetchRoute('/layerz')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
-              <Link2 className="h-4 w-4" />
-              <span>Layerz</span>
-            </Link>
-            {user && (
-              <Link to="/investor-directory" onMouseEnter={() => prefetchRoute('/investor-directory')} onFocus={() => prefetchRoute('/investor-directory')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
-                <Building2 className="h-4 w-4" />
-                <span>Investors</span>
-              </Link>
-            )}
-            <Link to="/explore" onMouseEnter={() => prefetchRoute('/explore')} onFocus={() => prefetchRoute('/explore')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
-              <Image className="h-4 w-4" />
-              <span>Explore</span>
+              <span>Discover</span>
             </Link>
             <Link to="/search" onMouseEnter={() => prefetchRoute('/search')} onFocus={() => prefetchRoute('/search')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
               <Search className="h-4 w-4" />
               <span>Search</span>
+            </Link>
+            <Link to="/travel-groups" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Find travel companions">
+              <MessageSquare className="h-4 w-4" />
+              <span>Travel Groups</span>
+            </Link>
+            <Link to="/women-guides" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Women's safety guides">
+              <Shield className="h-4 w-4" />
+              <span>Women Guides</span>
+            </Link>
+            <Link to="/communities" onMouseEnter={() => prefetchRoute('/communities')} onFocus={() => prefetchRoute('/communities')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Travel communities">
+              <MessageSquare className="h-4 w-4" />
+              <span>Communities</span>
+            </Link>
+            <Link to="/leaderboard" onMouseEnter={() => prefetchRoute('/leaderboard')} onFocus={() => prefetchRoute('/leaderboard')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Top travelers and itineraries">
+              <Trophy className="h-4 w-4" />
+              <span>Leaderboard</span>
             </Link>
           </nav>
 
@@ -259,26 +245,12 @@ export const Navbar = memo(function Navbar() {
                     {user.is_investor ? (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link to="/investor-dashboard" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
-                            <Building2 className="h-4 w-4 text-white group-hover:text-white" />
-                            <span className="font-bold text-foreground">Investor Dashboard</span>
-                            <Sparkles className="h-3 w-3 text-amber-600 ml-auto" />
-                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to="/investor-plans" className="cursor-pointer flex items-center gap-2 font-medium">
-                            <Settings className="h-4 w-4" />
-                            <span>Edit Investor Profile</span>
-                          </Link>
                         </DropdownMenuItem>
                       </>
                     ) : (
                       <DropdownMenuItem asChild>
-                        <Link to="/investor-plans" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
-                          <Building2 className="h-4 w-4 text-primary" />
-                          <span className="text-primary font-bold">Become an Investor</span>
-                          <Sparkles className="h-3 w-3 text-primary ml-auto animate-pulse" />
-                        </Link>
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />

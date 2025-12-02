@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { publishProjectSchema, PublishProjectInput } from '@/lib/schemas';
-import { useItineraryById } from '@/hooks/useProjects';
+import { useProjectById } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,13 +14,12 @@ import { X, Loader2, ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
-import { ChainSelector } from '@/components/ChainSelector';
 
 export default function EditProject() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: projectData, isLoading } = useItineraryById(id || '');
+  const { data: projectData, isLoading } = useProjectById(id || '');
 
   const [techStack, setTechStack] = useState<string[]>([]);
   const [techInput, setTechInput] = useState('');
@@ -233,14 +232,7 @@ export default function EditProject() {
                   </div>
                 </div>
 
-                {/* Chains Selector */}
-                <div className="space-y-3">
-                  <ChainSelector
-                    selectedChainIds={selectedChainIds}
-                    onSelectionChange={setSelectedChainIds}
-                    maxSelections={5}
-                  />
-                </div>
+                {/* Chains Selector removed in TripIt version */}
 
                 {/* Extended Information */}
                 <div className="space-y-4">

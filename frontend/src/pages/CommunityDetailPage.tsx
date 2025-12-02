@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useChain, useChainProjects, useFollowChain, useUnfollowChain } from '@/hooks/useChains';
-import { useBanChain, useSuspendChain, useUnbanChain, useDeleteChainAdmin, useToggleChainFeatured } from '@/hooks/useAdminChains';
-import { ChainHeader } from '@/components/ChainHeader';
-import { ChainHeaderSkeleton } from '@/components/ChainHeaderSkeleton';
-import { GallerySkeletonGrid } from '@/components/ProjectCardSkeleton';
-import { ProjectCard } from '@/components/ProjectCard';
-import { AddProjectToChainDialog } from '@/components/AddProjectToChainDialog';
-import { ChainPostList } from '@/components/ChainPostList';
+import { useChain, useChainProjects, useFollowChain, useUnfollowChain } from '@/hooks/useCommunities';
+import { useBanChain, useSuspendChain, useUnbanChain, useDeleteChainAdmin, useToggleChainFeatured } from '@/hooks/useAdminCommunities';
+import { CommunityHeader } from '@/components/CommunityHeader';
+import { CommunityHeaderSkeleton } from '@/components/CommunityHeaderSkeleton';
+import { ProjectCard } from '@/components/ItineraryCard';
+import { AddItineraryToCommunityDialog } from '@/components/AddItineraryToCommunityDialog';
+import { CommunityPostList } from '@/components/CommunityPostList';
 import { CreatePostDialog } from '@/components/CreatePostDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -117,7 +116,7 @@ export default function ChainDetailPage() {
           </Link>
         </Button>
 
-        <ChainHeaderSkeleton />
+        <CommunityHeaderSkeleton />
 
         {/* Projects skeleton grid */}
         <div className="space-y-6">
@@ -125,7 +124,7 @@ export default function ChainDetailPage() {
             <Skeleton className="h-6 w-24 rounded" />
             <Skeleton className="h-10 w-44 rounded" />
           </div>
-          <GallerySkeletonGrid count={12} />
+          <CommunityCardSkeletonGrid count={12} />
         </div>
       </div>
     );
@@ -158,7 +157,7 @@ export default function ChainDetailPage() {
       </Button>
 
       {/* Chain Header */}
-      <ChainHeader chain={chain} />
+      <CommunityHeader chain={chain} />
 
       {/* Community actions like subreddit (Join + Create Post) */}
       <div className="flex items-center justify-between gap-3 px-1 -mt-4">
@@ -189,8 +188,8 @@ export default function ChainDetailPage() {
 
       {/* Admin Actions - Only visible to admins */}
       {isAdmin && (
-        <Alert className="border-orange-500/50 bg-orange-500/10">
-          <Shield className="h-4 w-4 text-orange-500" />
+        <Alert className="border-yellow-500/50 bg-yellow-500/10">
+          <Shield className="h-4 w-4 text-yellow-500" />
           <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <span className="text-sm font-medium">Admin Controls</span>
             <div className="flex flex-wrap gap-2">
@@ -336,7 +335,7 @@ export default function ChainDetailPage() {
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-6">
           {projectsLoading ? (
-            <GallerySkeletonGrid count={12} />
+            <CommunityCardSkeletonGrid count={12} />
           ) : projectsError ? (
             <Card className="p-8 text-center">
               <p className="text-destructive">Failed to load projects</p>
@@ -357,7 +356,7 @@ export default function ChainDetailPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
+                  <ItineraryCard key={project.id} itinerary={project} />
                 ))}
               </div>
 
@@ -400,7 +399,7 @@ export default function ChainDetailPage() {
             </div>
             {user && <CreatePostDialog chainSlug={slug || ''} chainName={chain.name} />}
           </div>
-          <ChainPostList chainSlug={slug || ''} isOwner={isOwner} />
+          <CommunityPostList chainSlug={slug || ''} isOwner={isOwner} />
         </TabsContent>
 
         {/* About Tab */}
@@ -547,7 +546,7 @@ export default function ChainDetailPage() {
 
       {/* Add Project Dialog */}
       {user && (
-        <AddProjectToChainDialog
+        <AddItineraryToCommunityDialog
           open={showAddProjectDialog}
           onOpenChange={setShowAddProjectDialog}
           chainSlug={slug || ''}

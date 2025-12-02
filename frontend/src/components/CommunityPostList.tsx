@@ -1,27 +1,27 @@
 import { useState, useEffect } from 'react';
-import { ChainPostCard } from './ChainPostCard';
+import { CommunityPostCard } from './CommunityPostCard';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Loader2, TrendingUp, Clock, ArrowBigUp, Zap } from 'lucide-react';
-import { useChainPosts } from '@/hooks/useChainPosts';
+import { useCommunityPosts } from '@/hooks/useCommunityPosts';
 
-interface ChainPostListProps {
-  chainSlug: string;
+interface CommunityPostListProps {
+  communitySlug: string;
   isOwner?: boolean;
 }
 
-export function ChainPostList({ chainSlug, isOwner = false }: ChainPostListProps) {
+export function CommunityPostList({ communitySlug, isOwner = false }: CommunityPostListProps) {
   const [sort, setSort] = useState<'hot' | 'new' | 'top' | 'active'>('hot');
   const [page, setPage] = useState(1);
 
-  // Reset state when chainSlug changes (navigating to different chain)
+  // Reset state when communitySlug changes (navigating to different community)
   useEffect(() => {
     setPage(1);
     setSort('hot');
-  }, [chainSlug]);
+  }, [communitySlug]);
 
-  const { data, isLoading, error } = useChainPosts(chainSlug, {
+  const { data, isLoading, error } = useCommunityPosts(communitySlug, {
     sort,
     page,
     per_page: 20,
@@ -90,12 +90,12 @@ export function ChainPostList({ chainSlug, isOwner = false }: ChainPostListProps
       {posts.length === 0 ? (
         <Card className="p-12 text-center space-y-2">
           <p className="text-muted-foreground text-lg">No discussions yet</p>
-          <p className="text-sm text-muted-foreground">Be the first to start a discussion in this chain!</p>
+          <p className="text-sm text-muted-foreground">Be the first to start a discussion in this community!</p>
         </Card>
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <ChainPostCard key={post.id} post={post} chainSlug={chainSlug} isOwner={isOwner} />
+            <CommunityPostCard key={post.id} post={post} communitySlug={communitySlug} isOwner={isOwner} />
           ))}
         </div>
       )}

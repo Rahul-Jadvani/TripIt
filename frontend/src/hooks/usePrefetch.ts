@@ -5,7 +5,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api, { projectsService, leaderboardService, publicInvestorsService, messagesService, adminService } from '@/services/api';
-import { chainApi } from '@/services/chainApi';
+import { communityApi } from '@/services/communityApi';
 import { useAuth } from '@/context/AuthContext';
 import { logger } from '@/utils/logger';
 import { transformProject } from '@/hooks/useProjects';
@@ -122,7 +122,7 @@ export function usePrefetch() {
         const chainsPromises = [
           queryClient.prefetchQuery({
             queryKey: ['chains', { search: '', sort: 'trending', category: undefined, featured: false, page: 1, limit: 12 }],
-            queryFn: async () => chainApi.getChains({ page: 1, limit: 12, sort: 'trending' }),
+            queryFn: async () => communityApi.getChains({ page: 1, limit: 12, sort: 'trending' }),
             staleTime: 1000 * 60 * 5,
           }),
         ];
