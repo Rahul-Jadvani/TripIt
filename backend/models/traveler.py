@@ -86,8 +86,8 @@ class Traveler(db.Model):
 
     # Relationships
     itineraries = db.relationship('Itinerary', backref='creator', lazy='dynamic', foreign_keys='Itinerary.created_by_traveler_id')
-    safety_ratings = db.relationship('SafetyRating', backref='traveler', lazy='dynamic', cascade='all, delete-orphan')
-    travel_intel = db.relationship('TravelIntel', backref='traveler', lazy='dynamic', cascade='all, delete-orphan')
+    safety_ratings = db.relationship('SafetyRating', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='SafetyRating.traveler_id')
+    travel_intel = db.relationship('TravelIntel', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='TravelIntel.traveler_id')
     travel_groups = db.relationship('TravelGroup', backref='creator', lazy='dynamic', foreign_keys='TravelGroup.created_by_traveler_id')
     certifications = db.relationship('TravelerCertification', backref='traveler', lazy='dynamic', cascade='all, delete-orphan')
     sbt_verification = db.relationship('SBTVerification', backref='traveler', uselist=False, cascade='all, delete-orphan')

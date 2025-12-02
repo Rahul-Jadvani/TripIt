@@ -428,8 +428,8 @@ def register_blueprints(app):
     app.register_blueprint(validator_bp, url_prefix='/api/validator')
     app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
     app.register_blueprint(chains_bp, url_prefix='/api/chains')
-    # Register chains blueprint at /api/communities for frontend compatibility
-    app.register_blueprint(chains_bp, url_prefix='/api/communities')
+    # Register chains blueprint at /api/communities for frontend compatibility (use unique name)
+    app.register_blueprint(chains_bp, url_prefix='/api/communities', name='chains_communities')
     app.register_blueprint(chain_posts_bp, url_prefix='/api/chains')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(scoring_bp, url_prefix='/api')
