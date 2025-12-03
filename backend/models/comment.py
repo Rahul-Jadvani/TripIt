@@ -7,13 +7,13 @@ from extensions import db
 
 
 class Comment(db.Model):
-    """Comment model for project discussions"""
+    """Comment model for itinerary discussions"""
 
     __tablename__ = 'comments'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid4()))
-    project_id = db.Column(db.String(36), db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    project_id = db.Column(db.String(36), db.ForeignKey('itineraries.id', ondelete='CASCADE'), nullable=False)  # Still named project_id for compatibility
+    user_id = db.Column(db.String(36), db.ForeignKey('travelers.id', ondelete='CASCADE'), nullable=False)  # Still named user_id for compatibility
     parent_id = db.Column(db.String(36), db.ForeignKey('comments.id', ondelete='CASCADE'), nullable=True)
 
     content = db.Column(db.Text, nullable=False)

@@ -739,7 +739,7 @@ export default function ProjectDetail() {
                 <div className="card-elevated p-6">
                   <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
                     <ImageIcon className="h-4 w-4 text-primary" />
-                    Screenshots
+                    Photos
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {project.screenshots.map((screenshot: string, index: number) => (
@@ -750,12 +750,13 @@ export default function ProjectDetail() {
                       >
                         <img
                           src={screenshot}
-                          alt={`${project.title} - Screenshot ${index + 1}`}
+                          alt={`${project.title} - Photo ${index + 1}`}
                           className="w-full h-48 object-cover rounded-lg border border-border/60 shadow-lg group-hover:opacity-90 transition-opacity"
+                          onError={(e) => {
+                            console.error('Image failed to load:', screenshot);
+                            e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                          }}
                         />
-                        <span className="absolute bottom-2 right-2 text-[10px] bg-black/70 text-white px-2 py-1 rounded-full">
-                          Screenshot {index + 1}
-                        </span>
                       </div>
                     ))}
                   </div>

@@ -127,7 +127,7 @@ def list_itineraries(user_id):
 
         # Count and paginate
         total = query.count()
-        itineraries = query.options(joinedload(Itinerary.creator)).limit(per_page).offset((page - 1) * per_page).all()
+        itineraries = query.options(joinedload(Itinerary.itinerary_creator)).limit(per_page).offset((page - 1) * per_page).all()
 
         data = [i.to_dict(include_creator=True, user_id=user_id) for i in itineraries]
 
@@ -157,14 +157,14 @@ def get_itinerary(user_id, itinerary_id):
     """Get itinerary details"""
     try:
         itinerary = Itinerary.query.options(
-            joinedload(Itinerary.creator)
+            joinedload(Itinerary.itinerary_creator)
         ).get(itinerary_id)
 
         if not itinerary or itinerary.is_deleted:
             return error_response('Not found', 'Itinerary not found', 404)
 
-        # Increment view count
-        itinerary.view_count += 1
+        # Increment view count (handle NULL values from old records)
+        itinerary.view_count = (itinerary.view_count or 0) + 1
         db.session.commit()
 
         # Build response data
@@ -230,6 +230,7 @@ def create_itinerary(user_id):
             unique_highlights=validated_data.get('unique_highlights'),
             safety_tips=validated_data.get('safety_tips'),
             screenshots=validated_data.get('screenshots', []),
+            categories=validated_data.get('categories', []),
         )
 
         # Add to database
@@ -253,9 +254,12 @@ def create_itinerary(user_id):
         CacheService.invalidate_user_itineraries(user_id)
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
         itinerary_data = itinerary.to_dict(include_creator=True)
-        SocketService.emit_itinerary_created(itinerary_data)
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_project_created(itinerary_data)
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(itinerary_data, 'Itinerary created', 201)
 
@@ -291,10 +295,15 @@ def update_itinerary(user_id, itinerary_id):
 
         # Update fields
         for key, value in validated_data.items():
+            # Skip None values, but allow empty arrays/lists for fields like categories
             if value is not None:
                 setattr(itinerary, key, value)
 
         itinerary.updated_at = datetime.utcnow()
+
+        # Log categories for debugging
+        print(f"[UPDATE] Itinerary {itinerary_id} categories: {itinerary.categories}")
+
         db.session.commit()
 
         CacheService.invalidate_itinerary(itinerary_id)
@@ -311,9 +320,13 @@ def update_itinerary(user_id, itinerary_id):
                 print(f"Failed to queue rescore: {e}")
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        itinerary_data = itinerary.to_dict(include_creator=True)
-        SocketService.emit_itinerary_updated(itinerary_id, itinerary_data)
+        try:
+            from services.socket_service import SocketService
+            itinerary_data = itinerary.to_dict(include_creator=True)
+            SocketService.emit_project_updated(itinerary_id, itinerary_data)
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
+            itinerary_data = itinerary.to_dict(include_creator=True)
 
         return success_response(itinerary_data, 'Itinerary updated', 200)
 
@@ -345,9 +358,12 @@ def delete_itinerary(user_id, itinerary_id):
         CacheService.invalidate_user_itineraries(user_id)
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_itinerary_deleted(itinerary_id)
-        SocketService.emit_leaderboard_updated()
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_project_deleted(itinerary_id)
+            SocketService.emit_leaderboard_updated()
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(None, 'Itinerary deleted', 200)
 
@@ -374,8 +390,11 @@ def feature_itinerary(user_id, itinerary_id):
         CacheService.invalidate_itinerary_feed()
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_itinerary_featured(itinerary_id)
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_project_featured(itinerary_id)
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(itinerary.to_dict(include_creator=True), 'Itinerary featured', 200)
 
@@ -438,8 +457,11 @@ def add_safety_rating(user_id, itinerary_id):
         CacheService.invalidate_itinerary_feed()
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_itinerary_rated(itinerary_id, itinerary.safety_score)
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_project_rated(itinerary_id, itinerary.safety_score)
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(
             itinerary.to_dict(include_creator=True),
@@ -543,7 +565,7 @@ def get_leaderboard(user_id):
         if since:
             query = query.filter(Itinerary.created_at >= since)
 
-        top_itineraries = query.options(joinedload(Itinerary.creator)).order_by(
+        top_itineraries = query.options(joinedload(Itinerary.itinerary_creator)).order_by(
             Itinerary.proof_score.desc()
         ).limit(limit).all()
 
@@ -569,7 +591,7 @@ def get_leaderboard(user_id):
         ).limit(limit).all()
 
         # Featured itineraries
-        featured = Itinerary.query.options(joinedload(Itinerary.creator)).filter_by(
+        featured = Itinerary.query.options(joinedload(Itinerary.itinerary_creator)).filter_by(
             is_deleted=False,
             is_featured=True
         ).order_by(Itinerary.featured_at.desc()).limit(limit).all()
@@ -611,7 +633,7 @@ def get_featured_itineraries(user_id):
         itineraries = Itinerary.query.filter_by(
             is_deleted=False,
             is_featured=True
-        ).options(joinedload(Itinerary.creator)).order_by(
+        ).options(joinedload(Itinerary.itinerary_creator)).order_by(
             Itinerary.featured_at.desc()
         ).limit(limit).all()
 
@@ -642,7 +664,7 @@ def get_itineraries_by_destination(user_id, destination):
         itineraries = Itinerary.query.filter(
             Itinerary.is_deleted == False,
             Itinerary.destination.ilike(f'%{destination}%')
-        ).options(joinedload(Itinerary.creator)).order_by(
+        ).options(joinedload(Itinerary.itinerary_creator)).order_by(
             Itinerary.proof_score.desc()
         ).limit(limit).all()
 
@@ -677,7 +699,7 @@ def get_rising_stars(user_id):
         itineraries = Itinerary.query.filter(
             Itinerary.is_deleted == False,
             Itinerary.created_at >= thirty_days_ago
-        ).options(joinedload(Itinerary.creator)).order_by(
+        ).options(joinedload(Itinerary.itinerary_creator)).order_by(
             (Itinerary.safety_ratings_count + Itinerary.view_count).desc()
         ).limit(limit).all()
 
@@ -707,7 +729,7 @@ def get_most_requested_itineraries(user_id):
 
         itineraries = Itinerary.query.filter_by(
             is_deleted=False
-        ).options(joinedload(Itinerary.creator)).order_by(
+        ).options(joinedload(Itinerary.itinerary_creator)).order_by(
             Itinerary.view_count.desc(),
             Itinerary.safety_ratings_count.desc()
         ).limit(limit).all()

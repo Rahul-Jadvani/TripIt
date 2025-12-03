@@ -101,6 +101,7 @@ const App = () => (
               <Route path="/my-projects" element={<ProtectedRoute><MyProjects /></ProtectedRoute>} />
               <Route path="/publish" element={<ProtectedRoute><Publish /></ProtectedRoute>} />
               <Route path="/itinerary/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
+              <Route path="/project/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
               <Route path="/intros" element={<ProtectedRoute><Intros /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />

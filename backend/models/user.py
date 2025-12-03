@@ -47,7 +47,8 @@ class User(db.Model):
     # Relationships
     projects = db.relationship('Project', backref='creator', lazy='dynamic', foreign_keys='Project.user_id')
     votes = db.relationship('Vote', backref='user', lazy='dynamic', cascade='all, delete-orphan')
-    comments = db.relationship('Comment', backref='author', lazy='dynamic', cascade='all, delete-orphan')
+    # comments relationship disabled - Comment model now references travelers table
+    # comments = db.relationship('Comment', backref='author', lazy='dynamic', cascade='all, delete-orphan')
     badges_awarded = db.relationship('ValidationBadge', backref='validator', lazy='dynamic',
                                       foreign_keys='ValidationBadge.validator_id')
     intros_sent = db.relationship('Intro', backref='requester', lazy='dynamic',

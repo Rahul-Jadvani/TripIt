@@ -126,9 +126,13 @@ def create_travel_intel(user_id):
         CacheService.invalidate_itinerary(itinerary_id)
         CacheService.invalidate_itinerary_intel(itinerary_id)
 
-        # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_intel_added(itinerary_id, intel.to_dict(include_creator=True))
+        # Emit Socket.IO event (using emit_comment_added since travel intel replaced comments)
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_comment_added(itinerary_id, intel.to_dict())
+        except Exception as e:
+            # Socket events are non-critical, log and continue
+            print(f"Failed to emit socket event: {e}")
 
         # Notify itinerary creator of new intel
         try:
@@ -155,7 +159,7 @@ def create_travel_intel(user_id):
             logger.error(f"Travel Intel NOTIFICATION ERROR: {str(e)}")
 
         return success_response(
-            intel.to_dict(include_creator=True),
+            intel.to_dict(),
             'Travel intel created',
             201
         )
@@ -236,11 +240,14 @@ def update_travel_intel(user_id, intel_id):
         CacheService.invalidate_itinerary_intel(intel.itinerary_id)
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_intel_updated(intel.itinerary_id, intel.to_dict(include_creator=True))
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_comment_updated(intel.itinerary_id, intel.to_dict())
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(
-            intel.to_dict(include_creator=True),
+            intel.to_dict(),
             'Travel intel updated',
             200
         )
@@ -272,8 +279,11 @@ def delete_travel_intel(user_id, intel_id):
         CacheService.invalidate_itinerary_intel(intel.itinerary_id)
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_intel_deleted(intel.itinerary_id, intel_id)
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_comment_deleted(intel.itinerary_id, intel_id)
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(None, 'Travel intel deleted', 200)
 
@@ -391,11 +401,14 @@ def respond_to_intel(user_id, intel_id):
         CacheService.invalidate_itinerary(intel.itinerary_id)
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_intel_resolved(intel.itinerary_id, intel.to_dict(include_creator=True))
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_comment_updated(intel.itinerary_id, intel.to_dict())
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(
-            intel.to_dict(include_creator=True),
+            intel.to_dict(),
             'Intel response recorded',
             200
         )

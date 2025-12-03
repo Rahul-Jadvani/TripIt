@@ -85,7 +85,7 @@ class Traveler(db.Model):
     last_verified_date = db.Column(db.DateTime, nullable=True)
 
     # Relationships
-    itineraries = db.relationship('Itinerary', backref='creator', lazy='dynamic', foreign_keys='Itinerary.created_by_traveler_id')
+    itineraries = db.relationship('Itinerary', backref='itinerary_creator', lazy='dynamic', foreign_keys='Itinerary.created_by_traveler_id')
     safety_ratings = db.relationship('SafetyRating', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='SafetyRating.traveler_id')
     travel_intel = db.relationship('TravelIntel', backref='traveler', lazy='dynamic', cascade='all, delete-orphan', foreign_keys='TravelIntel.traveler_id')
     # travel_groups creator relationship is defined in TravelGroup model with backref='created_travel_groups'

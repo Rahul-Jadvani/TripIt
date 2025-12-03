@@ -15,8 +15,8 @@ import os
 import time
 
 from extensions import db
-from models.user import User
-from schemas.user import UserRegisterSchema, UserLoginSchema
+from models.traveler import Traveler
+from schemas.user import UserRegisterSchema, UserLoginSchema  # Schemas work with any model
 from utils.validators import validate_email, validate_username, validate_password
 from utils.helpers import success_response, error_response
 from utils.decorators import token_required
@@ -96,7 +96,7 @@ def register():
         validated_data = schema.load(data)
 
         # Check if user already exists
-        existing_user = User.query.filter_by(email=validated_data['email']).first()
+        existing_user = Traveler.query.filter_by(email=validated_data['email']).first()
         if existing_user:
             # Check if this is an OAuth account without a password
             # OAuth accounts have a random token as password, we'll allow them to set a real password
@@ -118,7 +118,7 @@ def register():
                     refresh_token = create_refresh_token(identity=existing_user.id)
 
                     return success_response({
-                        'user': existing_user.to_dict(include_email=True),
+                        'user': existing_user.to_dict(include_sensitive=True),
                         'tokens': {
                             'access': access_token,
                             'refresh': refresh_token
@@ -137,7 +137,7 @@ def register():
                 print(f"[Auth] Error checking existing user: {e}")
                 return error_response('User already exists', 'This email is already registered. Please sign in.', 409)
 
-        if User.query.filter_by(username=validated_data['username']).first():
+        if Traveler.query.filter_by(username=validated_data['username']).first():
             return error_response('Username taken', 'Username is already in use', 409)
 
         # Validate password strength
@@ -172,7 +172,7 @@ def register():
         refresh_token = create_refresh_token(identity=user.id)
 
         return success_response({
-            'user': user.to_dict(include_email=True),
+            'user': user.to_dict(include_sensitive=True),
             'tokens': {
                 'access': access_token,
                 'refresh': refresh_token
@@ -195,7 +195,7 @@ def login():
         validated_data = schema.load(data)
 
         # Find user
-        user = User.query.filter_by(email=validated_data['email']).first()
+        user = Traveler.query.filter_by(email=validated_data['email']).first()
         if not user or not user.check_password(validated_data['password']):
             return error_response('Invalid credentials', 'Email or password is incorrect', 401)
 
@@ -207,7 +207,7 @@ def login():
         refresh_token = create_refresh_token(identity=user.id)
 
         return success_response({
-            'user': user.to_dict(include_email=True),
+            'user': user.to_dict(include_sensitive=True),
             'tokens': {
                 'access': access_token,
                 'refresh': refresh_token
@@ -226,12 +226,12 @@ def get_current_user():
     """Get current user info"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = Traveler.query.get(user_id)
 
         if not user:
             return error_response('User not found', 'User account not found', 404)
 
-        return success_response(user.to_dict(include_email=True), 'User retrieved successfully', 200)
+        return success_response(user.to_dict(include_sensitive=True), 'User retrieved successfully', 200)
 
     except Exception as e:
         return error_response('Error', str(e), 500)
@@ -243,7 +243,7 @@ def refresh_token():
     """Refresh access token"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = Traveler.query.get(user_id)
 
         if not user or not user.is_active:
             return error_response('Invalid user', 'User not found or inactive', 401)
@@ -377,14 +377,14 @@ def google_callback():
         print(f"[Google OAuth] Got user email: {email}")
 
         # Find or create user
-        user = User.query.filter_by(email=email).first()
+        user = Traveler.query.filter_by(email=email).first()
         if not user:
             print(f"[Google OAuth] Creating new user for {email}")
             # Generate a username from email
             base_username = email.split('@')[0][:20] or 'user'
             candidate = base_username
             suffix = 1
-            while User.query.filter_by(username=candidate).first() is not None:
+            while Traveler.query.filter_by(username=candidate).first() is not None:
                 suffix += 1
                 candidate = f"{base_username}{suffix}"
 
@@ -449,7 +449,7 @@ def request_otp():
             return error_response('Validation error', 'Email is required', 400)
 
         # Check if user exists
-        user = User.query.filter_by(email=email).first()
+        user = Traveler.query.filter_by(email=email).first()
         if not user:
             return error_response('User not found', 'No account found with this email', 404)
 
@@ -522,7 +522,7 @@ def verify_otp():
             return error_response('Invalid OTP', 'Incorrect OTP', 401)
 
         # OTP is valid - get user
-        user = User.query.get(stored_data['user_id'])
+        user = Traveler.query.get(stored_data['user_id'])
         if not user or not user.is_active:
             del otp_storage[email]
             return error_response('User not found', 'User account not found or inactive', 404)
@@ -535,7 +535,7 @@ def verify_otp():
         refresh_token = create_refresh_token(identity=user.id)
 
         return success_response({
-            'user': user.to_dict(include_email=True),
+            'user': user.to_dict(include_sensitive=True),
             'tokens': {
                 'access': access_token,
                 'refresh': refresh_token

@@ -83,8 +83,9 @@ export function useCreateComment(projectId?: string, fallbackProjectId?: string)
       }
 
       return commentsService.create({
-        project_id: resolvedProjectId,
+        itinerary_id: resolvedProjectId,
         content: data.content,
+        intel_type: 'update', // Travel intel type (update, question, warning, recommendation, local_insight)
       });
     },
 

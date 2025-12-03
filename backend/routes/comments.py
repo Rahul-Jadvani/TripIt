@@ -9,7 +9,7 @@ import logging
 
 from extensions import db
 from models.comment import Comment
-from models.project import Project
+from models.itinerary import Itinerary
 from schemas.comment import CommentCreateSchema, CommentUpdateSchema
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
@@ -38,9 +38,9 @@ def get_comments(user_id):
             from flask import jsonify
             return jsonify(cached), 200
 
-        project = Project.query.get(project_id)
-        if not project:
-            return error_response('Not found', 'Project not found', 404)
+        itinerary = Itinerary.query.get(project_id)
+        if not itinerary:
+            return error_response('Not found', 'Itinerary not found', 404)
 
         # OPTIMIZED: Eager load author to avoid N+1 queries
         from sqlalchemy.orm import joinedload
@@ -75,9 +75,9 @@ def create_comment(user_id):
         schema = CommentCreateSchema()
         validated_data = schema.load(data)
 
-        project = Project.query.get(validated_data['project_id'])
-        if not project:
-            return error_response('Not found', 'Project not found', 404)
+        itinerary = Itinerary.query.get(validated_data['project_id'])
+        if not itinerary:
+            return error_response('Not found', 'Itinerary not found', 404)
 
         comment = Comment(
             project_id=validated_data['project_id'],
@@ -86,11 +86,11 @@ def create_comment(user_id):
             content=validated_data['content']
         )
 
-        project.comment_count += 1
+        itinerary.comment_count += 1
 
         # Recalculate community score immediately
         from models.event_listeners import update_project_community_score
-        update_project_community_score(project)
+        update_project_community_score(itinerary)
 
         db.session.add(comment)
         db.session.commit()
@@ -109,11 +109,11 @@ def create_comment(user_id):
         from services.socket_service import SocketService
         SocketService.emit_comment_added(validated_data['project_id'], comment.to_dict(include_author=True))
 
-        # Notify project owner of new comment
+        # Notify itinerary owner of new comment
         try:
             from utils.notifications import notify_comment_posted, notify_comment_reply
-            from models.user import User
-            commenter = User.query.get(user_id)
+            from models.traveler import Traveler
+            commenter = Traveler.query.get(user_id)
 
             if commenter:
                 # If it's a reply to another comment, notify the parent comment author
@@ -123,8 +123,8 @@ def create_comment(user_id):
                     if parent_comment and parent_comment.user_id != user_id:
                         notify_comment_reply(parent_comment.user_id, parent_comment, comment, commenter)
                 else:
-                    # Otherwise notify project owner
-                    notify_comment_posted(project.user_id, project, comment, commenter)
+                    # Otherwise notify itinerary owner
+                    notify_comment_posted(itinerary.created_by_traveler_id, itinerary, comment, commenter)
         except Exception as e:
             logger.error(f"❌ POST /comments NOTIFICATION ERROR: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
@@ -191,14 +191,14 @@ def delete_comment(user_id, comment_id):
         if comment.user_id != user_id:
             return error_response('Forbidden', 'You can only delete your own comments', 403)
 
-        # Get the project to update comment count
-        project = Project.query.get(comment.project_id)
-        if project:
-            project.comment_count = max(0, project.comment_count - 1)
+        # Get the itinerary to update comment count
+        itinerary = Itinerary.query.get(comment.project_id)
+        if itinerary:
+            itinerary.comment_count = max(0, itinerary.comment_count - 1)
 
             # Recalculate community score immediately
             from models.event_listeners import update_project_community_score
-            update_project_community_score(project)
+            update_project_community_score(itinerary)
 
         comment.is_deleted = True
         db.session.commit()

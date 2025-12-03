@@ -69,6 +69,7 @@ class Itinerary(db.Model):
     unique_highlights = db.Column(db.Text, nullable=True)  # Unique Highlights
     safety_tips = db.Column(db.Text, nullable=True)  # Safety & Travel Tips
     screenshots = db.Column(db.JSON, default=[])  # Trip photos/screenshots
+    categories = db.Column(db.JSON, default=[])  # Travel categories (Solo, Family, Adventure, etc.)
 
     # Safety & Verification
     photo_evidence_ipfs_hashes = db.Column(db.JSON, default=[])  # Array of IPFS hashes
@@ -105,7 +106,7 @@ class Itinerary(db.Model):
     last_verified_date = db.Column(db.DateTime, nullable=True)
 
     # Relationships
-    # creator relationship is defined in Traveler model with backref='creator'
+    # itinerary_creator relationship is defined in Traveler model with backref='itinerary_creator'
     day_plans_list = db.relationship('DayPlan', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
     embedded_businesses_list = db.relationship('EmbeddedBusiness', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
     hidden_gems_list = db.relationship('HiddenGem', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
@@ -160,6 +161,7 @@ class Itinerary(db.Model):
             'unique_highlights': self.unique_highlights,
             'safety_tips': self.safety_tips,
             'screenshots': self.screenshots or [],
+            'categories': self.categories or [],
             'safety_score': self.safety_score,
             'women_safe_certified': self.women_safe_certified,
             'safety_ratings_count': self.safety_ratings_count,
@@ -177,7 +179,7 @@ class Itinerary(db.Model):
         }
 
         # Include creator info if requested
-        if include_creator and self.creator:
-            data['creator'] = self.creator.to_dict()
+        if include_creator and self.itinerary_creator:
+            data['creator'] = self.itinerary_creator.to_dict()
 
         return data

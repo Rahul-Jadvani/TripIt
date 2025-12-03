@@ -59,6 +59,7 @@ class ItinerarySchema(Schema):
 class ItineraryCreateSchema(Schema):
     """Itinerary creation schema"""
     title = fields.Str(required=True, validate=validate.Length(min=5, max=200))
+    tagline = fields.Str(validate=validate.Length(max=300))
     description = fields.Str(required=True, validate=validate.Length(min=50))
     destination = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     regions = fields.List(fields.Str())
@@ -73,25 +74,39 @@ class ItineraryCreateSchema(Schema):
     travel_companions = fields.List(fields.Nested(TravelCompanionSchema))
     route_gpx = fields.Str()  # GPX file as string
     route_waypoints = fields.List(fields.Dict())
-    route_map_url = fields.Url()
+    route_map_url = fields.Str()
+    demo_url = fields.Str()
     starting_point_gps = fields.Str()
     ending_point_gps = fields.Str()
     best_season = fields.Str()
     women_safe_certified = fields.Bool()
 
+    # Extended trip details
+    trip_highlights = fields.Str()
+    trip_journey = fields.Str()
+    day_by_day_plan = fields.Str()
+    safety_tips = fields.Str()
+    hidden_gems = fields.Str()
+    unique_highlights = fields.Str()
+    screenshots = fields.List(fields.Str())
+    categories = fields.List(fields.Str())
+
     class Meta:
         fields = (
-            'title', 'description', 'destination', 'regions', 'start_date', 'end_date',
+            'title', 'tagline', 'description', 'destination', 'regions', 'start_date', 'end_date',
             'duration_days', 'difficulty_level', 'budget_amount', 'budget_currency',
             'travel_style', 'activity_tags', 'travel_companions', 'route_gpx',
-            'route_waypoints', 'route_map_url', 'starting_point_gps', 'ending_point_gps',
-            'best_season', 'women_safe_certified'
+            'route_waypoints', 'route_map_url', 'demo_url', 'starting_point_gps', 'ending_point_gps',
+            'best_season', 'women_safe_certified', 'trip_highlights', 'trip_journey',
+            'day_by_day_plan', 'safety_tips', 'hidden_gems', 'unique_highlights',
+            'screenshots', 'categories'
         )
 
 
 class ItineraryUpdateSchema(Schema):
     """Itinerary update schema"""
     title = fields.Str(validate=validate.Length(min=5, max=200))
+    tagline = fields.Str(validate=validate.Length(max=300))
     description = fields.Str(validate=validate.Length(min=50))
     destination = fields.Str(validate=validate.Length(min=1, max=200))
     regions = fields.List(fields.Str())
@@ -106,11 +121,22 @@ class ItineraryUpdateSchema(Schema):
     travel_companions = fields.List(fields.Nested(TravelCompanionSchema))
     route_gpx = fields.Str()
     route_waypoints = fields.List(fields.Dict())
-    route_map_url = fields.Url()
+    route_map_url = fields.Str()
+    demo_url = fields.Str()
     starting_point_gps = fields.Str()
     ending_point_gps = fields.Str()
     best_season = fields.Str()
     women_safe_certified = fields.Bool()
+
+    # Extended trip details
+    trip_highlights = fields.Str()
+    trip_journey = fields.Str()
+    day_by_day_plan = fields.Str()
+    safety_tips = fields.Str()
+    hidden_gems = fields.Str()
+    unique_highlights = fields.Str()
+    screenshots = fields.List(fields.Str())
+    categories = fields.List(fields.Str())
 
 
 class SafetyRatingSchema(Schema):

@@ -91,8 +91,11 @@ def add_safety_rating(user_id):
         CacheService.invalidate_itinerary_feed()
 
         # Emit Socket.IO event
-        from services.socket_service import SocketService
-        SocketService.emit_itinerary_rated(itinerary_id, itinerary.safety_score)
+        try:
+            from services.socket_service import SocketService
+            SocketService.emit_project_rated(itinerary_id, itinerary.safety_score)
+        except Exception as e:
+            print(f"Failed to emit socket event: {e}")
 
         return success_response(
             rating.to_dict(),

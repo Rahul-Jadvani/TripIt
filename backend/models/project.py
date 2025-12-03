@@ -82,7 +82,8 @@ class Project(db.Model):
     screenshots = db.relationship('ProjectScreenshot', backref='project', lazy='dynamic',
                                    cascade='all, delete-orphan')
     votes = db.relationship('Vote', backref='project', lazy='dynamic', cascade='all, delete-orphan')
-    comments = db.relationship('Comment', backref='project', lazy='dynamic', cascade='all, delete-orphan')
+    # comments relationship disabled - Comment model now references itineraries table
+    # comments = db.relationship('Comment', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     badges = db.relationship('ValidationBadge', backref='project', lazy='dynamic',
                               cascade='all, delete-orphan')
     intros = db.relationship('Intro', backref='project', lazy='dynamic', cascade='all, delete-orphan')

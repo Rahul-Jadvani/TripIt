@@ -67,7 +67,7 @@ export function transformProject(backendProject: any) {
     }),
     teamMembers: teamMembers,
     team_members: teamMembers,
-    screenshots: backendProject.screenshots?.map((s: any) => s.url) || [],
+    screenshots: backendProject.screenshots || [],
     authorId: backendProject.user_id,
     author: backendProject.creator ? {
       id: backendProject.creator.id,

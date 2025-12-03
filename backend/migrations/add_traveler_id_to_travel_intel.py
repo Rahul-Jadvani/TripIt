@@ -40,6 +40,28 @@ def add_traveler_id_column():
             """)
             print("✓ traveler_id column added")
 
+            # Check if there are existing rows that need default traveler_id
+            cursor.execute("SELECT COUNT(*) FROM travel_intel WHERE traveler_id IS NULL")
+            null_count = cursor.fetchone()[0]
+
+            if null_count > 0:
+                print(f"Found {null_count} rows with NULL traveler_id")
+                print("Setting default traveler_id for existing rows...")
+                cursor.execute("""
+                    UPDATE travel_intel
+                    SET traveler_id = (SELECT id FROM travelers LIMIT 1)
+                    WHERE traveler_id IS NULL
+                """)
+                print(f"✓ Updated {null_count} existing rows")
+
+            # Make column NOT NULL
+            print("Adding NOT NULL constraint...")
+            cursor.execute("""
+                ALTER TABLE travel_intel
+                ALTER COLUMN traveler_id SET NOT NULL
+            """)
+            print("✓ NOT NULL constraint added")
+
             # Add foreign key constraint
             print("Adding foreign key constraint...")
             cursor.execute("""
