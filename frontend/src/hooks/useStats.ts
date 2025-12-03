@@ -28,19 +28,29 @@ export function useDashboardStats(enabled: boolean = true) {
         throw new Error('User ID not found');
       }
 
-      // Get user's projects to calculate total votes
-      const projectsResponse = await api.get(`/users/${userStats.data.user_id}/projects?per_page=100`);
-      const projects = projectsResponse.data.data || [];
+      // Get user's itineraries to calculate total votes and comments
+      const itinerariesResponse = await api.get(`/users/${userStats.data.user_id}/itineraries?per_page=100`);
+      const itineraries = itinerariesResponse.data.data || [];
 
-      // Calculate total votes across all projects
-      const totalVotes = projects.reduce((sum: number, project: any) => {
-        return sum + (project.upvotes || 0);
+      console.log('[Dashboard Stats] Fetched itineraries:', itineraries.length);
+      console.log('[Dashboard Stats] Sample itinerary:', itineraries[0]);
+
+      // Calculate total votes across all itineraries (using helpful_votes)
+      const totalVotes = itineraries.reduce((sum: number, itinerary: any) => {
+        const votes = itinerary.helpful_votes || 0;
+        console.log(`[Dashboard Stats] Itinerary "${itinerary.title}": ${votes} votes`);
+        return sum + votes;
       }, 0);
 
-      // Calculate total comments across all projects
-      const totalComments = projects.reduce((sum: number, project: any) => {
-        return sum + (project.comment_count || 0);
+      // Calculate total comments across all itineraries
+      const totalComments = itineraries.reduce((sum: number, itinerary: any) => {
+        const comments = itinerary.comment_count || 0;
+        console.log(`[Dashboard Stats] Itinerary "${itinerary.title}": ${comments} comments`);
+        return sum + comments;
       }, 0);
+
+      console.log('[Dashboard Stats] Total votes:', totalVotes);
+      console.log('[Dashboard Stats] Total comments:', totalComments);
 
       // Get intro requests
       const receivedIntrosResponse = await api.get('/intros/received');
@@ -48,12 +58,12 @@ export function useDashboardStats(enabled: boolean = true) {
       const pendingIntros = receivedIntros.filter((intro: any) => intro.status === 'pending');
 
       return {
-        totalProjects: userStats.data.project_count || 0,
+        totalItineraries: itineraries.length,  // Use actual count from API
         totalVotes: totalVotes,
         totalComments: totalComments,
         introRequests: receivedIntros.length,
         pendingIntros: pendingIntros.length,
-        projects: projects,
+        itineraries: itineraries,
         recentIntros: receivedIntros.slice(0, 5),
       };
     },

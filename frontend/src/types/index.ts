@@ -252,12 +252,22 @@ export interface Itinerary {
   safety_ratings_count?: number;
   safety_ratings_avg?: number;
   // Credibility Scoring
+  proof_score?: number;
   travel_credibility_score?: number;
   identity_score?: number;
   travel_history_score?: number;
   community_score?: number;
   safety_score_component?: number;
   quality_score?: number;
+  score_explanations?: {
+    [key: string]: {
+      score: number;
+      max: number;
+      percentage: number;
+      summary: string;
+      details: string[];
+    };
+  };
   // Engagement Metrics
   safety_ratings?: SafetyRating[];
   travel_intel?: TravelIntel[];

@@ -4,13 +4,25 @@ import { toast } from 'sonner';
 
 // Transform backend project data to frontend format
 export function transformProject(backendProject: any) {
+  // Debug logging for score fields
+  if (backendProject.title?.includes('TESTTEST')) {
+    console.log('[transformProject] Raw backend data:', {
+      proof_score: backendProject.proof_score,
+      identity_score: backendProject.identity_score,
+      travel_history_score: backendProject.travel_history_score,
+      community_score: backendProject.community_score,
+      safety_score_component: backendProject.safety_score_component,
+      quality_score: backendProject.quality_score,
+    });
+  }
+
   // Map itinerary fields to project fields for compatibility
   const techStack = backendProject.tech_stack || backendProject.activity_tags || [];
   const teamMembers = backendProject.team_members || backendProject.travel_companions || [];
   const demoUrl = backendProject.demo_url || backendProject.route_map_url || '';
   const githubUrl = backendProject.github_url || backendProject.route_map_url || '';
 
-  return {
+  const transformed = {
     id: backendProject.id,
     title: backendProject.title,
     tagline: backendProject.tagline || backendProject.destination || '',
@@ -112,6 +124,16 @@ export function transformProject(backendProject: any) {
       validation: backendProject.validation_score || 0,
       quality: backendProject.quality_score || 0,
     },
+    // New itinerary scoring breakdown fields
+    proof_score: backendProject.proof_score ?? 0,
+    identity_score: backendProject.identity_score ?? 0,
+    travel_history_score: backendProject.travel_history_score ?? 0,
+    community_score: backendProject.community_score ?? 0,
+    safety_score_component: backendProject.safety_score_component ?? 0,
+    quality_score: backendProject.quality_score ?? 0,
+    safety_score: backendProject.safety_score ?? 0,
+    safety_ratings_count: backendProject.safety_ratings_count ?? 0,
+    score_explanations: backendProject.score_explanations || {},
     onchain_score: backendProject.onchain_score || 0,
     onchainScore: backendProject.onchain_score || 0,
     // AI Scoring fields
@@ -161,6 +183,20 @@ export function transformProject(backendProject: any) {
     createdAt: backendProject.created_at,
     updatedAt: backendProject.updated_at,
   };
+
+  // Debug logging for transformed data
+  if (backendProject.title?.includes('TESTTEST')) {
+    console.log('[transformProject] Transformed data:', {
+      proof_score: transformed.proof_score,
+      identity_score: transformed.identity_score,
+      travel_history_score: transformed.travel_history_score,
+      community_score: transformed.community_score,
+      safety_score_component: transformed.safety_score_component,
+      quality_score: transformed.quality_score,
+    });
+  }
+
+  return transformed;
 }
 
 export function useProjects(sort: string = 'hot', page: number = 1, includeDetailed: boolean = false) {

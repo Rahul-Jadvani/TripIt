@@ -1,10 +1,11 @@
 """
-Saved Projects Routes - Bookmarking functionality
+Saved Projects Routes - Bookmarking functionality (supports both Projects and Itineraries)
 """
 from flask import Blueprint, request, jsonify
 from extensions import db
 from models.saved_project import SavedProject
 from models.project import Project
+from models.itinerary import Itinerary
 from utils.decorators import token_required
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
 from utils.cache import CacheService
@@ -15,10 +16,14 @@ saved_projects_bp = Blueprint('saved_projects', __name__, url_prefix='/api/saved
 @saved_projects_bp.route('/save/<project_id>', methods=['POST'])
 @token_required
 def save_project(user_id, project_id):
-    """Save/bookmark a project"""
+    """Save/bookmark a project or itinerary"""
     try:
-        # Check if project exists
+        # Check if project or itinerary exists
         project = Project.query.get(project_id)
+        if not project:
+            # Try checking if it's an itinerary
+            project = Itinerary.query.get(project_id)
+
         if not project or project.is_deleted:
             return error_response('Not found', 'Project not found', 404)
 
@@ -60,7 +65,7 @@ def save_project(user_id, project_id):
 @saved_projects_bp.route('/unsave/<project_id>', methods=['DELETE'])
 @token_required
 def unsave_project(user_id, project_id):
-    """Remove project from saved/bookmarks"""
+    """Remove project/itinerary from saved/bookmarks"""
     try:
         saved = SavedProject.query.filter_by(
             user_id=user_id,
@@ -72,8 +77,11 @@ def unsave_project(user_id, project_id):
 
         db.session.delete(saved)
 
-        # Decrement save count
+        # Decrement save count - try Project first, then Itinerary
         project = Project.query.get(project_id)
+        if not project:
+            project = Itinerary.query.get(project_id)
+
         if project and project.share_count > 0:
             project.share_count -= 1
 
@@ -97,35 +105,41 @@ def unsave_project(user_id, project_id):
         return error_response('Error', str(e), 500)
 
 
+@saved_projects_bp.route('/itineraries', methods=['GET'])
 @saved_projects_bp.route('/my-saved', methods=['GET'])
 @token_required
 def get_my_saved_projects(user_id):
-    """Get user's saved/bookmarked projects"""
+    """Get user's saved/bookmarked projects/itineraries"""
     try:
         page, per_page = get_pagination_params(request)
 
-        # OPTIMIZED: Eager load project and creator to prevent N+1 queries
-        from sqlalchemy.orm import joinedload
+        # Get all saved items for this user
         query = SavedProject.query.filter_by(user_id=user_id)\
-            .join(Project, SavedProject.project_id == Project.id)\
-            .filter(Project.is_deleted == False)\
-            .options(
-                joinedload(SavedProject.project).joinedload(Project.creator)
-            )\
             .order_by(SavedProject.created_at.desc())
 
         total = query.count()
         saved_items = query.limit(per_page).offset((page - 1) * per_page).all()
 
-        # OPTIMIZED: Use eager-loaded project instead of querying again
+        # Load the actual project/itinerary for each saved item
         projects = []
         for saved in saved_items:
-            if saved.project:  # Use already-loaded project
-                project_dict = saved.project.to_dict(include_creator=True, user_id=user_id)
-                project_dict['saved_at'] = saved.created_at.isoformat()
-                projects.append(project_dict)
+            # Try to load as Project first
+            item = Project.query.get(saved.project_id)
 
-        return paginated_response(projects, total, page, per_page, 'Saved projects retrieved')
+            # If not found as Project, try as Itinerary
+            if not item:
+                item = Itinerary.query.get(saved.project_id)
+
+            # Skip if not found or deleted
+            if not item or item.is_deleted:
+                continue
+
+            # Convert to dict with creator info
+            project_dict = item.to_dict(include_creator=True, user_id=user_id)
+            project_dict['saved_at'] = saved.created_at.isoformat()
+            projects.append(project_dict)
+
+        return paginated_response(projects, total, page, per_page, 'Saved itineraries retrieved')
 
     except Exception as e:
         return error_response('Error', str(e), 500)

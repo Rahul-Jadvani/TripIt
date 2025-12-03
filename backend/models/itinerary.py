@@ -92,6 +92,7 @@ class Itinerary(db.Model):
     community_score = db.Column(db.Float, default=0.0)  # From ratings & comments
     safety_score_component = db.Column(db.Float, default=0.0)  # Safety metrics
     quality_score = db.Column(db.Float, default=0.0)  # Photos, description quality
+    score_explanations = db.Column(db.JSON, default=dict)  # AI explanations for each score component
 
     # Status
     is_published = db.Column(db.Boolean, default=False, index=True)
@@ -167,6 +168,13 @@ class Itinerary(db.Model):
             'safety_ratings_count': self.safety_ratings_count,
             'safety_ratings_avg': self.safety_ratings_avg,
             'proof_score': self.proof_score,
+            # Score breakdown components
+            'identity_score': self.identity_score,
+            'travel_history_score': self.travel_history_score,
+            'community_score': self.community_score,
+            'safety_score_component': self.safety_score_component,
+            'quality_score': self.quality_score,
+            'score_explanations': self.score_explanations or {},
             'is_published': self.is_published,
             'is_featured': self.is_featured,
             'view_count': self.view_count,

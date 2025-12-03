@@ -3,14 +3,13 @@ import { useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, Sparkles, FileText, Edit, Trophy, Link2, Layers, Info, X, MapPin, DollarSign, Sun, Map } from 'lucide-react';
+import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, FileText, Edit, Trophy, Link2, Layers, Info, X, MapPin, DollarSign, Sun, Map, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
 import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
 import { TravelIntelSection } from '@/components/TravelIntelSection';
 import { IntroRequest } from '@/components/IntroRequest';
 import { ShareDialog } from '@/components/ShareDialog';
-import { PostUpdateModal } from '@/components/PostUpdateModal';
 import { VoteButtons } from '@/components/VoteButtons';
 import { CommentSection } from '@/components/CommentSection';
 import { useAuth } from '@/context/AuthContext';
@@ -27,8 +26,8 @@ export default function ProjectDetail() {
   const saveMutation = useSaveItinerary();
   const unsaveMutation = useUnsaveItinerary();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [showPostUpdate, setShowPostUpdate] = useState(false);
   const [showProfileChecklist, setShowProfileChecklist] = useState(false);
+  const [expandedScores, setExpandedScores] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
 
   // Track which projects have been viewed to prevent duplicate API calls
@@ -197,7 +196,7 @@ export default function ProjectDetail() {
     project.trip_highlights && (
       <div key="highlights" className="card-elevated p-6">
         <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <TrendingUp className="h-4 w-4 text-primary" />
           Trip Highlights
         </h2>
         <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
@@ -526,6 +525,161 @@ export default function ProjectDetail() {
     );
   };
 
+  const renderScoringBreakdownCard = () => {
+    // Debug logging
+    console.log('[ProjectDetail] Scoring Breakdown Data:', {
+      identity_score: project.identity_score,
+      travel_history_score: project.travel_history_score,
+      community_score: project.community_score,
+      safety_score_component: project.safety_score_component,
+      quality_score: project.quality_score,
+      proof_score: project.proof_score,
+      score_explanations: project.score_explanations
+    });
+
+    // Check if we have proof_score (even if it's 0)
+    const hasProofScore = project.proof_score !== undefined && project.proof_score !== null;
+
+    if (!hasProofScore) {
+      return null;
+    }
+
+    // Helper function to toggle score explanation
+    const toggleScoreExplanation = (scoreKey: string) => {
+      setExpandedScores(prev => ({ ...prev, [scoreKey]: !prev[scoreKey] }));
+    };
+
+    // Helper function to render a score component with explanation
+    const renderScoreComponent = (
+      key: string,
+      label: string,
+      score: number,
+      explanationKey?: string
+    ) => {
+      const explanation = explanationKey && project.score_explanations?.[explanationKey];
+      const isExpanded = expandedScores[key];
+
+      return (
+        <div key={key} className="border border-border/30 rounded-lg overflow-hidden">
+          {/* Score Header - Clickable */}
+          <button
+            onClick={() => toggleScoreExplanation(key)}
+            className="w-full flex items-center justify-between p-3 hover:bg-accent/5 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${
+                  isExpanded ? 'transform rotate-180' : ''
+                }`}
+              />
+              <span className="text-sm text-muted-foreground">{label}</span>
+            </div>
+            <span className="font-semibold text-foreground">{formatScore(score)}</span>
+          </button>
+
+          {/* Explanation Dropdown */}
+          {isExpanded && explanation && (
+            <div className="px-3 pb-3 pt-1 bg-accent/5 border-t border-border/30">
+              <div className="space-y-2">
+                {/* Summary */}
+                <p className="text-xs text-muted-foreground italic">
+                  {explanation.summary}
+                </p>
+
+                {/* Score Stats */}
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-foreground font-medium">
+                    {explanation.score.toFixed(1)} / {explanation.max.toFixed(1)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    ({explanation.percentage.toFixed(0)}%)
+                  </span>
+                </div>
+
+                {/* Detailed Reasons */}
+                {explanation.details && explanation.details.length > 0 && (
+                  <ul className="space-y-1 mt-2">
+                    {explanation.details.map((detail: string, idx: number) => (
+                      <li key={idx} className="text-xs text-foreground/80 leading-relaxed">
+                        {detail}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div className="card-elevated p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-2 border-primary/20">
+        <h2 className="text-lg font-black mb-4 text-foreground flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-primary" />
+          Proof Score Breakdown
+        </h2>
+        <div className="space-y-3">
+          {/* Total Score */}
+          <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/30">
+            <span className="text-sm font-bold text-foreground">Total Score</span>
+            <span className="text-xl font-black text-primary">{formatScore(displayScore)}</span>
+          </div>
+
+          {/* Score Components with Explanations */}
+          <div className="space-y-2 pt-2">
+            {renderScoreComponent(
+              'identity',
+              'Identity Score',
+              project.identity_score || 0,
+              'identity_score'
+            )}
+            {renderScoreComponent(
+              'travel_history',
+              'Travel History',
+              project.travel_history_score || 0,
+              'travel_history_score'
+            )}
+            {renderScoreComponent(
+              'community',
+              'Community Engagement',
+              project.community_score || 0,
+              'community_score'
+            )}
+            {renderScoreComponent(
+              'safety',
+              'Safety Rating',
+              project.safety_score_component || 0,
+              'safety_score_component'
+            )}
+            {renderScoreComponent(
+              'quality',
+              'Content Quality',
+              project.quality_score || 0,
+              'quality_score'
+            )}
+          </div>
+
+          {/* Additional metrics */}
+          <div className="pt-3 border-t border-border/50 space-y-2">
+            {project.safety_score !== undefined && project.safety_score > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Community Safety Score</span>
+                <span className="font-medium text-foreground">{project.safety_score.toFixed(1)}/5.0</span>
+              </div>
+            )}
+            {project.safety_ratings_count !== undefined && project.safety_ratings_count > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Safety Ratings</span>
+                <span className="font-medium text-foreground">{project.safety_ratings_count} ratings</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderHackathonCard = () => {
     if (
       !(
@@ -684,11 +838,7 @@ export default function ProjectDetail() {
                 )}
                 {user?.id === project.authorId && (
                   <>
-                    <button onClick={() => setShowPostUpdate(true)} className="btn-primary h-10 px-4 text-sm flex items-center gap-1.5">
-                      <Sparkles className="h-4 w-4" />
-                      Post Update
-                    </button>
-                    <Link to={`/project/${project.id}/edit`} className="btn-secondary h-10 px-4 text-sm flex items-center gap-1.5">
+                    <Link to={`/project/${project.id}/edit`} className="btn-primary h-10 px-4 text-sm flex items-center gap-1.5">
                       <Edit className="h-4 w-4" />
                       Edit
                     </Link>
@@ -771,6 +921,7 @@ export default function ProjectDetail() {
 
             <div className="space-y-6">
               {renderCreatorCard()}
+              {renderScoringBreakdownCard()}
               {renderTeamCard()}
               {renderCategoriesCard()}
               {renderItineraryDetailsCard()}
@@ -787,16 +938,6 @@ export default function ProjectDetail() {
         url={`${window.location.origin}/project/${id}`}
         title={project.title}
         description={project.tagline}
-      />
-
-      {/* Post Update Modal */}
-      <PostUpdateModal
-        projectId={project.id}
-        isOpen={showPostUpdate}
-        onClose={() => setShowPostUpdate(false)}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['projectUpdates', id] });
-        }}
       />
     </div>
   );

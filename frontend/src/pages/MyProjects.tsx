@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Eye, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserItineraries, useDeleteItinerary } from '@/hooks/useProjects';
 import { ItineraryCard } from '@/components/ItineraryCard';
@@ -14,7 +14,6 @@ const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
     ))}
   </div>
 );
-import { PostUpdateModal } from '@/components/PostUpdateModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -24,7 +23,6 @@ export default function MyProjects() {
   const { data, isLoading, error } = useUserItineraries(user?.id || '');
   const deleteProjectMutation = useDeleteItinerary();
   const queryClient = useQueryClient();
-  const [showPostUpdate, setShowPostUpdate] = useState<string | null>(null);
   const [projectPendingDeletion, setProjectPendingDeletion] = useState<{ id: string; title: string } | null>(null);
   const handleConfirmDelete = async () => {
     if (!projectPendingDeletion) return;
@@ -73,7 +71,7 @@ export default function MyProjects() {
               {data?.data && data.data.length > 0 ? (
                 data.data.map((project: any) => (
                   <div key={project.id}>
-                    <ItineraryCard itinerary={project} />
+                    <ItineraryCard project={project} />
 
                     {/* Action buttons section - separate area below card */}
                     <div className="border-t-2 border-border bg-secondary/20 p-4">
@@ -82,16 +80,6 @@ export default function MyProjects() {
                           Itinerary Actions
                         </p>
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowPostUpdate(project.id);
-                            }}
-                            className="btn-primary inline-flex items-center gap-2 px-3 py-2"
-                          >
-                            <Sparkles className="h-4 w-4" />
-                            <span>Post Update</span>
-                          </button>
                           <Link
                             to={`/project/${project.id}`}
                             className="btn-secondary inline-flex items-center gap-2 px-3 py-2"
@@ -140,19 +128,6 @@ export default function MyProjects() {
           )}
         </div>
       </div>
-
-      {/* Post Update Modal */}
-      {showPostUpdate && (
-        <PostUpdateModal
-          projectId={showPostUpdate}
-          isOpen={!!showPostUpdate}
-          onClose={() => setShowPostUpdate(null)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['projectUpdates', showPostUpdate] });
-            setShowPostUpdate(null);
-          }}
-        />
-      )}
 
       <ConfirmDialog
         open={Boolean(projectPendingDeletion)}

@@ -9,6 +9,7 @@ from extensions import db
 from models.user import User
 from models.user_stats import UserDashboardStats
 from models.project import Project
+from models.itinerary import Itinerary
 from schemas.user import UserProfileUpdateSchema
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
@@ -62,6 +63,7 @@ def search_users():
 def get_user_profile(user_id, username):
     """Get user profile by username"""
     try:
+        print(f"[DEBUG] Getting profile for username: {username}")
         normalized_username = (username or '').strip().lower()
 
         # Check cache (5 min TTL)
@@ -76,7 +78,6 @@ def get_user_profile(user_id, username):
                 User.is_active == True,
                 or_(
                     func.lower(User.username) == normalized_username,
-                    func.lower(User.github_username) == normalized_username,
                     func.lower(User.email) == normalized_username
                 )
             )
@@ -85,16 +86,17 @@ def get_user_profile(user_id, username):
         if not user:
             return error_response('Not found', 'User not found', 404)
 
-        # Use denormalized stats for karma, but always recompute project_count to ensure accuracy
+        # Use denormalized stats for karma, but always recompute itinerary_count to ensure accuracy
         stats = user.dashboard_stats or UserDashboardStats.query.filter_by(user_id=user.id).first()
         karma_value = stats.karma() if stats else 0
-        project_count = db.session.query(func.count(Project.id)).filter(
-            Project.user_id == user.id,
-            Project.is_deleted == False
+        itinerary_count = db.session.query(func.count(Itinerary.id)).filter(
+            Itinerary.created_by_traveler_id == user.id,
+            Itinerary.is_deleted == False
         ).scalar() or 0
 
         profile = user.to_dict()
-        profile['project_count'] = project_count
+        profile['project_count'] = itinerary_count  # Backward compatibility
+        profile['itinerary_count'] = itinerary_count
         profile['karma'] = karma_value
 
         # Build response data
@@ -110,6 +112,9 @@ def get_user_profile(user_id, username):
         from flask import jsonify
         return jsonify(response_data), 200
     except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to get user profile for {username}: {str(e)}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
         return error_response('Error', str(e), 500)
 
 
@@ -236,6 +241,60 @@ def get_user_projects(current_user_id, user_id):
         projects = query.limit(per_page).offset((page - 1) * per_page).all()
 
         data = [p.to_dict(include_creator=True) for p in projects]
+
+        # Build response data
+        total_pages = (total + per_page - 1) // per_page
+        response_data = {
+            'status': 'success',
+            'message': 'Success',
+            'data': data,
+            'pagination': {
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': total_pages,
+            }
+        }
+
+        # Cache for 1 hour (auto-invalidated on data changes)
+        CacheService.set(cache_key, response_data, ttl=3600)
+
+        from flask import jsonify
+        return jsonify(response_data), 200
+    except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
+@users_bp.route('/<user_id>/itineraries', methods=['GET'])
+@optional_auth
+def get_user_itineraries(current_user_id, user_id):
+    """Get itineraries by user ID (OPTIMIZED with caching)"""
+    try:
+        page, per_page = get_pagination_params(request)
+
+        # Check cache (1 hour TTL - invalidated on itinerary changes)
+        cache_key = f"user_itineraries:{user_id}:page:{page}"
+        cached = CacheService.get(cache_key)
+        if cached:
+            from flask import jsonify
+            return jsonify(cached), 200
+
+        # OPTIMIZED: Eager load creator to avoid N+1
+        from sqlalchemy.orm import joinedload
+        query = Itinerary.query.filter_by(created_by_traveler_id=user_id, is_deleted=False)
+        query = query.options(joinedload(Itinerary.itinerary_creator))
+        query = query.order_by(Itinerary.created_at.desc())
+
+        # OPTIMIZED: Get count efficiently (cached separately)
+        count_cache_key = f"user_itineraries_count:{user_id}"
+        total = CacheService.get(count_cache_key)
+        if total is None:
+            total = query.count()
+            CacheService.set(count_cache_key, total, ttl=3600)  # Cache count for 1 hour
+
+        itineraries = query.limit(per_page).offset((page - 1) * per_page).all()
+
+        data = [i.to_dict(include_creator=True, user_id=current_user_id) for i in itineraries]
 
         # Build response data
         total_pages = (total + per_page - 1) // per_page

@@ -86,7 +86,7 @@ export function useCheckIfSavedItinerary(itineraryId: string) {
   return useQuery({
     queryKey: ['saved-check-itinerary', itineraryId],
     queryFn: async () => {
-      const response = await savedItinerariesService.checkIfSaved(itineraryId);
+      const response = await savedItinerariesService.checkIfSavedItinerary(itineraryId);
       return response.data.data.saved;
     },
     enabled: !!itineraryId,

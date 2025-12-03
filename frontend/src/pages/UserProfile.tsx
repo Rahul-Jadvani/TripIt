@@ -8,6 +8,7 @@ import { Shield, Award, Loader2, AlertCircle, Github, ExternalLink, MapPin, Brie
 import { useUserByUsername } from '@/hooks/useUser';
 import { useUserProjects, useUserTaggedProjects } from '@/hooks/useProjects';
 import { ItineraryCard } from '@/components/ItineraryCard';
+import { useUserOwnedCommunities, useUserFollowingCommunities } from '@/hooks/useCommunities';
 
 // Simple skeleton component for loading states
 const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
@@ -29,6 +30,10 @@ export default function UserProfile() {
   const { data: user, isLoading: userLoading, error: userError } = useUserByUsername(username || '');
   const { data: projectsData, isLoading: projectsLoading } = useUserProjects(user?.id || '');
   const { data: taggedProjectsData, isLoading: taggedProjectsLoading } = useUserTaggedProjects(user?.id || '');
+
+  // Fetch user's communities
+  const { data: ownedCommunitiesData, isLoading: ownedCommunitiesLoading } = useUserOwnedCommunities(user?.id || '');
+  const { data: followingCommunitiesData, isLoading: followingCommunitiesLoading } = useUserFollowingCommunities(user?.id || '');
 
   // Fetch investor profile if user is an investor
   const { data: investorProfile } = useQuery({
@@ -431,16 +436,16 @@ export default function UserProfile() {
                 Tagged ({taggedProjectsData?.data?.length || 0})
               </TabsTrigger>
               <TabsTrigger
-                value="owned-chains"
+                value="owned-communities"
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
-                Owned layerz ({ownedChainsData?.chains?.length || 0})
+                Owned Communities ({ownedCommunitiesData?.communities?.length || 0})
               </TabsTrigger>
               <TabsTrigger
-                value="following-chains"
+                value="following-communities"
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
-                Following layerz ({followingChainsData?.chains?.length || 0})
+                Following Communities ({followingCommunitiesData?.communities?.length || 0})
               </TabsTrigger>
             </TabsList>
 
@@ -454,7 +459,7 @@ export default function UserProfile() {
               ) : projectsData?.data && projectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {projectsData.data.map((project: any) => (
-                    <ItineraryCard key={project.id} itinerary={project} />
+                    <ItineraryCard key={project.id} project={project} />
                   ))}
                 </div>
               ) : (
@@ -479,7 +484,7 @@ export default function UserProfile() {
               ) : taggedProjectsData?.data && taggedProjectsData.data.length > 0 ? (
                 <div className="space-y-4">
                   {taggedProjectsData.data.map((project: any) => (
-                    <ItineraryCard key={project.id} itinerary={project} />
+                    <ItineraryCard key={project.id} project={project} />
                   ))}
                 </div>
               ) : (
@@ -494,8 +499,8 @@ export default function UserProfile() {
               )}
             </TabsContent>
 
-            <TabsContent value="owned-chains">
-              {ownedChainsLoading ? (
+            <TabsContent value="owned-communities">
+              {ownedCommunitiesLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Array.from({ length: 4 }).map((_, idx) => (
                     <div key={idx} className="card-elevated p-6 animate-pulse">
@@ -515,28 +520,28 @@ export default function UserProfile() {
                     </div>
                   ))}
                 </div>
-              ) : ownedChainsData?.chains && ownedChainsData.chains.length > 0 ? (
+              ) : ownedCommunitiesData?.communities && ownedCommunitiesData.communities.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {ownedChainsData.chains.map((chain: any) => (
+                  {ownedCommunitiesData.communities.map((community: any) => (
                     <Link
-                      key={chain.id}
-                      to={`/layerz/${chain.slug}`}
+                      key={community.id}
+                      to={`/communities/${community.slug}`}
                       className="card-elevated p-6 hover:border-primary transition-all"
                     >
                       <div className="flex items-start gap-4">
                         <Avatar className="h-16 w-16 border-2 border-border">
-                          {chain.logo_url ? (
-                            <AvatarImage src={chain.logo_url} alt={chain.name} />
+                          {community.logo_url ? (
+                            <AvatarImage src={community.logo_url} alt={community.name} />
                           ) : (
                             <AvatarFallback className="bg-primary/20 text-primary font-bold text-xl">
-                              {chain.name.charAt(0).toUpperCase()}
+                              {community.name.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           )}
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-bold text-lg truncate">{chain.name}</h3>
-                            {chain.is_featured && (
+                            <h3 className="font-bold text-lg truncate">{community.name}</h3>
+                            {community.is_featured && (
                               <Badge variant="default" className="gap-1">
                                 <Award className="h-3 w-3" />
                                 Featured
@@ -544,12 +549,12 @@ export default function UserProfile() {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                            {chain.description}
+                            {community.description}
                           </p>
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>{chain.project_count} projects</span>
-                            <span>{chain.follower_count} followers</span>
-                            <span>{chain.view_count} views</span>
+                            <span>{community.project_count || 0} projects</span>
+                            <span>{community.follower_count || 0} followers</span>
+                            <span>{community.view_count || 0} views</span>
                           </div>
                         </div>
                       </div>
@@ -560,17 +565,17 @@ export default function UserProfile() {
                 <div className="card-elevated p-12 text-center">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-bold text-foreground">No layerz created yet</p>
+                    <p className="text-lg font-bold text-foreground">No communities created yet</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.displayName || user.username} hasn't created any layerz yet
+                      {user.displayName || user.username} hasn't created any communities yet
                     </p>
                   </div>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="following-chains">
-              {followingChainsLoading ? (
+            <TabsContent value="following-communities">
+              {followingCommunitiesLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Array.from({ length: 4 }).map((_, idx) => (
                     <div key={idx} className="card-elevated p-6 animate-pulse">
@@ -590,28 +595,28 @@ export default function UserProfile() {
                     </div>
                   ))}
                 </div>
-              ) : followingChainsData?.chains && followingChainsData.chains.length > 0 ? (
+              ) : followingCommunitiesData?.communities && followingCommunitiesData.communities.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {followingChainsData.chains.map((chain: any) => (
+                  {followingCommunitiesData.communities.map((community: any) => (
                     <Link
-                      key={chain.id}
-                      to={`/layerz/${chain.slug}`}
+                      key={community.id}
+                      to={`/communities/${community.slug}`}
                       className="card-elevated p-6 hover:border-primary transition-all"
                     >
                       <div className="flex items-start gap-4">
                         <Avatar className="h-16 w-16 border-2 border-border">
-                          {chain.logo_url ? (
-                            <AvatarImage src={chain.logo_url} alt={chain.name} />
+                          {community.logo_url ? (
+                            <AvatarImage src={community.logo_url} alt={community.name} />
                           ) : (
                             <AvatarFallback className="bg-primary/20 text-primary font-bold text-xl">
-                              {chain.name.charAt(0).toUpperCase()}
+                              {community.name.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           )}
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-bold text-lg truncate">{chain.name}</h3>
-                            {chain.is_featured && (
+                            <h3 className="font-bold text-lg truncate">{community.name}</h3>
+                            {community.is_featured && (
                               <Badge variant="default" className="gap-1">
                                 <Award className="h-3 w-3" />
                                 Featured
@@ -619,12 +624,12 @@ export default function UserProfile() {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                            {chain.description}
+                            {community.description}
                           </p>
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>{chain.project_count} projects</span>
-                            <span>{chain.follower_count} followers</span>
-                            <span>{chain.view_count} views</span>
+                            <span>{community.project_count || 0} projects</span>
+                            <span>{community.follower_count || 0} followers</span>
+                            <span>{community.view_count || 0} views</span>
                           </div>
                         </div>
                       </div>
@@ -635,9 +640,9 @@ export default function UserProfile() {
                 <div className="card-elevated p-12 text-center">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-bold text-foreground">Not following any layerz</p>
+                    <p className="text-lg font-bold text-foreground">Not following any communities</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.displayName || user.username} hasn't followed any layerz yet
+                      {user.displayName || user.username} hasn't followed any communities yet
                     </p>
                   </div>
                 </div>

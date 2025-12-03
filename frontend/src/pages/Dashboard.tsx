@@ -5,6 +5,7 @@ import { useDashboardStats } from '@/hooks/useStats';
 import { DashboardStatsSkeleton, DashboardHeaderSkeleton } from '@/components/DashboardStatsSkeleton';
 import { useSavedItineraries } from '@/hooks/useSavedItineraries';
 import { formatDistanceToNow } from '@/utils/date';
+import { ItineraryCard } from '@/components/ItineraryCard';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -47,13 +48,13 @@ export default function Dashboard() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Total Itineraries</p>
-                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalItineraries}</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalItineraries || 0}</p>
                   </div>
                   <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
                     <Rocket className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
                   </div>
                 </div>
-                <Link to="/my-Itineraries" className="text-xs text-primary hover:underline font-bold">
+                <Link to="/my-projects" className="text-xs text-primary hover:underline font-bold">
                   View all →
                 </Link>
               </div>
@@ -63,7 +64,7 @@ export default function Dashboard() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Total Upvotes</p>
-                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalVotes}</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalVotes || 0}</p>
                   </div>
                   <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
                     <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
@@ -77,7 +78,7 @@ export default function Dashboard() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-1">Total Comments</p>
-                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalComments}</p>
+                    <p className="text-2xl sm:text-3xl font-black text-foreground">{stats.totalComments || 0}</p>
                   </div>
                   <div className="badge-primary flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-[10px] flex-shrink-0">
                     <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
@@ -137,7 +138,7 @@ export default function Dashboard() {
                     <Plus className="h-5 w-5" />
                     <span>Publish New Project</span>
                   </Link>
-                  <Link to="/my-Itineraries" className="btn-secondary w-full inline-flex items-center justify-start gap-3 px-4 py-3">
+                  <Link to="/my-projects" className="btn-secondary w-full inline-flex items-center justify-start gap-3 px-4 py-3">
                     <FileText className="h-5 w-5" />
                     <span>Manage My Itineraries</span>
                   </Link>
@@ -171,8 +172,8 @@ export default function Dashboard() {
                   </div>
                 ) : savedItinerariesData?.data && savedItinerariesData.data.length > 0 ? (
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {savedItinerariesData.data.map((project: any) => (
-                      <ProjectCard key={project.id} project={project} />
+                    {savedItinerariesData.data.map((itinerary: any) => (
+                      <ItineraryCard key={itinerary.id} project={itinerary} />
                     ))}
                   </div>
                 ) : (
