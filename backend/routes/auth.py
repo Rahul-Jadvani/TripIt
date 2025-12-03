@@ -146,7 +146,7 @@ def register():
             return error_response('Weak password', msg, 400)
 
         # Create user
-        user = User(
+        user = Traveler(
             email=validated_data['email'],
             username=validated_data['username'],
             display_name=validated_data.get('display_name', validated_data['username']),
@@ -388,7 +388,7 @@ def google_callback():
                 suffix += 1
                 candidate = f"{base_username}{suffix}"
 
-            user = User(
+            user = Traveler(
                 email=email,
                 username=candidate,
                 display_name=name or candidate,

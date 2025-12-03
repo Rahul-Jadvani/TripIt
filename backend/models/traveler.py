@@ -3,6 +3,7 @@ Traveler Model - Extended User for TripIt (replaces User from Zer0)
 """
 from datetime import datetime
 from uuid import uuid4
+from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 
 
@@ -128,3 +129,11 @@ class Traveler(db.Model):
             })
 
         return data
+
+    def set_password(self, password):
+        """Hash and set password"""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Verify password against hash"""
+        return check_password_hash(self.password_hash, password)
