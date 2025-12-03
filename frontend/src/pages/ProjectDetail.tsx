@@ -194,53 +194,78 @@ export default function ProjectDetail() {
   const displayScore = getProjectScore(project);
 
   const insightCards = [
-    project.travel_story && (
-      <div key="story" className="card-elevated p-6">
+    project.trip_highlights && (
+      <div key="highlights" className="card-elevated p-6">
         <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" />
-          Trip Journey
+          <Sparkles className="h-4 w-4 text-primary" />
+          Trip Highlights
         </h2>
         <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
-          {project.travel_story}
+          {project.trip_highlights}
         </div>
       </div>
     ),
-    project.inspiration && (
+    project.trip_journey && (
       <div
-        key="inspiration"
+        key="journey"
         className="card-elevated p-6 bg-gradient-to-br from-secondary/30 to-secondary/10 border-2 border-primary/20"
       >
         <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-          <Lightbulb className="h-4 w-4 text-primary" />
-          The Spark
-        </h2>
-        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm italic">
-          {project.inspiration}
-        </div>
-      </div>
-    ),
-    project.market_comparison && (
-      <div key="market" className="card-elevated p-6">
-        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          Market Landscape
+          <FileText className="h-4 w-4 text-primary" />
+          Trip Journey & Experience
         </h2>
         <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
-          {project.market_comparison}
+          {project.trip_journey}
         </div>
       </div>
     ),
-    project.novelty_factor && (
+    project.day_by_day_plan && (
+      <div key="dayplan" className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-primary" />
+          Day-by-Day Itinerary
+        </h2>
+        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+          {project.day_by_day_plan}
+        </div>
+      </div>
+    ),
+    project.hidden_gems && (
+      <div key="gems" className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Lightbulb className="h-4 w-4 text-primary" />
+          Hidden Gems & Local Businesses
+        </h2>
+        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+          {project.hidden_gems}
+        </div>
+      </div>
+    ),
+    project.unique_highlights && (
       <div
-        key="novelty"
+        key="unique"
         className="card-elevated p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30"
       >
         <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          What Makes It Unique
+          <TrendingUp className="h-4 w-4 text-primary" />
+          Unique Highlights
         </h2>
         <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm font-medium">
-          {project.novelty_factor}
+          {project.unique_highlights}
+        </div>
+      </div>
+    ),
+    project.safety_tips && (
+      <div
+        key="safety"
+        className="card-elevated p-6 bg-gradient-to-br from-orange-500/10 to-orange-500/5 border-2 border-orange-500/30"
+      >
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Shield className="h-4 w-4 text-orange-500" />
+          Safety Intelligence & Travel Tips
+        </h2>
+        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+          {project.safety_tips}
         </div>
       </div>
     ),
@@ -251,11 +276,12 @@ export default function ProjectDetail() {
 
     const missingFields: string[] = [];
     if (!project.categories || project.categories.length === 0) missingFields.push('Categories');
-    if (!project.travel_story) missingFields.push('Trip Journey');
-    if (!project.inspiration) missingFields.push('Inspiration');
-    if (!project.market_comparison) missingFields.push('Market Comparison');
-    if (!project.novelty_factor) missingFields.push('Novelty Factor');
-    if (!project.pitch_deck_url) missingFields.push('Pitch Deck');
+    if (!project.trip_highlights) missingFields.push('Trip Highlights');
+    if (!project.trip_journey) missingFields.push('Trip Journey & Experience');
+    if (!project.day_by_day_plan) missingFields.push('Day-by-Day Itinerary');
+    if (!project.hidden_gems) missingFields.push('Hidden Gems');
+    if (!project.unique_highlights) missingFields.push('Unique Highlights');
+    if (!project.safety_tips) missingFields.push('Safety Intelligence & Travel Tips');
 
     if (!missingFields.length) return null;
 
@@ -384,8 +410,8 @@ export default function ProjectDetail() {
     return (
       <div className="card-elevated p-6">
         <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-          <Code className="h-4 w-4 text-primary" />
-          Travel Style & Activities
+          <Shield className="h-4 w-4 text-primary" />
+          Safety Gear & Tags
         </h2>
         <div className="flex flex-wrap gap-2">
           {project.techStack.map((tech: string) => (
@@ -441,8 +467,9 @@ export default function ProjectDetail() {
     const hasBudget = project.budget_amount;
     const hasRouteMap = project.githubUrl || project.route_map_url;
     const hasSeason = project.best_season;
+    const hasTravelStyle = project.travel_style;
 
-    if (!hasDuration && !hasBudget && !hasRouteMap && !hasSeason) return null;
+    if (!hasDuration && !hasBudget && !hasRouteMap && !hasSeason && !hasTravelStyle) return null;
 
     return (
       <div className="card-elevated p-6">
@@ -451,6 +478,13 @@ export default function ProjectDetail() {
           Trip Details
         </h2>
         <div className="space-y-3">
+          {hasTravelStyle && (
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Travel Type:</span>
+              <span className="text-foreground font-medium">{project.travel_style}</span>
+            </div>
+          )}
           {hasDuration && (
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -619,18 +653,18 @@ export default function ProjectDetail() {
                   className="btn-primary h-10 px-4 text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Demo
+                  Booking Link
                 </a>
               )}
-              {project.githubUrl && (
+              {(project.githubUrl || project.route_map_url) && (
                 <a
-                  href={project.githubUrl}
+                  href={project.githubUrl || project.route_map_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-secondary h-10 px-4 text-sm inline-flex items-center gap-1.5 whitespace-nowrap"
                 >
-                  <Github className="h-4 w-4" />
-                  Code
+                  <Map className="h-4 w-4" />
+                  Maps Link
                 </a>
               )}
               {project.pitch_deck_url && (
@@ -683,7 +717,13 @@ export default function ProjectDetail() {
               {renderMissingFieldsAlert()}
 
               <div className="card-elevated p-6">
-                <h2 className="text-lg font-black mb-3 text-foreground">About This Project</h2>
+                <h2 className="text-lg font-black mb-3 text-foreground">Trip Overview</h2>
+                {project.destination && (
+                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/50">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-primary">{project.destination}</span>
+                  </div>
+                )}
                 <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
                   {project.description}
                 </div>

@@ -108,6 +108,7 @@ export default function Publish() {
   const [inspiration, setInspiration] = useState('');
   const [marketComparison, setMarketComparison] = useState('');
   const [noveltyFactor, setNoveltyFactor] = useState('');
+  const [safetyTips, setSafetyTips] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
 
   const createProjectMutation = useCreateItinerary();
@@ -327,14 +328,39 @@ export default function Publish() {
       // Map frontend fields to backend ItineraryCreateSchema
       const payload: any = {
         title: data.title,
+        tagline: data.tagline || '',
         description: data.description,
         destination: data.destination,
-        activity_tags: techStack,  // Map tech_stack → activity_tags
+        activity_tags: techStack,  // Safety & Gear Tags
+        travel_style: data.travel_type || '',  // Travel type (solo, group, etc.)
       };
 
-      // Add optional fields only if they have values
+      // Extended trip details (mapped from old project fields)
+      if (projectStory && projectStory.trim()) {
+        payload.trip_highlights = projectStory;  // Trip Highlights
+      }
+      if (inspiration && inspiration.trim()) {
+        payload.trip_journey = inspiration;  // Trip Journey & Experience
+      }
+      if (data.hackathonName && data.hackathonName.trim()) {
+        payload.day_by_day_plan = data.hackathonName;  // Day-by-Day Itinerary
+      }
+      if (marketComparison && marketComparison.trim()) {
+        payload.hidden_gems = marketComparison;  // Hidden Gems & Local Businesses
+      }
+      if (noveltyFactor && noveltyFactor.trim()) {
+        payload.unique_highlights = noveltyFactor;  // Unique Highlights
+      }
+      if (safetyTips && safetyTips.trim()) {
+        payload.safety_tips = safetyTips;  // Safety & Travel Tips
+      }
+
+      // Optional fields
       if (data.githubUrl && data.githubUrl.trim()) {
         payload.route_map_url = data.githubUrl;  // Map link (GPX/KML/Google Maps)
+      }
+      if (data.demoUrl && data.demoUrl.trim()) {
+        payload.demo_url = data.demoUrl;  // Booking/Reference link
       }
       if (data.duration_days) {
         payload.duration_days = data.duration_days;
@@ -353,6 +379,12 @@ export default function Publish() {
           if (m.avatar_url) t.avatar_url = m.avatar_url;
           return t;
         });
+      }
+      if (screenshotUrls.length > 0) {
+        payload.screenshots = screenshotUrls;  // Trip photos
+      }
+      if (categories.length > 0) {
+        payload.categories = categories;
       }
 
       if (import.meta.env.DEV) {
@@ -377,6 +409,7 @@ export default function Publish() {
       setInspiration('');
       setMarketComparison('');
       setNoveltyFactor('');
+      setSafetyTips('');
       setCategories([]);
       // Navigation handled by success modal action
     } catch (error: any) {
@@ -849,30 +882,32 @@ Day 3: Return journey via Kunzum Pass, visit local monastery...
                   </div>
 
                   <div className="space-y-3">
-                    <Label htmlFor="hackathonDate" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Shield className="h-4 w-4" /> Safety Intelligence & Risks</span>
+                    <Label htmlFor="safetyTips" className="text-base font-bold flex items-center gap-2">
+                      <span className="inline-flex items-center gap-2"><Shield className="h-4 w-4" /> Safety Intelligence & Travel Tips</span>
                       <span className="text-xs badge-warning">Important</span>
                     </Label>
                     <Textarea
-                      id="hackathonDate"
-                      placeholder="List specific risks travelers should know about:
-- Landslide zones during monsoon
-- Wildlife encounters (bears, leopards)
-- Nearest hospital: District Hospital, Kaza (45km)
-- Network connectivity: Only BSNL available after Gramphu
-- Emergency numbers: Local police, forest dept
-- Altitude sickness precautions above 3000m
-- Road conditions and weather warnings"
-                      rows={10}
+                      id="safetyTips"
+                      placeholder="Share comprehensive safety information and travel tips:
+- Specific risks: Landslide zones, wildlife encounters, altitude sickness
+- Medical: Nearest hospital location and distance, emergency numbers
+- Connectivity: Network availability, last point of mobile coverage
+- Permits & Documentation: Required permits, visa requirements
+- Best times to visit & weather warnings
+- Local customs to respect and things to avoid
+- Packing essentials and gear requirements
+- Emergency contacts: Local police, forest dept, tour operators"
+                      rows={12}
                       className="text-base resize-none"
-                      {...register('hackathonDate')}
+                      value={safetyTips}
+                      onChange={(e) => setSafetyTips(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">Critical safety information can prevent emergencies</p>
+                    <p className="text-xs text-muted-foreground">Comprehensive safety information helps travelers prepare and stay safe</p>
                   </div>
 
                   <div className="space-y-3">
                     <Label htmlFor="inspiration" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Hidden Gems & Local Businesses</span>
+                      <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Trip Journey & Experience</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
@@ -905,7 +940,7 @@ Day 3: Return journey via Kunzum Pass, visit local monastery...
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <Label htmlFor="marketComparison" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Unique Highlights</span>
+                      <span className="inline-flex items-center gap-2"><Search className="h-4 w-4" /> Hidden Gems & Local Businesses</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
@@ -921,18 +956,18 @@ Day 3: Return journey via Kunzum Pass, visit local monastery...
 
                   <div className="space-y-3">
                     <Label htmlFor="noveltyFactor" className="text-base font-bold flex items-center gap-2">
-                      <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4" /> Safety & Travel Tips</span>
+                      <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4" /> Unique Highlights</span>
                       <span className="text-xs badge-secondary">Optional</span>
                     </Label>
                     <Textarea
                       id="noveltyFactor"
-                      placeholder="Include important travel safety tips, local customs to respect, best times to visit, things to avoid, or any warnings other travelers should know about."
+                      placeholder="What makes this itinerary truly unique? Any special experiences, cultural moments, or unexpected discoveries that set this trip apart from typical tourist routes?"
                       rows={4}
                       className="text-base resize-none"
                       value={noveltyFactor}
                       onChange={(e) => setNoveltyFactor(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">Help travelers prepare better and stay safe on similar journeys</p>
+                    <p className="text-xs text-muted-foreground">Share what makes this journey one-of-a-kind</p>
                   </div>
                 </div>
               </div>

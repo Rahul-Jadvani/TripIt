@@ -60,8 +60,8 @@ def list_itineraries(user_id):
         ])
         has_filters = base_has_filters or include_detailed
 
-        # Build query
-        query = Itinerary.query.filter_by(is_deleted=False)
+        # Build query - only show published itineraries
+        query = Itinerary.query.filter_by(is_deleted=False, is_published=True)
 
         # Search in title, description, destination
         if search:
@@ -205,6 +205,7 @@ def create_itinerary(user_id):
             title=validated_data['title'],
             description=validated_data['description'],
             destination=validated_data['destination'],
+            tagline=validated_data.get('tagline'),
             regions=validated_data.get('regions', []),
             start_date=validated_data.get('start_date'),
             end_date=validated_data.get('end_date'),
@@ -216,9 +217,19 @@ def create_itinerary(user_id):
             travel_companions=validated_data.get('travel_companions', []),
             route_gpx=validated_data.get('route_gpx'),
             route_map_url=validated_data.get('route_map_url'),
+            demo_url=validated_data.get('demo_url'),
             duration_days=validated_data.get('duration_days'),
             best_season=validated_data.get('best_season'),
             women_safe_certified=validated_data.get('women_safe_certified', False),
+            # Extended trip details
+            trip_highlights=validated_data.get('trip_highlights'),
+            trip_journey=validated_data.get('trip_journey'),
+            day_by_day_plan=validated_data.get('day_by_day_plan'),
+            safety_intelligence=validated_data.get('safety_intelligence'),
+            hidden_gems=validated_data.get('hidden_gems'),
+            unique_highlights=validated_data.get('unique_highlights'),
+            safety_tips=validated_data.get('safety_tips'),
+            screenshots=validated_data.get('screenshots', []),
         )
 
         # Add to database

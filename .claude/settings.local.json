@@ -30,7 +30,8 @@
       "Bash(curl:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(redis-cli:*)"
     ],
     "deny": [],
     "ask": []

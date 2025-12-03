@@ -24,11 +24,30 @@ export function transformProject(backendProject: any) {
     market_comparison: backendProject.market_comparison,
     noveltyFactor: backendProject.novelty_factor,
     novelty_factor: backendProject.novelty_factor,
+    // Extended itinerary fields (new trip detail fields)
+    tripHighlights: backendProject.trip_highlights,
+    trip_highlights: backendProject.trip_highlights,
+    tripJourney: backendProject.trip_journey,
+    trip_journey: backendProject.trip_journey,
+    dayByDayPlan: backendProject.day_by_day_plan,
+    day_by_day_plan: backendProject.day_by_day_plan,
+    safetyIntelligence: backendProject.safety_intelligence,
+    safety_intelligence: backendProject.safety_intelligence,
+    hiddenGems: backendProject.hidden_gems,
+    hidden_gems: backendProject.hidden_gems,
+    uniqueHighlights: backendProject.unique_highlights,
+    unique_highlights: backendProject.unique_highlights,
+    safetyTips: backendProject.safety_tips,
+    safety_tips: backendProject.safety_tips,
     // Itinerary-specific fields
     destination: backendProject.destination,
     duration_days: backendProject.duration_days,
     budget_amount: backendProject.budget_amount,
     budget_currency: backendProject.budget_currency,
+    route_map_url: backendProject.route_map_url,
+    demo_url: backendProject.demo_url,
+    best_season: backendProject.best_season,
+    travel_style: backendProject.travel_style,
     categories: (backendProject.categories || []).map((c: any) => {
       if (!c) return '';
       if (typeof c === 'string') return c;

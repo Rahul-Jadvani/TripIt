@@ -44,6 +44,7 @@ class Itinerary(db.Model):
     # Route & GPS
     route_gpx = db.Column(db.Text, nullable=True)  # GPX format for route
     route_map_url = db.Column(db.String(500), nullable=True)  # URL to map
+    demo_url = db.Column(db.String(500), nullable=True)  # Booking/blog/reference link
     route_waypoints = db.Column(db.JSON, default=[])  # Array of GPS points: [{lat, lon, name, elevation}, ...]
     starting_point_gps = db.Column(db.String(50), nullable=True)  # "lat,lon"
     ending_point_gps = db.Column(db.String(50), nullable=True)
@@ -58,6 +59,16 @@ class Itinerary(db.Model):
     activity_tags = db.Column(db.JSON, default=[])  # Activity/safety tags
     travel_style = db.Column(db.String(100), nullable=True)  # Solo, Group, etc.
     travel_companions = db.Column(db.JSON, default=[])  # Array of travel companions
+
+    # Extended Trip Details
+    trip_highlights = db.Column(db.Text, nullable=True)  # Trip Highlights
+    trip_journey = db.Column(db.Text, nullable=True)  # Trip Journey & Experience
+    day_by_day_plan = db.Column(db.Text, nullable=True)  # Day-by-Day Itinerary
+    safety_intelligence = db.Column(db.Text, nullable=True)  # Safety Intelligence & Risks
+    hidden_gems = db.Column(db.Text, nullable=True)  # Hidden Gems & Local Businesses
+    unique_highlights = db.Column(db.Text, nullable=True)  # Unique Highlights
+    safety_tips = db.Column(db.Text, nullable=True)  # Safety & Travel Tips
+    screenshots = db.Column(db.JSON, default=[])  # Trip photos/screenshots
 
     # Safety & Verification
     photo_evidence_ipfs_hashes = db.Column(db.JSON, default=[])  # Array of IPFS hashes
@@ -95,12 +106,12 @@ class Itinerary(db.Model):
 
     # Relationships
     # creator relationship is defined in Traveler model with backref='creator'
-    day_plans = db.relationship('DayPlan', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
-    embedded_businesses = db.relationship('EmbeddedBusiness', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
-    hidden_gems = db.relationship('HiddenGem', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
-    safety_alerts = db.relationship('SafetyAlert', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
-    safety_ratings = db.relationship('SafetyRating', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
-    travel_intel = db.relationship('TravelIntel', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
+    day_plans_list = db.relationship('DayPlan', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
+    embedded_businesses_list = db.relationship('EmbeddedBusiness', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
+    hidden_gems_list = db.relationship('HiddenGem', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
+    safety_alerts_list = db.relationship('SafetyAlert', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
+    safety_ratings_list = db.relationship('SafetyRating', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
+    travel_intel_list = db.relationship('TravelIntel', backref='itinerary', lazy='dynamic', cascade='all, delete-orphan')
     # travel_groups relationship defined in TravelGroup model with backref
 
     def calculate_proof_score(self):
@@ -135,10 +146,20 @@ class Itinerary(db.Model):
             'budget_currency': self.budget_currency,
             'route_gpx': self.route_gpx,
             'route_map_url': self.route_map_url,
+            'demo_url': self.demo_url,
             'best_season': self.best_season,
             'activity_tags': self.activity_tags or [],
             'travel_companions': self.travel_companions or [],
             'community_tags': self.community_tags or [],
+            # Extended trip details
+            'trip_highlights': self.trip_highlights,
+            'trip_journey': self.trip_journey,
+            'day_by_day_plan': self.day_by_day_plan,
+            'safety_intelligence': self.safety_intelligence,
+            'hidden_gems': self.hidden_gems,
+            'unique_highlights': self.unique_highlights,
+            'safety_tips': self.safety_tips,
+            'screenshots': self.screenshots or [],
             'safety_score': self.safety_score,
             'women_safe_certified': self.women_safe_certified,
             'safety_ratings_count': self.safety_ratings_count,
