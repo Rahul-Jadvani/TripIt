@@ -34,16 +34,16 @@ export default function CommunitiesListPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-4xl font-bold">Travel Communities</h1>
+          <h1 className="text-4xl font-bold">Travel Caravans</h1>
           <p className="text-muted-foreground mt-2">
-            Discover and join travel communities
+            Discover and join travel caravans
           </p>
         </div>
         {user && (
           <Button asChild>
             <Link to="/community/create">
               <Plus className="h-4 w-4 mr-2" />
-              Create Community
+              Create Caravan
             </Link>
           </Button>
         )}
@@ -66,11 +66,11 @@ export default function CommunitiesListPage() {
         <CommunityCardSkeletonGrid count={12} />
       ) : error ? (
         <Card className="p-8 text-center">
-          <p className="text-destructive">Failed to load communities. Please try again.</p>
+          <p className="text-destructive">Failed to load caravans. Please try again.</p>
         </Card>
       ) : communities.length === 0 ? (
         <Card className="p-12 text-center space-y-4">
-          <p className="text-muted-foreground text-lg">No communities found</p>
+          <p className="text-muted-foreground text-lg">No caravans found</p>
           {search && (
             <p className="text-sm text-muted-foreground">
               Try adjusting your search or filters
@@ -80,7 +80,7 @@ export default function CommunitiesListPage() {
             <Button asChild className="mt-4">
               <Link to="/community/create">
                 <Plus className="h-4 w-4 mr-2" />
-                Create the first community
+                Create the first caravan
               </Link>
             </Button>
           )}

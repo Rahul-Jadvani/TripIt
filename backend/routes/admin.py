@@ -5,7 +5,9 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta
 from extensions import db
 from models.user import User
+from models.traveler import Traveler
 from models.project import Project
+from models.itinerary import Itinerary
 from models.badge import ValidationBadge
 from models.investor_request import InvestorRequest
 from models.validator_permissions import ValidatorPermissions
@@ -13,6 +15,8 @@ from models.chain import Chain, ChainModerationLog
 from models.admin_scoring_config import AdminScoringConfig
 from utils.decorators import admin_required
 from utils.cache import CacheService
+from utils.user_utils import get_user_by_id, search_users
+from utils.content_utils import get_content_by_id
 from utils.notifications import (
     notify_investor_request_approved,
     notify_investor_request_rejected,
@@ -35,18 +39,19 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/users', methods=['GET'])
 @admin_required
 def get_all_users(user_id):
-    """Get all users with pagination and filtering"""
+    """Get all users with pagination and filtering - QUERIES BOTH TABLES"""
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 50, type=int)
         search = request.args.get('search', '')
         role_filter = request.args.get('role', '')  # 'admin', 'validator', 'investor', 'regular'
 
-        query = User.query
+        # Query User table (email/password users)
+        user_query = User.query
 
-        # Search filter
+        # Search filter for User table
         if search:
-            query = query.filter(
+            user_query = user_query.filter(
                 db.or_(
                     User.username.ilike(f'%{search}%'),
                     User.email.ilike(f'%{search}%'),
@@ -54,31 +59,77 @@ def get_all_users(user_id):
                 )
             )
 
-        # Role filter
+        # Role filter for User table
         if role_filter == 'admin':
-            query = query.filter(User.is_admin == True)
+            user_query = user_query.filter(User.is_admin == True)
         elif role_filter == 'validator':
-            query = query.filter(User.is_validator == True)
+            user_query = user_query.filter(User.is_validator == True)
         elif role_filter == 'investor':
-            query = query.filter(User.is_investor == True)
+            user_query = user_query.filter(User.is_investor == True)
         elif role_filter == 'regular':
-            query = query.filter(
+            user_query = user_query.filter(
                 User.is_admin == False,
                 User.is_validator == False,
                 User.is_investor == False
             )
 
-        # Pagination
-        users = query.order_by(User.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        # Query Traveler table (Google OAuth users)
+        traveler_query = Traveler.query
+
+        # Search filter for Traveler table
+        if search:
+            traveler_query = traveler_query.filter(
+                db.or_(
+                    Traveler.username.ilike(f'%{search}%'),
+                    Traveler.email.ilike(f'%{search}%'),
+                    Traveler.display_name.ilike(f'%{search}%')
+                )
+            )
+
+        # Role filter for Traveler table
+        if role_filter == 'admin':
+            traveler_query = traveler_query.filter(Traveler.is_admin == True)
+        elif role_filter == 'validator':
+            traveler_query = traveler_query.filter(Traveler.is_validator == True)
+        elif role_filter == 'investor':
+            traveler_query = traveler_query.filter(Traveler.is_investor == True)
+        elif role_filter == 'regular':
+            traveler_query = traveler_query.filter(
+                Traveler.is_admin == False,
+                Traveler.is_validator == False,
+                Traveler.is_investor == False
+            )
+
+        # Get totals from both tables
+        user_total = user_query.count()
+        traveler_total = traveler_query.count()
+        total = user_total + traveler_total
+
+        # Calculate offset
+        offset = (page - 1) * per_page
+
+        # Get users from both tables and combine
+        users_from_user_table = user_query.order_by(User.created_at.desc()).limit(per_page).offset(offset).all()
+        users_from_traveler_table = traveler_query.order_by(Traveler.created_at.desc()).limit(per_page).offset(max(0, offset - user_total)).all()
+
+        # Combine results
+        all_users = list(users_from_user_table) + list(users_from_traveler_table)
+        all_users = all_users[:per_page]  # Trim to per_page
+
+        # Convert to dict with correct parameters based on type
+        users_data = []
+        for u in all_users:
+            if isinstance(u, Traveler):
+                users_data.append(u.to_dict(include_sensitive=False))
+            else:
+                users_data.append(u.to_dict(include_email=True))
 
         return jsonify({
             'status': 'success',
             'data': {
-                'users': [user.to_dict(include_email=True) for user in users.items],
-                'total': users.total,
-                'pages': users.pages,
+                'users': users_data,
+                'total': total,
+                'pages': (total + per_page - 1) // per_page,
                 'current_page': page,
             }
         }), 200
@@ -90,9 +141,10 @@ def get_all_users(user_id):
 @admin_bp.route('/users/<user_id>/toggle-admin', methods=['POST'])
 @admin_required
 def toggle_admin(admin_id, user_id):
-    """Make user admin or remove admin status"""
+    """Make user admin or remove admin status - CHECKS BOTH TABLES"""
     try:
-        user = User.query.get(user_id)
+        # Check both user tables
+        user = get_user_by_id(user_id)
         if not user:
             return jsonify({'status': 'error', 'message': 'User not found'}), 404
 
@@ -110,10 +162,17 @@ def toggle_admin(admin_id, user_id):
             print(f"[Admin] Warning: failed to send admin role changed email: {email_err}")
 
         action = 'granted' if user.is_admin else 'removed'
+
+        # Use correct to_dict parameter based on type
+        if isinstance(user, Traveler):
+            user_data = user.to_dict(include_sensitive=False)
+        else:
+            user_data = user.to_dict(include_email=True)
+
         return jsonify({
             'status': 'success',
             'message': f'Admin access {action} for {user.username}',
-            'data': user.to_dict(include_email=True)
+            'data': user_data
         }), 200
 
     except Exception as e:
@@ -124,9 +183,10 @@ def toggle_admin(admin_id, user_id):
 @admin_bp.route('/users/<user_id>/toggle-active', methods=['POST'])
 @admin_required
 def toggle_user_active(admin_id, user_id):
-    """Ban or unban a user"""
+    """Ban or unban a user - CHECKS BOTH TABLES"""
     try:
-        user = User.query.get(user_id)
+        # Check both user tables
+        user = get_user_by_id(user_id)
         if not user:
             return jsonify({'status': 'error', 'message': 'User not found'}), 404
 
@@ -153,10 +213,17 @@ def toggle_user_active(admin_id, user_id):
             print(f"[Admin] Warning: failed to send user ban/unban email: {email_err}")
 
         action = 'activated' if user.is_active else 'banned'
+
+        # Use correct to_dict parameter based on type
+        if isinstance(user, Traveler):
+            user_data = user.to_dict(include_sensitive=False)
+        else:
+            user_data = user.to_dict(include_email=True)
+
         return jsonify({
             'status': 'success',
             'message': f'User {action} successfully',
-            'data': user.to_dict(include_email=True)
+            'data': user_data
         }), 200
 
     except Exception as e:
@@ -198,17 +265,24 @@ def delete_user(admin_id, user_id):
 @admin_bp.route('/validators', methods=['GET'])
 @admin_required
 def get_all_validators(user_id):
-    """Get all validators with their permissions and assignment counts"""
+    """Get all validators with their permissions and assignment counts - SEARCHES BOTH TABLES"""
     try:
         from models.validator_assignment import ValidatorAssignment
         from sqlalchemy.orm import joinedload
         from sqlalchemy import func, case
 
-        # OPTIMIZED: Single aggregation query instead of N+1 queries
-        # Get all validators with eager-loaded permissions
-        validators = User.query.filter(User.is_validator == True)\
+        # QUERY BOTH TABLES for validators
+        # Get validators from User table (email/password users)
+        user_validators = User.query.filter(User.is_validator == True)\
             .options(joinedload(User.validator_permissions))\
             .all()
+
+        # Get validators from Traveler table (Google OAuth users)
+        traveler_validators = Traveler.query.filter(Traveler.is_validator == True)\
+            .all()
+
+        # Combine all validators
+        all_validators = list(user_validators) + list(traveler_validators)
 
         # Get assignment stats for ALL validators in ONE query using aggregation
         validator_stats = db.session.query(
@@ -230,9 +304,9 @@ def get_all_validators(user_id):
             for stat in validator_stats
         }
 
-        # Get all assignments with eager-loaded projects in ONE query
+        # Get all assignments with eager-loaded itineraries in ONE query
         all_assignments = ValidatorAssignment.query\
-            .options(joinedload(ValidatorAssignment.project))\
+            .options(joinedload(ValidatorAssignment.itinerary))\
             .all()
 
         # Build category breakdown per validator
@@ -242,19 +316,25 @@ def get_all_validators(user_id):
             if validator_id not in category_breakdown_by_validator:
                 category_breakdown_by_validator[validator_id] = {}
 
-            if assignment.project and assignment.project.categories:
-                for category in assignment.project.categories:
+            if assignment.itinerary and assignment.itinerary.categories:
+                for category in assignment.itinerary.categories:
                     if category not in category_breakdown_by_validator[validator_id]:
                         category_breakdown_by_validator[validator_id][category] = 0
                     category_breakdown_by_validator[validator_id][category] += 1
 
         # Build response with minimal additional queries
         validators_data = []
-        for validator in validators:
-            validator_dict = validator.to_dict(include_email=True)
+        for validator in all_validators:
+            # Handle both User and Traveler models
+            if isinstance(validator, Traveler):
+                validator_dict = validator.to_dict(include_sensitive=False)
+                # Travelers don't have validator_permissions relationship, need to query separately
+                permissions = ValidatorPermissions.query.filter_by(validator_id=validator.id).first()
+            else:
+                validator_dict = validator.to_dict(include_email=True)
+                # Use eager-loaded permissions for User
+                permissions = validator.validator_permissions
 
-            # Use eager-loaded permissions
-            permissions = validator.validator_permissions
             if permissions:
                 validator_dict['permissions'] = permissions.to_dict()
             else:
@@ -294,7 +374,7 @@ def get_all_validators(user_id):
 @admin_bp.route('/validators/add-email', methods=['POST'])
 @admin_required
 def add_validator_by_email(user_id):
-    """Add validator by email - create account if doesn't exist"""
+    """Add validator by email - searches both User and Traveler tables"""
     try:
         data = request.get_json()
         email = data.get('email', '').strip().lower()
@@ -302,11 +382,13 @@ def add_validator_by_email(user_id):
         if not email:
             return jsonify({'status': 'error', 'message': 'Email is required'}), 400
 
-        # Check if user exists
+        # Check if user exists in BOTH tables
         user = User.query.filter_by(email=email).first()
+        if not user:
+            user = Traveler.query.filter_by(email=email).first()
 
         if not user:
-            # User doesn't exist - return message to create account first
+            # User doesn't exist in either table
             return jsonify({
                 'status': 'pending',
                 'message': 'No account found with this email. Please ask the user to create an account first.',
@@ -345,10 +427,16 @@ def add_validator_by_email(user_id):
         except Exception as email_err:
             print(f"[Admin] Warning: failed to send validator email: {email_err}")
 
+        # Use correct to_dict parameter based on type
+        if isinstance(user, Traveler):
+            user_data = user.to_dict(include_sensitive=False)
+        else:
+            user_data = user.to_dict(include_email=True)
+
         return jsonify({
             'status': 'success',
             'message': f'{user.username} is now a validator',
-            'data': user.to_dict(include_email=True)
+            'data': user_data
         }), 200
 
     except Exception as e:
@@ -359,9 +447,13 @@ def add_validator_by_email(user_id):
 @admin_bp.route('/validators/<validator_id>/remove', methods=['POST'])
 @admin_required
 def remove_validator(user_id, validator_id):
-    """Remove validator status"""
+    """Remove validator status - searches both tables"""
     try:
+        # Search both tables
         validator = User.query.get(validator_id)
+        if not validator:
+            validator = Traveler.query.get(validator_id)
+
         if not validator:
             return jsonify({'status': 'error', 'message': 'Validator not found'}), 404
 
@@ -387,11 +479,15 @@ def remove_validator(user_id, validator_id):
 @admin_bp.route('/validators/<validator_id>/permissions', methods=['POST'])
 @admin_required
 def update_validator_permissions(user_id, validator_id):
-    """Update validator permissions"""
+    """Update validator permissions - searches both tables"""
     try:
         data = request.get_json()
 
+        # Search both tables
         validator = User.query.get(validator_id)
+        if not validator:
+            validator = Traveler.query.get(validator_id)
+
         if not validator or not validator.is_validator:
             return jsonify({'status': 'error', 'message': 'Validator not found'}), 404
 
@@ -433,9 +529,10 @@ def update_validator_permissions(user_id, validator_id):
 # ============================================================================
 
 @admin_bp.route('/projects', methods=['GET'])
+@admin_bp.route('/itineraries', methods=['GET'])  # Alias for backward compatibility
 @admin_required
 def get_all_projects(user_id):
-    """Get all projects with pagination"""
+    """Get all itineraries with pagination (backward compatible endpoint)"""
     try:
         from sqlalchemy.orm import joinedload
 
@@ -444,26 +541,28 @@ def get_all_projects(user_id):
         search = request.args.get('search', '')
 
         # OPTIMIZED: Eager load creator to prevent N+1 queries
-        query = Project.query.options(joinedload(Project.creator))
+        query = Itinerary.query.options(joinedload(Itinerary.itinerary_creator))
 
         if search:
             query = query.filter(
                 db.or_(
-                    Project.title.ilike(f'%{search}%'),
-                    Project.description.ilike(f'%{search}%')
+                    Itinerary.title.ilike(f'%{search}%'),
+                    Itinerary.description.ilike(f'%{search}%'),
+                    Itinerary.destination.ilike(f'%{search}%')
                 )
             )
 
-        projects = query.order_by(Project.created_at.desc()).paginate(
+        itineraries = query.order_by(Itinerary.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 
         return jsonify({
             'status': 'success',
             'data': {
-                'projects': [project.to_dict(include_creator=True) for project in projects.items],
-                'total': projects.total,
-                'pages': projects.pages,
+                'projects': [itinerary.to_dict(include_creator=True) for itinerary in itineraries.items],
+                'itineraries': [itinerary.to_dict(include_creator=True) for itinerary in itineraries.items],
+                'total': itineraries.total,
+                'pages': itineraries.pages,
                 'current_page': page,
             }
         }), 200
@@ -889,7 +988,7 @@ def assign_project_to_validator(admin_id):
 @admin_bp.route('/validator-assignments/bulk', methods=['POST'])
 @admin_required
 def bulk_assign_projects(admin_id):
-    """Bulk assign projects to a validator based on filters"""
+    """Bulk assign itineraries to a validator based on filters"""
     try:
         from models.validator_assignment import ValidatorAssignment
         from uuid import uuid4
@@ -898,45 +997,45 @@ def bulk_assign_projects(admin_id):
         validator_id = data.get('validator_id')
         category_filter = data.get('category_filter')  # 'all', or specific category
         priority = data.get('priority', 'normal')
-        limit = data.get('limit', 50)  # Max projects to assign
+        limit = data.get('limit', 50)  # Max itineraries to assign
 
         if not validator_id:
             return jsonify({'status': 'error', 'message': 'validator_id is required'}), 400
 
-        # Verify validator exists
-        validator = User.query.get(validator_id)
-        if not validator or not validator.is_validator:
+        # Verify validator exists (check both User and Traveler tables)
+        validator = User.query.get(validator_id) or Traveler.query.get(validator_id)
+        if not validator or not (validator.is_validator or validator.is_admin):
             return jsonify({'status': 'error', 'message': 'Invalid validator'}), 400
 
-        # Build query for projects
-        query = Project.query.filter_by(is_deleted=False)
+        # Build query for itineraries
+        query = Itinerary.query.filter_by(is_deleted=False)
 
         if category_filter and category_filter != 'all':
             # Check if category is in the categories JSON array
             from sqlalchemy import cast, String
             query = query.filter(
-                cast(Project.categories, String).like(f'%{category_filter}%')
+                cast(Itinerary.categories, String).like(f'%{category_filter}%')
             )
 
-        # Get projects that aren't already assigned to this validator
-        assigned_project_ids = db.session.query(ValidatorAssignment.project_id).filter_by(
+        # Get itineraries that aren't already assigned to this validator
+        assigned_itinerary_ids = db.session.query(ValidatorAssignment.project_id).filter_by(
             validator_id=validator_id
         ).all()
-        assigned_ids = [p[0] for p in assigned_project_ids]
+        assigned_ids = [p[0] for p in assigned_itinerary_ids]
 
         if assigned_ids:
-            query = query.filter(Project.id.notin_(assigned_ids))
+            query = query.filter(Itinerary.id.notin_(assigned_ids))
 
-        projects = query.order_by(Project.created_at.desc()).limit(limit).all()
+        itineraries = query.order_by(Itinerary.created_at.desc()).limit(limit).all()
 
         # Create assignments
         assignments_created = 0
-        created_projects = []
-        for project in projects:
+        created_itineraries = []
+        for itinerary in itineraries:
             assignment = ValidatorAssignment(
                 id=str(uuid4()),
                 validator_id=validator_id,
-                project_id=project.id,
+                project_id=itinerary.id,  # Using project_id field for itinerary ID
                 assigned_by=admin_id,
                 category_filter=category_filter,
                 priority=priority,
@@ -944,17 +1043,17 @@ def bulk_assign_projects(admin_id):
             )
             db.session.add(assignment)
             assignments_created += 1
-            created_projects.append(project)
+            created_itineraries.append(itinerary)
 
         db.session.commit()
 
-        # Notify the validator (in-app + email for each project)
+        # Notify the validator (in-app + email for each itinerary)
         try:
-            for project in created_projects:
-                notify_validator_assignment(validator, project, actor_id=admin_id, priority=priority)
+            for itinerary in created_itineraries:
+                notify_validator_assignment(validator, itinerary, actor_id=admin_id, priority=priority)
                 EmailService.send_validator_assignment_email(
                     validator=validator,
-                    project=project,
+                    project=itinerary,  # EmailService accepts both
                     priority=priority
                 )
         except Exception as notify_err:
@@ -962,7 +1061,7 @@ def bulk_assign_projects(admin_id):
 
         return jsonify({
             'status': 'success',
-            'message': f'{assignments_created} projects assigned to validator',
+            'message': f'{assignments_created} itineraries assigned to validator',
             'data': {'count': assignments_created}
         }), 201
 
@@ -1006,11 +1105,10 @@ def get_validator_assignments(admin_id, validator_id):
             validator_id=validator_id
         ).order_by(ValidatorAssignment.created_at.desc()).all()
 
-        # Include project details
+        # Include itinerary details
         result = []
         for assignment in assignments:
-            assignment_data = assignment.to_dict()
-            assignment_data['project'] = assignment.project.to_dict(include_creator=True)
+            assignment_data = assignment.to_dict(include_itinerary=True)
             result.append(assignment_data)
 
         return jsonify({

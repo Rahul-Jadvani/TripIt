@@ -67,7 +67,7 @@ export function AddItineraryToCommunityDialog({
       if (requiresApproval) {
         toast.success('Request submitted for approval!');
       } else {
-        toast.success('Itinerary added to community!');
+        toast.success('Itinerary added to caravan!');
       }
 
       onOpenChange(false);
@@ -86,11 +86,11 @@ export function AddItineraryToCommunityDialog({
         <DialogHeader>
           <DialogTitle>Add Itinerary to {communityName}</DialogTitle>
           <DialogDescription>
-            {requiresApproval
-              ? 'Select one of your published itineraries to submit for approval'
-              : 'Select one of your published itineraries to add to this community'}
-          </DialogDescription>
-        </DialogHeader>
+              {requiresApproval
+                ? 'Select one of your published itineraries to submit for approval'
+                : 'Select one of your published itineraries to add to this caravan'}
+            </DialogDescription>
+          </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-hidden flex flex-col">
           {/* Search */}
@@ -211,7 +211,7 @@ export function AddItineraryToCommunityDialog({
             ) : requiresApproval ? (
               'Submit for Approval'
             ) : (
-              'Add to Community'
+              'Add to Caravan'
             )}
           </Button>
         </DialogFooter>

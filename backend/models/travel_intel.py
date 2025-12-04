@@ -71,6 +71,8 @@ class TravelIntel(db.Model):
             'verified_at_location': self.verified_at_location,
             'helpful_votes': self.helpful_votes,
             'unhelpful_votes': self.unhelpful_votes,
+            'helpful_count': self.helpful_votes,
+            'unhelpful_count': self.unhelpful_votes,
             'safety_related': self.safety_related,
             'severity_level': self.severity_level,
             'status': self.status,

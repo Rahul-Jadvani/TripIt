@@ -17,7 +17,7 @@ export default function About() {
           <p className="text-lg leading-relaxed text-muted-foreground">
             TripIt is a social discovery platform designed for travelers to share, discover, and discuss authentic travel itineraries. We use a
             trust-based credibility system to highlight verified and high-quality itineraries, helping travel creators
-            build a community and connect with fellow adventurers who value their experiences.
+            build a caravan and connect with fellow adventurers who value their experiences.
           </p>
         </Card>
 
@@ -26,7 +26,7 @@ export default function About() {
             <Shield className="mb-4 h-8 w-8 text-primary" />
             <h3 className="mb-2 text-xl font-semibold">Proof-Based Credibility</h3>
             <p className="text-muted-foreground">
-              Our unique scoring system evaluates itinerarys based on verification, community engagement, validation
+              Our unique scoring system evaluates itinerarys based on verification, caravan engagement, validation
               badges, and quality metrics.
             </p>
           </Card>
@@ -65,7 +65,7 @@ export default function About() {
             <div>
               <h3 className="mb-2 text-lg font-semibold">What is a proof score?</h3>
               <p className="text-muted-foreground">
-                The proof score is a composite metric that combines verification (blockchain certificates), community
+                The proof score is a composite metric that combines verification (blockchain certificates), caravan
                 votes, curator validation badges, and automated quality assessment.
               </p>
             </div>
@@ -73,7 +73,7 @@ export default function About() {
               <h3 className="mb-2 text-lg font-semibold">How do I get my itinerary featured?</h3>
               <p className="text-muted-foreground">
                 itinerarys with high proof scores and validation badges from curators are more likely to be featured.
-                Focus on building quality itinerarys with proper documentation and community engagement.
+                Focus on building quality itinerarys with proper documentation and caravan engagement.
               </p>
             </div>
             <div>

@@ -84,7 +84,7 @@ export default function Dashboard() {
                     <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Community</p>
+                <p className="text-xs text-muted-foreground">Caravan</p>
               </div>
 
               {/* Intro Requests */}

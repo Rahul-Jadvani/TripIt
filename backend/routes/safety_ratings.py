@@ -35,11 +35,25 @@ def add_safety_rating(user_id):
         if not itinerary or itinerary.is_deleted:
             return error_response('Not found', 'Itinerary not found', 404)
 
+        # Resolve traveler SBT ID (fallback to traveler_id to satisfy NOT NULL constraint)
+        traveler = Traveler.query.get(user_id)
+        traveler_sbt_id = getattr(traveler, 'sbt_id', None) or user_id
+
         # Check if user already rated this itinerary
         existing_rating = SafetyRating.query.filter_by(
             itinerary_id=itinerary_id,
             traveler_id=user_id
         ).first()
+
+        # Normalize experience date (fallback to today if missing/invalid)
+        experience_date = data.get('experience_date')
+        if isinstance(experience_date, str):
+            try:
+                experience_date = datetime.fromisoformat(experience_date).date()
+            except ValueError:
+                experience_date = None
+        if experience_date is None:
+            experience_date = datetime.utcnow().date()
 
         # Prepare rating data
         rating_data = {
@@ -50,7 +64,7 @@ def add_safety_rating(user_id):
             'route_safety': data.get('route_safety'),
             'community_safety': data.get('community_safety'),
             'women_safety_score': data.get('women_safety_score'),
-            'experience_date': data.get('experience_date'),
+            'experience_date': experience_date,
         }
 
         # Photo evidence
@@ -61,6 +75,7 @@ def add_safety_rating(user_id):
             for key, value in rating_data.items():
                 if value is not None:
                     setattr(existing_rating, key, value)
+            existing_rating.traveler_sbt_id = traveler_sbt_id
 
             if photo_ipfs_hashes:
                 existing_rating.photo_ipfs_hashes = photo_ipfs_hashes
@@ -73,6 +88,7 @@ def add_safety_rating(user_id):
             rating = SafetyRating(
                 itinerary_id=itinerary_id,
                 traveler_id=user_id,
+                traveler_sbt_id=traveler_sbt_id,
                 photo_ipfs_hashes=photo_ipfs_hashes,
                 **rating_data
             )
@@ -309,13 +325,16 @@ def mark_rating_helpful(user_id, rating_id):
             return error_response('Not found', 'Safety rating not found', 404)
 
         # Increment helpful count
-        rating.helpful_count = (rating.helpful_count or 0) + 1
+        rating.helpful_votes = (rating.helpful_votes or 0) + 1
         db.session.commit()
 
         CacheService.invalidate_itinerary(rating.itinerary_id)
 
         return success_response(
-            {'helpful_count': rating.helpful_count},
+            {
+                'helpful_votes': rating.helpful_votes,
+                'helpful_count': rating.helpful_votes,
+            },
             'Rating marked as helpful',
             200
         )
@@ -335,13 +354,16 @@ def mark_rating_unhelpful(user_id, rating_id):
             return error_response('Not found', 'Safety rating not found', 404)
 
         # Increment unhelpful count
-        rating.unhelpful_count = (rating.unhelpful_count or 0) + 1
+        rating.unhelpful_votes = (rating.unhelpful_votes or 0) + 1
         db.session.commit()
 
         CacheService.invalidate_itinerary(rating.itinerary_id)
 
         return success_response(
-            {'unhelpful_count': rating.unhelpful_count},
+            {
+                'unhelpful_votes': rating.unhelpful_votes,
+                'unhelpful_count': rating.unhelpful_votes,
+            },
             'Rating marked as unhelpful',
             200
         )

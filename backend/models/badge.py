@@ -45,6 +45,7 @@ class ValidationBadge(db.Model):
         data = {
             'id': self.id,
             'project_id': self.project_id,
+            'validator_id': self.validator_id,  # Always include validator_id for frontend
             'badge_type': self.badge_type,
             'points': self.points,
             'rationale': self.rationale,

@@ -81,6 +81,8 @@ class Itinerary(db.Model):
     safety_ratings_count = db.Column(db.Integer, default=0)
     safety_ratings_avg = db.Column(db.Float, default=0.0)
     helpful_votes = db.Column(db.Integer, default=0)
+    upvotes = db.Column(db.Integer, default=0, index=True)
+    downvotes = db.Column(db.Integer, default=0)
     share_count = db.Column(db.Integer, default=0)
     view_count = db.Column(db.Integer, default=0)
     comment_count = db.Column(db.Integer, default=0)
@@ -179,6 +181,9 @@ class Itinerary(db.Model):
             'is_featured': self.is_featured,
             'view_count': self.view_count,
             'helpful_votes': self.helpful_votes,
+            'upvotes': self.upvotes,
+            'downvotes': self.downvotes,
+            'voteCount': self.upvotes - self.downvotes,
             'comment_count': self.comment_count,
             'created_by_traveler_id': self.created_by_traveler_id,
             'user_id': self.created_by_traveler_id,  # Alias for compatibility
@@ -189,5 +194,10 @@ class Itinerary(db.Model):
         # Include creator info if requested
         if include_creator and self.itinerary_creator:
             data['creator'] = self.itinerary_creator.to_dict()
+
+        # Include badges (minimal query - only fetch if needed for display)
+        from models.badge import ValidationBadge
+        badges = ValidationBadge.query.filter_by(project_id=self.id).all()
+        data['badges'] = [badge.to_dict() for badge in badges]
 
         return data

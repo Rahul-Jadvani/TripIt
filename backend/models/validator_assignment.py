@@ -13,7 +13,7 @@ class ValidatorAssignment(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid4()))
     validator_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    project_id = db.Column(db.String(36), db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    project_id = db.Column(db.String(36), db.ForeignKey('itineraries.id', ondelete='CASCADE'), nullable=False)  # Now references itineraries
 
     # Assignment details
     assigned_by = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)  # Admin who assigned
@@ -34,7 +34,7 @@ class ValidatorAssignment(db.Model):
 
     # Relationships
     validator = db.relationship('User', foreign_keys=[validator_id], backref='validator_assignments')
-    project = db.relationship('Project', backref='validator_assignments')
+    itinerary = db.relationship('Itinerary', backref='validator_assignments', foreign_keys=[project_id])
     assigner = db.relationship('User', foreign_keys=[assigned_by])
 
     # Unique constraint - one validator per project
@@ -42,12 +42,13 @@ class ValidatorAssignment(db.Model):
         db.UniqueConstraint('validator_id', 'project_id', name='unique_validator_project'),
     )
 
-    def to_dict(self):
+    def to_dict(self, include_itinerary=False):
         """Convert to dictionary"""
-        return {
+        data = {
             'id': self.id,
             'validator_id': self.validator_id,
-            'project_id': self.project_id,
+            'project_id': self.project_id,  # Keep for backward compatibility
+            'itinerary_id': self.project_id,  # Also expose as itinerary_id
             'assigned_by': self.assigned_by,
             'category_filter': self.category_filter,
             'status': self.status,
@@ -58,6 +59,11 @@ class ValidatorAssignment(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }
+
+        if include_itinerary and self.itinerary:
+            data['itinerary'] = self.itinerary.to_dict(include_creator=True)
+
+        return data
 
     def __repr__(self):
         return f'<ValidatorAssignment {self.validator_id} -> {self.project_id}>'

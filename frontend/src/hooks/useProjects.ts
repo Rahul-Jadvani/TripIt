@@ -21,6 +21,11 @@ export function transformProject(backendProject: any) {
   const teamMembers = backendProject.team_members || backendProject.travel_companions || [];
   const demoUrl = backendProject.demo_url || backendProject.route_map_url || '';
   const githubUrl = backendProject.github_url || backendProject.route_map_url || '';
+  const cachedUserVote = (() => {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem(`userVote:${backendProject.id}`);
+    return raw === 'up' || raw === 'down' ? raw : null;
+  })();
 
   const transformed = {
     id: backendProject.id,
@@ -164,14 +169,16 @@ export function transformProject(backendProject: any) {
       }
       return { type: String(b) };
     }),
-    // Voting fields - pass through ALL needed fields
-    upvotes: backendProject.upvotes || 0,
-    downvotes: backendProject.downvotes || 0,
-    voteCount: (backendProject.upvotes || 0) - (backendProject.downvotes || 0),
+    // Voting fields - fall back to safety/helpful counts when legacy vote fields are missing
+    upvotes: backendProject.upvotes ?? backendProject.safety_ratings_count ?? backendProject.helpful_votes ?? 0,
+    downvotes: backendProject.downvotes ?? 0,
+    voteCount:
+      (backendProject.upvotes ?? backendProject.safety_ratings_count ?? backendProject.helpful_votes ?? 0) -
+      (backendProject.downvotes ?? 0),
     commentCount: backendProject.comment_count || 0,
     viewCount: backendProject.view_count || 0,
-    userVote: backendProject.user_vote || null,
-    user_vote: backendProject.user_vote || null,
+    userVote: backendProject.user_vote ?? cachedUserVote ?? null,
+    user_vote: backendProject.user_vote ?? cachedUserVote ?? null,
     isFeatured: backendProject.is_featured || false,
     chains: backendProject.chains || [],
     chainCount: backendProject.chain_count || 0,

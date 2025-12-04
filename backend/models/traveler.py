@@ -77,6 +77,8 @@ class Traveler(db.Model):
 
     # Status & Roles
     is_admin = db.Column(db.Boolean, default=False)
+    is_validator = db.Column(db.Boolean, default=False)
+    is_investor = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     is_suspended = db.Column(db.Boolean, default=False)
 
@@ -112,6 +114,9 @@ class Traveler(db.Model):
             'sbt_status': self.sbt_status,
             'trip_token_balance': self.trip_token_balance,
             'is_active': self.is_active,
+            'is_admin': self.is_admin,
+            'is_validator': self.is_validator,
+            'is_investor': self.is_investor,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 

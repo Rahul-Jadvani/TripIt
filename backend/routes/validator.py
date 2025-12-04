@@ -6,6 +6,7 @@ from datetime import datetime
 from extensions import db
 from models.user import User
 from models.project import Project
+from models.itinerary import Itinerary
 from models.badge import ValidationBadge
 from models.validator_permissions import ValidatorPermissions
 from models.validator_assignment import ValidatorAssignment
@@ -391,7 +392,8 @@ def award_badge(user_id):
         if badge_type not in ValidationBadge.BADGE_POINTS:
             return jsonify({'status': 'error', 'message': 'Invalid badge type'}), 400
 
-        project = Project.query.get(project_id)
+        # Try Itinerary first (new system), fallback to Project (legacy)
+        project = Itinerary.query.get(project_id) or Project.query.get(project_id)
         if not project:
             return jsonify({'status': 'error', 'message': 'Project not found'}), 404
 
@@ -537,6 +539,28 @@ def get_validator_stats(user_id):
                 'badge_breakdown': badge_breakdown,
                 'available_projects': available_projects,
                 'permissions': permissions.to_dict() if permissions else None
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@validator_bp.route('/assignments/check/<itinerary_id>', methods=['GET'])
+@admin_or_validator_required
+def check_itinerary_assignment(user_id, itinerary_id):
+    """Check if current user is assigned to a specific itinerary"""
+    try:
+        assignment = ValidatorAssignment.query.filter_by(
+            validator_id=user_id,
+            project_id=itinerary_id
+        ).first()
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'is_assigned': assignment is not None,
+                'assignment': assignment.to_dict() if assignment else None
             }
         }), 200
 

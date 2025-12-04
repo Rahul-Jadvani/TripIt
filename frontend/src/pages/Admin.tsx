@@ -1268,7 +1268,7 @@ export default function Admin() {
         limit,
       });
       const assignedCount = response?.data?.data?.count ?? 0;
-      toast.success(`${assignedCount} project${assignedCount === 1 ? '' : 's'} assigned successfully!`);
+      toast.success(`${assignedCount} itinerary${assignedCount === 1 ? '' : 'ies'} assigned successfully!`);
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'validators'] }),
@@ -1285,7 +1285,7 @@ export default function Admin() {
 
   const handleAssignSelectedProjects = async () => {
     if (!currentValidatorForAssignment || selectedProjects.length === 0) {
-      toast.error('Select projects and validator');
+      toast.error('Select itineraries and verified user');
       return;
     }
 
@@ -1308,7 +1308,7 @@ export default function Admin() {
         .map(r => (r.reason?.response?.data?.message || r.reason?.message || 'Failed'));
 
       if (successes > 0) {
-        toast.success(`${successes} project${successes === 1 ? '' : 's'} assigned successfully`);
+        toast.success(`${successes} itinerary${successes === 1 ? '' : 'ies'} assigned successfully`);
       }
       if (errors.length > 0) {
         const uniqueErrors = Array.from(new Set(errors));
@@ -1385,7 +1385,7 @@ export default function Admin() {
               <Shield className="h-8 w-8 text-primary" />
               <h1 className="text-3xl font-bold">Admin Dashboard</h1>
             </div>
-            <p className="text-muted-foreground">Manage users, validators, projects, and platform settings</p>
+            <p className="text-muted-foreground">Manage users, verified users, itineraries, and platform settings</p>
           </div>
           <Button variant="outline" onClick={handleAdminLogout}>
             Logout
@@ -1425,11 +1425,11 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger value="validators">
             <Shield className="h-4 w-4 mr-2" />
-            Validators
+            Verified Users
           </TabsTrigger>
           <TabsTrigger value="projects">
             <FolderOpen className="h-4 w-4 mr-2" />
-            Projects
+            Itineraries
           </TabsTrigger>
           <TabsTrigger value="chains">
             <Layers className="h-4 w-4 mr-2" />
@@ -1481,7 +1481,7 @@ export default function Admin() {
               </Card>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Validators</CardTitle>
+                  <CardTitle className="text-sm font-medium">Verified Users</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{stats.users.validators}</div>
@@ -1535,7 +1535,7 @@ export default function Admin() {
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                       <div className="flex gap-2 mt-2">
                         {user.is_admin && <Badge>Admin</Badge>}
-                        {user.is_validator && <Badge variant="secondary">Validator</Badge>}
+                        {user.is_validator && <Badge variant="secondary">Verified User</Badge>}
                         {user.is_investor && <Badge variant="outline">Investor</Badge>}
                         {user.is_active === false && <Badge variant="destructive">Banned</Badge>}
                       </div>
@@ -1586,8 +1586,8 @@ export default function Admin() {
         <TabsContent value="validators" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Add Validator</CardTitle>
-              <CardDescription>Search and add a user as validator</CardDescription>
+              <CardTitle>Add Verified User</CardTitle>
+              <CardDescription>Search and add a user as verified user</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="relative">
@@ -1663,13 +1663,13 @@ export default function Admin() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{validator.username}</p>
-                          <Badge variant="secondary">Validator</Badge>
+                          <Badge variant="secondary">Verified User</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">{validator.email}</p>
                         {validator.permissions && (
                           <div className="mt-2 text-sm space-y-1">
                             <p className="text-muted-foreground">
-                              Validate all: {validator.permissions.can_validate_all ? '✓ Yes' : '✗ No'}
+                              Verify all: {validator.permissions.can_validate_all ? '✓ Yes' : '✗ No'}
                             </p>
                             <p className="text-muted-foreground">
                               Badge types: {validator.permissions.allowed_badge_types.join(', ')}
@@ -1699,7 +1699,7 @@ export default function Admin() {
                             </div>
                             {validator.assignments.category_breakdown && Object.keys(validator.assignments.category_breakdown).length > 0 && (
                               <div className="mt-2">
-                                <p className="text-xs text-muted-foreground mb-1 font-semibold">Assigned Project Categories:</p>
+                                <p className="text-xs text-muted-foreground mb-1 font-semibold">Assigned Itinerary Categories:</p>
                                 <div className="flex flex-wrap gap-1">
                                   {Object.entries(validator.assignments.category_breakdown).map(([category, count]) => (
                                     <Badge key={category} variant="outline" className="text-xs bg-primary/10">
@@ -1730,12 +1730,12 @@ export default function Admin() {
                               <DialogTitle>
                                 {validator.assignments && validator.assignments.total > 0
                                   ? `Manage Assignments for ${validator.username}`
-                                  : `Assign Projects to ${validator.username}`}
+                                  : `Assign Itineraries to ${validator.username}`}
                               </DialogTitle>
                               <DialogDescription>
                                 {validator.assignments && validator.assignments.total > 0
-                                  ? `Currently has ${validator.assignments.total} assignments. Assign more projects by category.`
-                                  : "Bulk assign projects by category filter"}
+                                  ? `Currently has ${validator.assignments.total} assignments. Assign more itineraries by category.`
+                                  : "Bulk assign itineraries by category filter"}
                               </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4">
@@ -1809,7 +1809,7 @@ export default function Admin() {
                                     Assigning...
                                   </>
                                 ) : (
-                                  'Assign Projects'
+                                  'Assign Itineraries'
                                 )}
                               </Button>
                             </div>
@@ -1828,14 +1828,14 @@ export default function Admin() {
                               }}
                             >
                               <List className="h-4 w-4 mr-1" />
-                              Select Projects
+                              Select Itineraries
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
                             <DialogHeader>
-                              <DialogTitle>Assign Specific Projects to {validator.username}</DialogTitle>
+                              <DialogTitle>Assign Specific Itineraries to {validator.username}</DialogTitle>
                               <DialogDescription>
-                                Select individual projects to assign
+                                Select individual itineraries to assign for rating
                               </DialogDescription>
                             </DialogHeader>
                             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
@@ -1848,7 +1848,7 @@ export default function Admin() {
                                     onChange={toggleSelectAllProjects}
                                     className="w-4 h-4"
                                   />
-                                  <span className="font-semibold">Select All ({projects.length} projects)</span>
+                                  <span className="font-semibold">Select All ({projects.length} itineraries)</span>
                                 </label>
                               </div>
 
@@ -1858,7 +1858,7 @@ export default function Admin() {
                                   <Loader2 className="h-6 w-6 animate-spin" />
                                 </div>
                               ) : projects.length === 0 ? (
-                                <p className="text-center text-muted-foreground py-8">No projects available</p>
+                                <p className="text-center text-muted-foreground py-8">No itineraries available</p>
                               ) : (
                                 projects.map(project => (
                                   <label
@@ -1886,7 +1886,7 @@ export default function Admin() {
                             </div>
                             <div className="pt-4 border-t">
                               <p className="text-sm text-muted-foreground mb-2">
-                                {selectedProjects.length} project(s) selected
+                                {selectedProjects.length} itinerary(ies) selected
                               </p>
                               <Button
                                 className="w-full"
@@ -1899,7 +1899,7 @@ export default function Admin() {
                                     Assigning...
                                   </>
                                 ) : (
-                                  'Assign Selected Projects'
+                                  'Assign Selected Itineraries'
                                 )}
                               </Button>
                             </div>
@@ -1924,9 +1924,9 @@ export default function Admin() {
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Edit Validator Permissions</DialogTitle>
+                              <DialogTitle>Edit Verified User Permissions</DialogTitle>
                               <DialogDescription>
-                                Configure what {validator.username} can validate
+                                Configure what {validator.username} can verify
                               </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4">
@@ -1969,7 +1969,7 @@ export default function Admin() {
                               <div>
                                 <Label>Allowed Categories (auto-assignment)</Label>
                                 <p className="text-xs text-muted-foreground mb-2">
-                                  New projects with these categories will be auto-assigned to this validator
+                                  New itineraries with these categories will be auto-assigned to this verified user
                                 </p>
                                 <div className="grid grid-cols-2 gap-2 mt-2">
                                   {['AI/ML', 'Web3/Blockchain', 'FinTech', 'HealthTech', 'EdTech', 'E-Commerce', 'SaaS', 'DevTools', 'IoT', 'Gaming', 'Social', 'Other'].map(cat => (

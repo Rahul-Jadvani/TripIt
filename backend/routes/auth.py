@@ -36,28 +36,49 @@ def _get_redis_client():
     return Redis.from_url(redis_url, decode_responses=True)
 
 def store_oauth_state(state, data, ttl=300):
-    """Store OAuth state in Redis with TTL (default 5 minutes)"""
+    """Store OAuth state in Redis with session fallback"""
     try:
         import json
         redis = _get_redis_client()
         redis.setex(f"oauth_state:{state}", ttl, json.dumps(data))
+        print(f"[OAuth] State stored in Redis: {state[:8]}...")
     except Exception as e:
-        print(f"[OAuth] Error storing state in Redis: {e}")
+        print(f"[OAuth] Redis unavailable, using session fallback: {e}")
+        # Fallback to session storage
+        from flask import session
+        if 'oauth_states' not in session:
+            session['oauth_states'] = {}
+        session['oauth_states'][state] = data
+        session.modified = True
+        print(f"[OAuth] State stored in session: {state[:8]}...")
 
 def get_oauth_state(state):
-    """Get and delete OAuth state from Redis"""
+    """Get and delete OAuth state from Redis with session fallback"""
+    import json
+    from flask import session
+
+    # Try Redis first
     try:
-        import json
         redis = _get_redis_client()
         key = f"oauth_state:{state}"
         data = redis.get(key)
         if data:
             redis.delete(key)  # One-time use
+            print(f"[OAuth] State retrieved from Redis: {state[:8]}...")
             return json.loads(data) if data else None
-        return None
     except Exception as e:
-        print(f"[OAuth] Error getting state from Redis: {e}")
-        return None
+        print(f"[OAuth] Redis unavailable, checking session: {e}")
+
+    # Fallback to session
+    if 'oauth_states' in session and state in session['oauth_states']:
+        data = session['oauth_states'][state]
+        del session['oauth_states'][state]  # One-time use
+        session.modified = True
+        print(f"[OAuth] State retrieved from session: {state[:8]}...")
+        return data
+
+    print(f"[OAuth] State not found: {state[:8]}...")
+    return None
 
 
 def get_retry_session(retries=3, backoff_factor=0.5, status_forcelist=(500, 502, 503, 504)):

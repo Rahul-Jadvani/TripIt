@@ -84,11 +84,11 @@ export default function Feed() {
   const { data: featuredData } = useFeaturedProjects(30);
   const { data: risingStarsData } = useRisingStars(30);
 
-  // Dynamic category sections - you can add more categories here
-  const { data: defiData } = useCategoryProjects('DeFi', 30);
-  const { data: aiData } = useCategoryProjects('AI/ML', 30);
-  const { data: gamingData } = useCategoryProjects('Gaming', 30);
-  const { data: saasData } = useCategoryProjects('SaaS', 30);
+  // Travel-specific sections - fetch multiple pages to get more itineraries
+  const { data: page2Data } = useItineraries('trending', 2);
+  const { data: page3Data } = useItineraries('trending', 3);
+  const { data: page4Data } = useItineraries('top-rated', 2);
+  const { data: page5Data } = useItineraries('newest', 2);
 
   const investorsHref = user ? '/investor-directory' : '/investors';
 
@@ -138,21 +138,77 @@ export default function Feed() {
   // Progressive loading: Show page when trending & top-rated are loaded
   const isLoading = hotLoading || topLoading;
 
-  // Categorize projects
+  // Categorize itineraries by activity tags
   const categorizedProjects = useMemo(() => {
+    // Combine all data sources
+    const allItineraries = [
+      ...(hotData?.data || []),
+      ...(topData?.data || []),
+      ...(newData?.data || []),
+      ...(page2Data?.data || []),
+      ...(page3Data?.data || []),
+      ...(page4Data?.data || []),
+      ...(page5Data?.data || []),
+      ...(featuredData?.data || []),
+      ...(risingStarsData?.data || []),
+    ];
+
+    // Remove duplicates
+    const uniqueMap = new Map();
+    allItineraries.forEach(item => {
+      if (item && item.id && !uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      }
+    });
+    const unique = Array.from(uniqueMap.values());
+
+    // Categorize by activity tags
+    const adventure = unique.filter((p: any) =>
+      p.activity_tags?.some((tag: string) =>
+        ['Trekking', 'Hiking', 'Mountain', 'Climbing', 'Camping'].some(keyword =>
+          tag.includes(keyword)
+        )
+      )
+    );
+
+    const beach = unique.filter((p: any) =>
+      p.activity_tags?.some((tag: string) =>
+        ['Beach', 'Scuba', 'Snorkeling', 'Surfing', 'Water Sports'].some(keyword =>
+          tag.includes(keyword)
+        )
+      )
+    );
+
+    const cultural = unique.filter((p: any) =>
+      p.activity_tags?.some((tag: string) =>
+        ['Culture', 'Heritage', 'Temple', 'Museum', 'Festival'].some(keyword =>
+          tag.includes(keyword)
+        )
+      )
+    );
+
+    const digitalNomad = unique.filter((p: any) =>
+      p.activity_tags?.some((tag: string) =>
+        tag.includes('Digital Nomad') || tag.includes('Remote Work')
+      )
+    );
+
+    const womenSafe = unique.filter((p: any) => p.women_safe_certified === true);
+
     return {
       hot: (hotData?.data || []).slice(0, 30),
       topScored: (topData?.data || []).slice(0, 30),
       featured: (featuredData?.data || []).slice(0, 30),
       risingStars: (risingStarsData?.data || []).slice(0, 30),
       newLaunches: (newData?.data || []).slice(0, 30),
-      defi: (defiData?.data || []).slice(0, 30),
-      aiMl: (aiData?.data || []).slice(0, 30),
-      gaming: (gamingData?.data || []).slice(0, 30),
-      saas: (saasData?.data || []).slice(0, 30),
+      adventure: adventure.slice(0, 30),
+      beach: beach.slice(0, 30),
+      cultural: cultural.slice(0, 30),
+      digitalNomad: digitalNomad.slice(0, 30),
+      womenSafe: womenSafe.slice(0, 30),
       mostRequested: (mostRequestedData?.data || []).slice(0, 30),
     };
-  }, [hotData, topData, newData, mostRequestedData, featuredData, risingStarsData, defiData, aiData, gamingData, saasData]);
+  }, [hotData, topData, newData, page2Data, page3Data, page4Data, page5Data, mostRequestedData, featuredData, risingStarsData]);
 
   // Merge all feed projects once to power stats + tag leader without duplicates
   const visibleFeedProjects = useMemo(() => {
@@ -168,17 +224,17 @@ export default function Feed() {
     addProjects(hotData?.data);
     addProjects(topData?.data);
     addProjects(newData?.data);
+    addProjects(page2Data?.data);
+    addProjects(page3Data?.data);
+    addProjects(page4Data?.data);
+    addProjects(page5Data?.data);
     addProjects(featuredData?.data);
     addProjects(risingStarsData?.data);
-    addProjects(defiData?.data);
-    addProjects(aiData?.data);
-    addProjects(gamingData?.data);
-    addProjects(saasData?.data);
     addProjects(mostRequestedData?.data);
     return Array.from(unique.values());
-  }, [hotData?.data, topData?.data, newData?.data, featuredData?.data, risingStarsData?.data, defiData?.data, aiData?.data, gamingData?.data, saasData?.data, mostRequestedData?.data]);
+  }, [hotData?.data, topData?.data, newData?.data, page2Data?.data, page3Data?.data, page4Data?.data, page5Data?.data, featuredData?.data, risingStarsData?.data, mostRequestedData?.data]);
 
-  // Compute leading tag/category today from all visible datasets
+  // Compute leading tag from activity_tags (travel-focused)
   const leader = useMemo(() => {
     const all = visibleFeedProjects;
     const buckets: Record<string, number> = {};
@@ -186,36 +242,39 @@ export default function Feed() {
       if (!key) return;
       buckets[key] = (buckets[key] || 0) + 1;
     };
+
+    // Count activity tags from all itineraries
     for (const p of all) {
-      // Prefer categories if present
-      if (Array.isArray((p as any).categories) && (p as any).categories.length) {
-        for (const c of (p as any).categories as string[]) push(c);
-      } else if (Array.isArray((p as any).techStack)) {
-        // Fallback heuristic from tech
-        const ts = (p as any).techStack.map((t: string) => t.toLowerCase());
-        if (ts.some((t: string) => t.includes('blockchain') || t.includes('solidity') || t.includes('web3'))) push('Web3/Blockchain');
-        if (ts.some((t: string) => t.includes('ai') || t.includes('machine'))) push('AI/ML');
-        if (ts.some((t: string) => t.includes('python') || t.includes('node'))) push('SaaS');
+      if (Array.isArray((p as any).activity_tags) && (p as any).activity_tags.length) {
+        for (const tag of (p as any).activity_tags as string[]) {
+          push(tag);
+        }
       }
     }
-    let label = 'Other';
+
+    // Find most common tag
+    let label = 'Travel';
     let count = 0;
     for (const [k, v] of Object.entries(buckets)) {
       if (v > count) { label = k; count = v; }
     }
+
     const total = Object.values(buckets).reduce((a, b) => a + b, 0) || 1;
     const percent = (count / total) * 100;
-    const iconKey = label.toLowerCase().includes('block')
-      ? 'blockchain'
-      : label.toLowerCase().includes('ai')
-        ? 'ai'
-        : label.toLowerCase().includes('game')
-          ? 'gaming'
-          : label.toLowerCase().includes('fin')
-            ? 'fintech'
-            : label.toLowerCase().includes('saas')
-              ? 'saas'
+
+    // Map tag to icon category
+    const iconKey = label.toLowerCase().includes('trek') || label.toLowerCase().includes('mountain')
+      ? 'adventure'
+      : label.toLowerCase().includes('beach') || label.toLowerCase().includes('water')
+        ? 'beach'
+        : label.toLowerCase().includes('cultur') || label.toLowerCase().includes('herit')
+          ? 'cultural'
+          : label.toLowerCase().includes('nomad') || label.toLowerCase().includes('remote')
+            ? 'digital'
+            : label.toLowerCase().includes('photo')
+              ? 'photography'
               : 'other';
+
     return { label, count, percent, icon: iconKey as any };
   }, [visibleFeedProjects]);
 
@@ -407,7 +466,7 @@ export default function Feed() {
               {topBuilders[0] && (
                 <FeedMiniThread
                   title={`Top Travel Creator: @${topBuilders[0].username}`}
-                  subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} community score`}
+                  subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} caravan score`}
                   href={`/u/${topBuilders[0].username}`}
                   badge="Featured"
                 />
@@ -432,10 +491,11 @@ export default function Feed() {
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">Popular adventures gaining momentum this week</p>
                 </div>
-                {/* TODO: Implement itinerary carousel for trending items */}
-                <div className="p-8 text-center text-muted-foreground">
-                  Loading trending destinations...
-                </div>
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.hot} categoryName="trending" />
+                  </Suspense>
+                </LazyOnVisible>
               </section>
             )}
 
@@ -444,7 +504,7 @@ export default function Feed() {
               {topBuilders[0] && (
                 <FeedMiniThread
                   title={`@${topBuilders[0].username}`}
-                  subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} community score`}
+                  subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} caravan score`}
                   href={`/u/${topBuilders[0].username}`}
                   badge="Top Travel Creator"
                 />
@@ -460,8 +520,8 @@ export default function Feed() {
             </div>
 
             {/* Women-Safe Certified Carousel */}
-            {categorizedProjects.featured.length > 0 && (
-              <section id="women-safe" className="carousel-cinema scroll-mt-24">
+            {categorizedProjects.womenSafe.length > 0 && (
+              <section id="women-safe-featured" className="carousel-cinema scroll-mt-24">
                 <div className="mb-4">
                   <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
                     <Shield className="h-6 w-6 text-accent" />
@@ -471,6 +531,7 @@ export default function Feed() {
                 </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.womenSafe} categoryName="women-safe" />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -488,6 +549,7 @@ export default function Feed() {
                 </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.risingStars} categoryName="rising-stars" />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -501,93 +563,104 @@ export default function Feed() {
                     <Clock className="h-6 w-6 text-primary" />
                     Latest Adventures
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Recently shared itineraries from the community</p>
+                  <p className="text-sm text-muted-foreground mt-1">Recently shared itineraries from the caravan</p>
                 </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.newLaunches} categoryName="newest" />
                   </Suspense>
                 </LazyOnVisible>
               </section>
             )}
 
-            {/* DeFi Projects Carousel */}
-            {categorizedProjects.defi.length > 0 && (
-              <section id="defi" className="carousel-cinema scroll-mt-24">
+            {/* Adventure & Trekking Itineraries */}
+            {categorizedProjects.adventure.length > 0 && (
+              <section id="adventure" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <TrendingUp className="h-6 w-6 text-primary" />
+                    Adventure & Trekking
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Epic mountain adventures and challenging treks</p>
+                </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.adventure} categoryName="adventure" />
                   </Suspense>
                 </LazyOnVisible>
               </section>
             )}
 
-            {/* DeFi Hero Thread */}
-            {categorizedProjects.defi?.[0] && (
-              <FeedMiniThread
-                title={`Top DeFi Project: ${categorizedProjects.defi[0].title}`}
-                subtitle={`by @${categorizedProjects.defi[0].author?.username || 'Builder'}`}
-                href={`/project/${categorizedProjects.defi[0].id}`}
-                badge="DeFi"
-              />
-            )}
-
-            {/* AI/ML Projects Carousel */}
-            {categorizedProjects.aiMl.length > 0 && (
-              <section id="ai-ml" className="carousel-cinema scroll-mt-24">
+            {/* Beach & Coastal Trips */}
+            {categorizedProjects.beach.length > 0 && (
+              <section id="beach" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                    Beach & Coastal
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Relaxing beach getaways and water adventures</p>
+                </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.beach} categoryName="beach" />
                   </Suspense>
                 </LazyOnVisible>
               </section>
             )}
 
-            {/* AI/ML Hero Thread */}
-            {categorizedProjects.aiMl?.[0] && (
-              <FeedMiniThread
-                title={`Top AI Project: ${categorizedProjects.aiMl[0].title}`}
-                subtitle={`Score: ${categorizedProjects.aiMl[0].proofScore?.total || 0} • ${categorizedProjects.aiMl[0].voteCount || 0} votes`}
-                href={`/project/${categorizedProjects.aiMl[0].id}`}
-                badge="AI"
-              />
-            )}
-
-            {/* Gaming Projects Carousel */}
-            {categorizedProjects.gaming.length > 0 && (
-              <section id="gaming" className="carousel-cinema scroll-mt-24">
+            {/* Cultural & Heritage */}
+            {categorizedProjects.cultural.length > 0 && (
+              <section id="cultural" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Zap className="h-6 w-6 text-primary" />
+                    Cultural & Heritage
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Immersive cultural experiences and historical sites</p>
+                </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.cultural} categoryName="cultural" />
                   </Suspense>
                 </LazyOnVisible>
               </section>
             )}
 
-            {/* Gaming Hero Thread */}
-            {categorizedProjects.gaming?.[0] && (
-              <FeedMiniThread
-                title={`Trending Game: ${categorizedProjects.gaming[0].title}`}
-                subtitle={`${categorizedProjects.gaming[0].voteCount || 0} votes • ${categorizedProjects.gaming[0].viewCount || 0} views`}
-                href={`/project/${categorizedProjects.gaming[0].id}`}
-                badge="Gaming"
-              />
-            )}
-
-            {/* SaaS Projects Carousel */}
-            {categorizedProjects.saas.length > 0 && (
-              <section id="saas" className="carousel-cinema scroll-mt-24">
+            {/* Digital Nomad Destinations */}
+            {categorizedProjects.digitalNomad.length > 0 && (
+              <section id="digital-nomad" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Flame className="h-6 w-6 text-primary" />
+                    Digital Nomad Hotspots
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Work + travel destinations for remote workers</p>
+                </div>
                 <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.digitalNomad} categoryName="digital-nomad" />
                   </Suspense>
                 </LazyOnVisible>
               </section>
             )}
 
-            {/* SaaS Hero Thread */}
-            {categorizedProjects.saas?.[0] && (
-              <FeedMiniThread
-                title={`Top SaaS: ${categorizedProjects.saas[0].title}`}
-                subtitle={categorizedProjects.saas[0].tagline || 'Innovative SaaS solution'}
-                href={`/project/${categorizedProjects.saas[0].id}`}
-                badge="SaaS"
-              />
+            {/* Women-Safe Certified */}
+            {categorizedProjects.womenSafe.length > 0 && (
+              <section id="women-safe" className="carousel-cinema scroll-mt-24">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Shield className="h-6 w-6 text-primary" />
+                    Women-Safe Certified
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">Verified safe itineraries for women travelers</p>
+                </div>
+                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
+                    <TopRatedCarousel projects={categorizedProjects.womenSafe} categoryName="women-safe" />
+                  </Suspense>
+                </LazyOnVisible>
+              </section>
             )}
 
             {/* Another mini-thread */}
@@ -688,7 +761,7 @@ export default function Feed() {
                   <div className="text-6xl">✈️</div>
                   <p className="text-2xl font-black text-foreground">Ready for your next adventure?</p>
                   <p className="text-base text-muted-foreground mb-6">
-                    No itineraries yet. Be the first to share your travel journey with our community!
+                    No itineraries yet. Be the first to share your travel journey with our caravan!
                   </p>
                   <button className="badge badge-primary text-sm font-bold px-6 py-2 hover:opacity-90">
                     Share Your Itinerary

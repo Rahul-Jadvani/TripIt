@@ -32,10 +32,10 @@ export function useCreateCommunity() {
     mutationFn: (data: CreateCommunityData) => communityApi.createCommunity(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['communities'] });
-      toast.success('Community created successfully!');
+      toast.success('Caravan created successfully!');
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to create community');
+      toast.error(error?.response?.data?.message || 'Failed to create caravan');
     },
   });
 }
@@ -48,10 +48,10 @@ export function useUpdateCommunity(slug: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', slug] });
       queryClient.invalidateQueries({ queryKey: ['communities'] });
-      toast.success('Community updated successfully!');
+      toast.success('Caravan updated successfully!');
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to update community');
+      toast.error(error?.response?.data?.message || 'Failed to update caravan');
     },
   });
 }
@@ -63,10 +63,10 @@ export function useDeleteCommunity() {
     mutationFn: (slug: string) => communityApi.deleteCommunity(slug),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['communities'] });
-      toast.success('Community deleted successfully');
+      toast.success('Caravan deleted successfully');
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to delete community');
+      toast.error(error?.response?.data?.message || 'Failed to delete caravan');
     },
   });
 }
@@ -106,15 +106,15 @@ export function useAddItineraryToCommunity() {
       queryClient.invalidateQueries({ queryKey: ['communityItineraries', variables.slug] });
       queryClient.invalidateQueries({ queryKey: ['community', variables.slug] });
       queryClient.invalidateQueries({ queryKey: ['itinerary', variables.itineraryId] });
-      toast.success('Itinerary added to community!');
+      toast.success('Itinerary added to caravan!');
     },
     onError: (error: any) => {
-      // Don't show error for approval-required communities (202 status)
+      // Don't show error for approval-required caravans (202 status)
       if (error?.response?.status === 202) {
         toast.info('Request submitted for approval');
         return;
       }
-      toast.error(error?.response?.data?.message || 'Failed to add itinerary to community');
+      toast.error(error?.response?.data?.message || 'Failed to add itinerary to caravan');
     },
   });
 }
@@ -129,7 +129,7 @@ export function useRemoveItineraryFromCommunity() {
       queryClient.invalidateQueries({ queryKey: ['communityItineraries', variables.slug] });
       queryClient.invalidateQueries({ queryKey: ['community', variables.slug] });
       queryClient.invalidateQueries({ queryKey: ['itinerary', variables.itineraryId] });
-      toast.success('Itinerary removed from community');
+      toast.success('Itinerary removed from caravan');
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Failed to remove itinerary');
@@ -212,10 +212,10 @@ export function useFollowCommunity() {
     onSuccess: (_, slug) => {
       queryClient.invalidateQueries({ queryKey: ['community', slug] });
       queryClient.invalidateQueries({ queryKey: ['communities'] });
-      toast.success('Following community!');
+      toast.success('Following caravan!');
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to follow community');
+      toast.error(error?.response?.data?.message || 'Failed to follow caravan');
     },
   });
 }
@@ -228,10 +228,10 @@ export function useUnfollowCommunity() {
     onSuccess: (_, slug) => {
       queryClient.invalidateQueries({ queryKey: ['community', slug] });
       queryClient.invalidateQueries({ queryKey: ['communities'] });
-      toast.success('Unfollowed community');
+      toast.success('Unfollowed caravan');
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to unfollow community');
+      toast.error(error?.response?.data?.message || 'Failed to unfollow caravan');
     },
   });
 }

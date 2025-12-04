@@ -1,18 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Itinerary } from '@/types';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowUp, MessageSquare, Award, Star, TrendingUp, Github, ExternalLink, Shield, Share2, Bookmark } from 'lucide-react';
+import { MessageSquare, Share2, Bookmark, ChevronLeft, ChevronRight, MapPin, Calendar, TrendingUp, DollarSign, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
 import { useAuth } from '@/context/AuthContext';
-import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
-import { IntroRequest } from '@/components/IntroRequest';
-import { InteractiveScrollBackground } from '@/components/InteractiveScrollBackground';
 import { ShareDialog } from '@/components/ShareDialog';
-import { formatScore, getProjectScore } from '@/utils/score';
+import { VoteButtons } from '@/components/VoteButtons';
 
 interface ItineraryCardProps {
   project: Itinerary;
@@ -25,6 +21,23 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
   const unsaveMutation = useUnsaveItinerary();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [savedLocal, setSavedLocal] = useState<boolean | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Get images from screenshots - only if they exist
+  const images = project.screenshots && project.screenshots.length > 0
+    ? project.screenshots
+    : [];
+
+  // Auto-scroll carousel
+  useEffect(() => {
+    if (images.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }, 4000); // Change image every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [images.length]);
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -42,7 +55,6 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
     }
 
     const current = savedLocal ?? !!isSaved;
-    // Optimistic toggle
     setSavedLocal(!current);
     if (current) {
       unsaveMutation.mutate(project.id, {
@@ -55,247 +67,271 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
     }
   };
 
+  const nextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
 
-  // Truncate text to max words with ellipsis
-  const truncateText = (text: string, maxWords: number) => {
-    if (!text) return '';
-    const words = text.trim().split(/\s+/);
-    if (words.length <= maxWords) return text;
-    return words.slice(0, maxWords).join(' ') + '...';
+  const prevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const formatDuration = () => {
+    if (project.duration_days) {
+      return `${project.duration_days} ${project.duration_days === 1 ? 'day' : 'days'}`;
+    }
+    return 'N/A';
+  };
+
+  const formatBudget = () => {
+    if (project.estimated_budget_min && project.estimated_budget_max) {
+      return `$${project.estimated_budget_min} - $${project.estimated_budget_max}`;
+    }
+    if (project.budget_amount) {
+      return `${project.budget_currency || '$'}${project.budget_amount}`;
+    }
+    return 'N/A';
   };
 
   return (
-    <div className="group relative w-full h-full z-0">
-      <Card className="card-interactive overflow-hidden relative w-full h-full min-h-0 box-border flex flex-col transition-all duration-300 group-hover:z-10">
-        <InteractiveScrollBackground className="text-primary/20" />
-        <Link to={`/project/${project.id}`} className="flex flex-col flex-1 min-h-0 relative z-10">
-          {/* Main content container - scrollable */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
-            {/* Header with title and Credibility Score badge */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start gap-2 mb-2">
-                  {project.isFeatured && (
-                    <Star className="h-4 w-4 fill-primary text-primary flex-shrink-0 mt-0.5" />
-                  )}
-                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-smooth line-clamp-2">
-                    {truncateText(project.title, 8)}
-                  </h3>
-                </div>
-                <p className="text-xs text-muted-foreground leading-tight line-clamp-2">
-                  {truncateText(project.tagline, 12)}
+    <div className="group relative w-full">
+      <Card className="overflow-hidden relative w-full border border-border/40 hover:border-primary/30 transition-all duration-300">
+        {/* Caption Section - Creator + Title */}
+        <div className="p-4 pb-2">
+          <div className="flex items-center gap-3">
+            <Link to={`/profile/${project.creator?.username || project.author?.username}`} onClick={(e) => e.stopPropagation()}>
+              <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+                <AvatarImage
+                  src={project.creator?.avatar_url || project.author?.avatar || project.author?.avatar_url}
+                  alt={project.creator?.username || project.author?.username}
+                />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                  {(project.creator?.username || project.author?.username)?.slice(0, 2).toUpperCase() || 'NA'}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Link to={`/profile/${project.creator?.username || project.author?.username}`} onClick={(e) => e.stopPropagation()}>
+                <p className="text-sm font-bold text-foreground hover:text-primary transition-colors">
+                  {project.creator?.username || project.author?.username}
                 </p>
+              </Link>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {project.destination}
+              </p>
+            </div>
+          </div>
+
+          {/* Title/Caption */}
+          <Link to={`/project/${project.id}`}>
+            <div className="flex items-start justify-between gap-3 mt-3">
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-foreground mb-1 hover:text-primary transition-colors">
+                  {project.title}
+                </h3>
+                {project.tagline && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {project.tagline}
+                  </p>
+                )}
               </div>
-
-              {/* Credibility Score badge - top right */}
-              <div className="flex-shrink-0 flex flex-col gap-2 items-end">
-                {/* Share and Save buttons */}
-                <div className="flex gap-1">
-                  <button
-                    onClick={handleShare}
-                    className="p-1.5 rounded-lg bg-secondary/50 hover:bg-primary hover:text-black text-muted-foreground transition-smooth border border-border/40"
-                    title="Share project"
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
-                    className={`p-1.5 rounded-lg transition-smooth border border-border/40 disabled:opacity-50 ${
-                      (savedLocal ?? isSaved)
-                        ? 'bg-primary text-black'
-                        : 'bg-secondary/50 hover:bg-primary hover:text-black text-muted-foreground'
-                    }`}
-                    title={(savedLocal ?? isSaved) ? 'Unsave project' : 'Save project'}
-                  >
-                    <Bookmark className={`h-3.5 w-3.5 ${(savedLocal ?? isSaved) ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
-
-                <div className="flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 px-3 py-2 min-w-[70px]">
-                  {(() => {
-                    const scoringStatus = project.scoring_status || project.scoringStatus;
-                    const derivedScore = getProjectScore(project);
-                    const formattedScore = formatScore(derivedScore);
-                    const isLegacyProject = !scoringStatus; // Old projects don't have scoring_status
-
-                    return (
-                      <>
-                        <span className="text-xl font-bold text-primary">
-                          {formattedScore}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground font-medium">
-                          Score
-                        </span>
-                        {/* Only show status badges for NEW projects (not legacy) */}
-                        {!isLegacyProject && scoringStatus && scoringStatus !== 'completed' && (
-                          <span className={`text-[8px] font-bold mt-0.5 px-1.5 py-0.5 rounded ${
-                            scoringStatus === 'pending' ? 'bg-orange-500/20 text-orange-600' :
-                            scoringStatus === 'processing' ? 'bg-blue-500/20 text-blue-600 animate-pulse' :
-                            scoringStatus === 'retrying' ? 'bg-orange-500/20 text-orange-600' :
-                            'bg-red-500/20 text-red-600'
-                          }`}>
-                            {scoringStatus === 'pending' ? '⏳ Pending' :
-                             scoringStatus === 'processing' ? '🔄 Analyzing' :
-                             scoringStatus === 'retrying' ? '🔁 Retry' :
-                             '⚠️ Failed'}
-                          </span>
-                        )}
-                      </>
-                    );
-                  })()}
+              {/* Credibility Score badge - Always visible */}
+              <div className="px-2.5 py-1.5 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm font-bold text-primary">{project.proof_score || 0}</span>
                 </div>
               </div>
             </div>
+          </Link>
+        </div>
 
-            {/* Description - compact */}
+        {/* Photo Carousel - Only show if images exist */}
+        {images.length > 0 && (
+          <Link to={`/project/${project.id}`}>
+            <div className="relative w-full aspect-[4/3] bg-secondary/20 overflow-hidden group/carousel">
+              <img
+                src={images[currentImageIndex]}
+                alt={`${project.title} - ${currentImageIndex + 1}`}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover/carousel:scale-105"
+              />
+
+              {/* Carousel controls */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+
+                  {/* Dots indicator */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {images.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setCurrentImageIndex(idx);
+                        }}
+                        className={`h-1.5 rounded-full transition-all ${
+                          idx === currentImageIndex
+                            ? 'w-6 bg-white'
+                            : 'w-1.5 bg-white/50 hover:bg-white/75'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </Link>
+        )}
+
+        {/* Engagement Actions */}
+        <div className="px-4 py-3 border-b border-border/40">
+          <div className="flex items-center gap-4">
+            <VoteButtons
+              projectId={project.id}
+              voteCount={(project.upvotes || 0) - (project.downvotes || 0)}
+              userVote={project.user_vote || project.userVote}
+              projectOwnerId={project.created_by_traveler_id || project.user_id}
+            />
+
+            <Link
+              to={`/project/${project.id}#comments`}
+              className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MessageSquare className="h-5 w-5" />
+              <span className="text-sm font-medium">{project.comment_count || 0}</span>
+            </Link>
+
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors ml-auto"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={handleSave}
+              disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
+              className={`transition-colors disabled:opacity-50 ${
+                (savedLocal ?? isSaved) ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+              }`}
+            >
+              <Bookmark className={`h-5 w-5 ${(savedLocal ?? isSaved) ? 'fill-current' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Trip Overview */}
+        <Link to={`/project/${project.id}`}>
+          <div className="px-4 py-3 space-y-3">
+            {/* Description */}
             {project.description && (
-              <div className="bg-secondary/40 rounded-lg p-2.5 border border-border/40 w-full">
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                  {truncateText(project.description, 35)}
-                </p>
-              </div>
+              <p className="text-sm text-foreground leading-relaxed line-clamp-3">
+                {project.description}
+              </p>
             )}
 
-            {/* Tech stack - horizontal scroll */}
-            {project.techStack && project.techStack.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap">
-                {project.techStack.slice(0, 4).map((tech) => (
-                  <span key={tech} className="badge bg-secondary/30 text-foreground text-[10px] py-0.5 px-2 flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary border border-black" />
-                    {tech}
-                  </span>
-                ))}
-                {project.techStack.length > 4 && (
-                  <span className="badge bg-secondary/30 text-foreground text-[10px] py-0.5 px-2">+{project.techStack.length - 4}</span>
-                )}
+            {/* Trip Details Grid */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 text-xs">
+                <Calendar className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-muted-foreground">Duration</p>
+                  <p className="font-medium text-foreground">{formatDuration()}</p>
+                </div>
               </div>
-            )}
 
-            {/* Chains section removed in TripIt version */}
+              <div className="flex items-center gap-2 text-xs">
+                <DollarSign className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-muted-foreground">Budget</p>
+                  <p className="font-medium text-foreground">{formatBudget()}</p>
+                </div>
+              </div>
 
-            {/* Creator info */}
-            {project.author && (
-              <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <Avatar className="h-7 w-7 flex-shrink-0">
-                    <AvatarImage src={project.author.avatar || project.author.avatar_url} alt={project.author.username} />
-                    <AvatarFallback className="bg-card text-[10px] font-semibold">
-                      {project.author.username?.slice(0, 2).toUpperCase() || 'NA'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-foreground truncate">
-                      {project.author.username}
-                    </p>
-                    {project.hackathonName && (
-                      <p className="text-[10px] text-muted-foreground truncate">
-                        {project.hackathonName}
-                      </p>
-                    )}
+              {project.difficulty_level && (
+                <div className="flex items-center gap-2 text-xs">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-muted-foreground">Difficulty</p>
+                    <p className="font-medium text-foreground capitalize">{project.difficulty_level}</p>
                   </div>
                 </div>
+              )}
 
-                {/* Crew/Team members */}
-                {(project.teamMembers || project.team_members) && (project.teamMembers || project.team_members)!.length > 0 && (
-                  <div className="flex-shrink-0">
-                    <div className="flex -space-x-1.5">
-                      {(project.teamMembers || project.team_members)!.slice(0, 3).map((member, idx) => {
-                        const avatarUrl = (member as any).avatar || (member as any).avatar_url || (member as any).image;
-                        return (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-center w-6 h-6 rounded-full bg-accent/20 border border-accent/30 text-[9px] font-semibold text-accent overflow-hidden"
-                            title={member.name}
-                          >
-                            {avatarUrl ? (
-                              <img
-                                src={avatarUrl}
-                                alt={member.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              member.name?.slice(0, 1).toUpperCase() || '?'
-                            )}
-                          </div>
-                        );
-                      })}
-                      {(project.teamMembers || project.team_members)!.length > 3 && (
-                        <div
-                          className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary/50 border border-border/50 text-[9px] font-semibold text-muted-foreground"
-                          title={`+${(project.teamMembers || project.team_members)!.length - 3} more`}
-                        >
-                          +{(project.teamMembers || project.team_members)!.length - 3}
-                        </div>
-                      )}
-                    </div>
+              {project.travel_type && (
+                <div className="flex items-center gap-2 text-xs">
+                  <Users className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-muted-foreground">Type</p>
+                    <p className="font-medium text-foreground capitalize">{project.travel_type}</p>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Activity Tags */}
+            {project.activity_tags && project.activity_tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {project.activity_tags.slice(0, 5).map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full border border-primary/20"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+                {project.activity_tags.length > 5 && (
+                  <span className="px-2 py-1 text-xs font-medium bg-secondary text-muted-foreground rounded-full">
+                    +{project.activity_tags.length - 5} more
+                  </span>
                 )}
               </div>
             )}
           </div>
         </Link>
 
-        {/* Interactive action buttons - sticky at bottom */}
-        <div className="px-4 py-3 space-y-1.5 border-t border-border/40 bg-card/60 backdrop-blur-sm flex-shrink-0 relative z-10">
-          {/* CTA Links */}
-          <div className="flex items-center gap-2 justify-center">
-            {project.demoUrl && (
-              <a
-                href={project.demoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex-1 p-2 rounded-lg bg-secondary/70 hover:bg-primary hover:text-black text-muted-foreground hover:text-foreground transition-smooth border border-border text-center text-xs font-medium flex items-center justify-center gap-1"
-                title="View Live Demo"
-              >
-                <ExternalLink className="h-3 w-3" />
-                <span>Demo</span>
-              </a>
-            )}
-            {project.githubUrl && (
-              <a
-                href={project.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex-1 p-2 rounded-lg bg-secondary/70 hover:bg-primary hover:text-black text-muted-foreground hover:text-foreground transition-smooth border border-border text-center text-xs font-medium flex items-center justify-center gap-1"
-                title="View on GitHub"
-              >
-                <Github className="h-3 w-3" />
-                <span>Code</span>
-              </a>
-            )}
-          </div>
-
-          {/* Safety rating and Travel Intel */}
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex-1">
-              <SafetyRatingWidget
-                itineraryId={project.id}
-                averageScore={project.averageScore}
-                ratingCount={project.ratingCount}
-                userRating={project.userRating}
-                itineraryOwnerId={project.authorId || project.user_id}
-              />
+        {/* Crew/Travel Companions */}
+        {project.travel_companions && project.travel_companions.length > 0 && (
+          <div className="px-4 py-3 border-t border-border/40">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Travel Crew</p>
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {project.travel_companions.slice(0, 4).map((companion: any, idx) => (
+                  <div
+                    key={idx}
+                    className="w-8 h-8 rounded-full bg-primary/10 border-2 border-card flex items-center justify-center text-xs font-bold text-primary"
+                    title={companion.name}
+                  >
+                    {companion.name?.slice(0, 1).toUpperCase() || '?'}
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {project.travel_companions.length === 1
+                  ? project.travel_companions[0].name
+                  : `${project.travel_companions.length} travelers`}
+              </div>
             </div>
-            {/* Travel Intel count button */}
-            <Link
-              to={`/project/${project.id}#intel`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-smooth border border-border text-xs font-medium"
-              title="View travel intel"
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span>{project.travelIntelCount || 0}</span>
-            </Link>
           </div>
-
-          {/* Intro Request button */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <IntroRequest projectId={project.id} builderId={project.authorId} />
-          </div>
-        </div>
+        )}
       </Card>
 
       {/* Share Dialog */}
@@ -304,9 +340,8 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
         onOpenChange={setShareDialogOpen}
         url={`${window.location.origin}/project/${project.id}`}
         title={project.title}
-        description={project.tagline}
+        description={project.tagline || project.destination}
       />
     </div>
   );
 }
-

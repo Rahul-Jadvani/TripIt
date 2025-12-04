@@ -76,9 +76,10 @@ def initialize_root_admins():
             db.session.rollback()  # Clear the failed transaction
             triggers_disabled = False
 
-        # Update registered users to admin using raw SQL
+        # Update registered users to admin using raw SQL (both users and travelers tables)
         updated_count = 0
         for email in ROOT_ADMIN_EMAILS:
+            # Check and update users table
             result = db.session.execute(
                 text("SELECT id, is_admin FROM users WHERE email = :email"),
                 {"email": email}
@@ -92,7 +93,23 @@ def initialize_root_admins():
                         {"email": email}
                     )
                     updated_count += 1
-                    print(f"[ADMIN] Set {email} as root admin")
+                    print(f"[ADMIN] Set {email} as root admin in users table")
+
+            # Check and update travelers table
+            traveler_result = db.session.execute(
+                text("SELECT id, is_admin FROM travelers WHERE email = :email"),
+                {"email": email}
+            ).fetchone()
+
+            if traveler_result:
+                traveler_id, traveler_is_admin = traveler_result
+                if not traveler_is_admin:
+                    db.session.execute(
+                        text("UPDATE travelers SET is_admin = true, updated_at = NOW() WHERE email = :email"),
+                        {"email": email}
+                    )
+                    updated_count += 1
+                    print(f"[ADMIN] Set {email} as root admin in travelers table")
 
         # Re-enable triggers if we disabled them
         if triggers_disabled:
@@ -185,6 +202,14 @@ def create_app(config_name=None):
                 print("[App] WARNING: REDIS_URL not set in environment")
         except Exception as e:
             print(f"[App] WARNING: Redis initialization error: {e}")
+
+        # Initialize trending tags tracker
+        try:
+            from utils.trending_tags import init_trending_tags
+            init_trending_tags()
+            print("[TRENDING] Trending tags tracker initialized")
+        except Exception as e:
+            print(f"[TRENDING] Warning: Failed to initialize trending tags: {e}")
 
         # PERFORMANCE: Start background cache warmer (sequential, stable)
         # Skip if disabled (e.g., during migrations to avoid deadlocks)
@@ -406,6 +431,7 @@ def register_blueprints(app):
     from routes.travel_intel import travel_intel_bp
     from routes.travel_groups import travel_groups_bp
     from routes.women_safety import women_safety_bp
+    from routes.trending import trending_bp
 
     # PERFORMANCE: Ultra-fast optimized routes
     from routes.prefetch import prefetch_bp
@@ -444,6 +470,7 @@ def register_blueprints(app):
     app.register_blueprint(travel_intel_bp, url_prefix='/api/travel-intel')
     app.register_blueprint(travel_groups_bp, url_prefix='/api/travel-groups')
     app.register_blueprint(women_safety_bp, url_prefix='/api/women-safety')
+    app.register_blueprint(trending_bp, url_prefix='/api')
 
     # PERFORMANCE: Ultra-fast optimized endpoints
     app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')

@@ -74,14 +74,15 @@ export function useSearch(query: string, type?: string) {
     queryFn: async () => {
       const response = await searchService.search(query, type);
 
-      // Transform results
-      const projects = response.data.data?.projects?.map(transformProject) || [];
+      // Transform results - support both 'projects' and 'itineraries' keys
+      const itineraries = (response.data.data?.itineraries || response.data.data?.projects || []).map(transformProject);
       const users = response.data.data?.users?.map(transformUser) || [];
 
       return {
-        projects,
+        Itineraries: itineraries,
+        projects: itineraries, // Backwards compatibility
         users,
-        total: projects.length + users.length,
+        total: itineraries.length + users.length,
       };
     },
     // Only search if query is at least 2 characters

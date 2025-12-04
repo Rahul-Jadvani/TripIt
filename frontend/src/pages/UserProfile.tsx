@@ -111,7 +111,7 @@ export default function UserProfile() {
                   {(user as any)?.isValidator && (
                     <Badge className="bg-blue-600 text-white">
                       <Shield className="mr-1 h-3 w-3" />
-                      Validator
+                      Verified User
                     </Badge>
                   )}
                   {user.github_connected && user.github_username && (
@@ -439,13 +439,13 @@ export default function UserProfile() {
                 value="owned-communities"
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
-                Owned Communities ({ownedCommunitiesData?.communities?.length || 0})
+                Owned Caravans ({ownedCommunitiesData?.communities?.length || 0})
               </TabsTrigger>
               <TabsTrigger
                 value="following-communities"
                 className="rounded-md px-4 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
               >
-                Following Communities ({followingCommunitiesData?.communities?.length || 0})
+                Following Caravans ({followingCommunitiesData?.communities?.length || 0})
               </TabsTrigger>
             </TabsList>
 
@@ -565,9 +565,9 @@ export default function UserProfile() {
                 <div className="card-elevated p-12 text-center">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-bold text-foreground">No communities created yet</p>
+                    <p className="text-lg font-bold text-foreground">No caravans created yet</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.displayName || user.username} hasn't created any communities yet
+                      {user.displayName || user.username} hasn't created any caravans yet
                     </p>
                   </div>
                 </div>
@@ -640,9 +640,9 @@ export default function UserProfile() {
                 <div className="card-elevated p-12 text-center">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-bold text-foreground">Not following any communities</p>
+                    <p className="text-lg font-bold text-foreground">Not following any caravans</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.displayName || user.username} hasn't followed any communities yet
+                      {user.displayName || user.username} hasn't followed any caravans yet
                     </p>
                   </div>
                 </div>

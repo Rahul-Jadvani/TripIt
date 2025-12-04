@@ -516,7 +516,7 @@ export default function ChainDetailPage() {
                 {chain.creator ? (
                   <span className="text-foreground font-medium">@{chain.creator.username}</span>
                 ) : (
-                  'community'
+                  'caravan'
                 )}
               </div>
             </Card>

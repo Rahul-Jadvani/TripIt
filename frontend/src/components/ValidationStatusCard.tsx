@@ -1,4 +1,5 @@
-import { Award, Clock, CheckCircle } from 'lucide-react';
+import { Award, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { StarRating, getStarRating } from './StarRating';
 
 interface Badge {
   badge_type: string;
@@ -14,12 +15,12 @@ interface ValidationStatusCardProps {
   className?: string;
 }
 
-const badgeIcons: Record<string, string> = {
-  stone: '🪨',
-  silver: '🥈',
-  gold: '🥇',
-  platinum: '💎',
-  demerit: '⛔',
+// Star rating labels
+const starLabels: Record<number, string> = {
+  1: 'Basic',
+  2: 'Good',
+  3: 'Excellent',
+  4: 'Outstanding',
 };
 
 const badgeColors: Record<string, string> = {
@@ -55,19 +56,23 @@ export function ValidationStatusCard({ badges = [], className = '' }: Validation
     <div className={`card-elevated p-5 ${className}`}>
       <h3 className="font-black text-sm mb-3 text-foreground flex items-center gap-2">
         <Award className="h-4 w-4 text-primary" />
-        Validation Status
+        Verification Status
       </h3>
 
       {hasValidation && highestBadge ? (
         <div className="space-y-3">
-          {/* Badge Display */}
+          {/* Badge Display with Stars */}
           <div
             className={`rounded-lg p-4 border-2 ${
               badgeColors[highestBadge.badge_type]
             } transition-all`}
           >
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl">{badgeIcons[highestBadge.badge_type]}</span>
+              {highestBadge.badge_type === 'demerit' ? (
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+              ) : (
+                <StarRating rating={getStarRating(highestBadge.badge_type)} size="lg" />
+              )}
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   {highestBadge.badge_type === 'demerit' ? (
@@ -78,7 +83,10 @@ export function ValidationStatusCard({ badges = [], className = '' }: Validation
                     <CheckCircle className="h-4 w-4 text-primary" />
                   )}
                   <span className="text-sm font-black text-foreground uppercase">
-                    {highestBadge.badge_type} {highestBadge.badge_type === 'demerit' ? 'Warning' : 'Badge'}
+                    {highestBadge.badge_type === 'demerit'
+                      ? 'Warning'
+                      : `${starLabels[getStarRating(highestBadge.badge_type)]} Rating`
+                    }
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -116,7 +124,7 @@ export function ValidationStatusCard({ badges = [], className = '' }: Validation
           {/* All Badges if multiple */}
           {badges.length > 1 && (
             <div className="border-t border-border/50 pt-3">
-              <p className="text-xs text-muted-foreground mb-2">All Badges Received:</p>
+              <p className="text-xs text-muted-foreground mb-2">All Ratings Received:</p>
               <div className="space-y-2">
                 {badges.map((badge, idx) => (
                   <div
@@ -124,11 +132,20 @@ export function ValidationStatusCard({ badges = [], className = '' }: Validation
                     className="flex items-center justify-between p-2 bg-secondary/30 rounded border border-border"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{badgeIcons[badge.badge_type]}</span>
-                      <span className="text-xs font-bold uppercase">{badge.badge_type}</span>
+                      {badge.badge_type === 'demerit' ? (
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                      ) : (
+                        <StarRating rating={getStarRating(badge.badge_type)} size="sm" />
+                      )}
+                      <span className="text-xs font-bold">
+                        {badge.badge_type === 'demerit'
+                          ? 'Warning'
+                          : starLabels[getStarRating(badge.badge_type)]
+                        }
+                      </span>
                     </div>
-                    <span className="text-xs text-primary font-bold">
-                      +{badgeScores[badge.badge_type]}pts
+                    <span className={`text-xs font-bold ${badge.badge_type === 'demerit' ? 'text-red-600' : 'text-primary'}`}>
+                      {badgeScores[badge.badge_type] > 0 ? '+' : ''}{badgeScores[badge.badge_type]}pts
                     </span>
                   </div>
                 ))}
@@ -153,9 +170,9 @@ export function ValidationStatusCard({ badges = [], className = '' }: Validation
               />
             </svg>
             <div className="flex-1">
-              <span className="text-sm text-foreground font-semibold">Expert Validated</span>
+              <span className="text-sm text-foreground font-semibold">Expert Verified</span>
               <p className="text-xs text-muted-foreground">
-                Project reviewed by platform validator
+                Itinerary reviewed by verified user
               </p>
             </div>
             <span className="text-lg text-primary font-black">
@@ -171,10 +188,10 @@ export function ValidationStatusCard({ badges = [], className = '' }: Validation
               <Clock className="h-6 w-6 text-primary animate-spin" />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-foreground">Pending Validation</span>
+                  <span className="text-sm font-black text-foreground">Pending Verification</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  This project is awaiting review by our validators
+                  This itinerary is awaiting review by our verified users
                 </p>
               </div>
             </div>
@@ -183,39 +200,43 @@ export function ValidationStatusCard({ badges = [], className = '' }: Validation
           {/* Info about validation */}
           <div className="p-3 bg-secondary/30 rounded border border-border">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Projects are reviewed by platform validators who assess quality, innovation, and
-              completion. Validated projects receive badges (Silver, Gold, or Platinum) that boost
-              their proof score.
+              Itineraries are reviewed by verified users who assess quality, authenticity, and
+              completeness. Verified itineraries receive badges (Silver, Gold, or Platinum) that boost
+              their credibility score.
             </p>
           </div>
 
           {/* Potential Points */}
           <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-2">
-              {(['stone', 'silver', 'gold'] as const).map((type) => (
-                <div
-                  key={type}
-                  className={`p-2 rounded-lg border ${badgeColors[type]} text-center`}
-                >
-                  <div className="text-lg mb-1">{badgeIcons[type]}</div>
-                  <div className={`text-xs font-bold uppercase ${type === 'gold' ? 'text-black' : 'text-foreground'}`}>{type}</div>
-                  <div className={`text-xs font-bold ${type === 'gold' ? 'text-black' : 'text-primary'}`}>+{badgeScores[type]}pts</div>
-                </div>
-              ))}
-            </div>
+            <p className="text-xs text-muted-foreground mb-2">Possible Ratings:</p>
             <div className="grid grid-cols-2 gap-2">
-              {(['platinum', 'demerit'] as const).map((type) => (
-                <div
-                  key={type}
-                  className={`p-2 rounded-lg border ${badgeColors[type]} text-center`}
-                >
-                  <div className="text-lg mb-1">{badgeIcons[type]}</div>
-                  <div className="text-xs font-bold uppercase">{type}</div>
-                  <div className={`text-xs font-bold ${type === 'demerit' ? 'text-red-600' : 'text-primary'}`}>
-                    {badgeScores[type] > 0 ? '+' : ''}{badgeScores[type]}pts
+              {[1, 2, 3, 4].map((stars) => {
+                const types = Object.entries({ stone: 1, silver: 2, gold: 3, platinum: 4 });
+                const [type] = types.find(([_, s]) => s === stars) || ['stone', 1];
+                return (
+                  <div
+                    key={stars}
+                    className={`p-3 rounded-lg border ${badgeColors[type]} text-center`}
+                  >
+                    <div className="flex justify-center mb-1">
+                      <StarRating rating={stars} size="sm" />
+                    </div>
+                    <div className={`text-xs font-bold ${type === 'gold' ? 'text-black' : 'text-foreground'}`}>
+                      {starLabels[stars]}
+                    </div>
+                    <div className={`text-xs font-bold ${type === 'gold' ? 'text-black' : 'text-primary'}`}>
+                      +{badgeScores[type]}pts
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+            <div className={`p-2 rounded-lg border ${badgeColors['demerit']} text-center`}>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <span className="text-xs font-bold text-foreground">Warning</span>
+              </div>
+              <div className="text-xs font-bold text-red-600">-10pts</div>
             </div>
           </div>
         </div>

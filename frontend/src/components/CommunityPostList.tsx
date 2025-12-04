@@ -90,7 +90,7 @@ export function CommunityPostList({ communitySlug, isOwner = false }: CommunityP
       {posts.length === 0 ? (
         <Card className="p-12 text-center space-y-2">
           <p className="text-muted-foreground text-lg">No discussions yet</p>
-          <p className="text-sm text-muted-foreground">Be the first to start a discussion in this community!</p>
+          <p className="text-sm text-muted-foreground">Be the first to start a discussion in this caravan!</p>
         </Card>
       ) : (
         <div className="space-y-4">

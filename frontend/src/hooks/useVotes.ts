@@ -2,6 +2,24 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { votesService } from '@/services/api';
 import { toast } from 'sonner';
 
+const VOTE_KEY_PREFIX = 'userVote:';
+
+function getCachedUserVote(projectId: string): 'up' | 'down' | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(`${VOTE_KEY_PREFIX}${projectId}`);
+  if (raw === 'up' || raw === 'down') return raw;
+  return null;
+}
+
+function setCachedUserVote(projectId: string, vote: 'up' | 'down' | null) {
+  if (typeof window === 'undefined') return;
+  if (!vote) {
+    localStorage.removeItem(`${VOTE_KEY_PREFIX}${projectId}`);
+  } else {
+    localStorage.setItem(`${VOTE_KEY_PREFIX}${projectId}`, vote);
+  }
+}
+
 export function useVote(projectId: string) {
   const queryClient = useQueryClient();
 
@@ -49,6 +67,8 @@ export function useVote(projectId: string) {
           else newDownvotes++;
         }
 
+        setCachedUserVote(projectId, newUserVote as any);
+
         return {
           ...old,
           data: {
@@ -73,11 +93,11 @@ export function useVote(projectId: string) {
           const currentUpvotes = project.upvotes || 0;
           const currentDownvotes = project.downvotes || 0;
 
-          let newUpvotes = currentUpvotes;
-          let newDownvotes = currentDownvotes;
-          let newUserVote: string | null = voteType;
+        let newUpvotes = currentUpvotes;
+        let newDownvotes = currentDownvotes;
+        let newUserVote: string | null = voteType;
 
-          if (currentVote === voteType) {
+        if (currentVote === voteType) {
             if (voteType === 'up') newUpvotes = Math.max(0, newUpvotes - 1);
             else newDownvotes = Math.max(0, newDownvotes - 1);
             newUserVote = null;
@@ -90,6 +110,8 @@ export function useVote(projectId: string) {
             if (voteType === 'up') newUpvotes++;
             else newDownvotes++;
           }
+
+          setCachedUserVote(projectId, newUserVote as any);
 
           return {
             ...project,
@@ -104,13 +126,17 @@ export function useVote(projectId: string) {
         return { ...old, data: projects };
       });
 
-      return { previousProject };
+      return { previousProject, previousUserVote: getCachedUserVote(projectId) };
     },
 
-    // On success: Reconcile with server response
-    onSuccess: (response) => {
+    // On success: Reconcile with server response (only if backend returns vote counts)
+    onSuccess: (response, voteType) => {
       const voteData = response?.data?.data;
-      if (!voteData) {
+      const hasCounts = voteData && (voteData.upvotes !== undefined || voteData.downvotes !== undefined || voteData.voteCount !== undefined);
+      if (!voteData || !hasCounts) {
+        // Safety ratings path returns no vote counts; keep optimistic state
+        // Persist last action in cache for refresh scenarios
+        setCachedUserVote(projectId, voteType);
         return;
       }
 
@@ -148,6 +174,8 @@ export function useVote(projectId: string) {
 
         return { ...old, data: projects };
       });
+
+      setCachedUserVote(projectId, voteData.user_vote || null);
     },
 
     // On error: Rollback
@@ -159,6 +187,7 @@ export function useVote(projectId: string) {
       if (context?.previousProject) {
         queryClient.setQueryData(['project', projectId], context.previousProject);
       }
+      setCachedUserVote(projectId, context?.previousUserVote || null);
     },
   });
 }

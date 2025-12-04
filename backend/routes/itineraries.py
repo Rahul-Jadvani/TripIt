@@ -414,11 +414,23 @@ def add_safety_rating(user_id, itinerary_id):
 
         data = request.get_json() or {}
 
+        traveler = Traveler.query.get(user_id)
+        traveler_sbt_id = getattr(traveler, 'sbt_id', None) or user_id
+
         # Check if user already rated this itinerary
         existing_rating = SafetyRating.query.filter_by(
             itinerary_id=itinerary_id,
-            traveler_sbt_id=user_id
+            traveler_id=user_id
         ).first()
+
+        experience_date = data.get('experience_date')
+        if isinstance(experience_date, str):
+            try:
+                experience_date = datetime.fromisoformat(experience_date).date()
+            except ValueError:
+                experience_date = None
+        if experience_date is None:
+            experience_date = datetime.utcnow().date()
 
         # Create or update rating
         rating_data = {
@@ -429,18 +441,22 @@ def add_safety_rating(user_id, itinerary_id):
             'route_safety': data.get('route_safety'),
             'community_safety': data.get('community_safety'),
             'women_safety_score': data.get('women_safety_score'),
-            'helpful_count': 0,
+            'experience_date': experience_date,
+            'helpful_votes': 0,
+            'unhelpful_votes': 0,
         }
 
         if existing_rating:
             for key, value in rating_data.items():
                 if value is not None:
                     setattr(existing_rating, key, value)
+            existing_rating.traveler_sbt_id = traveler_sbt_id
             db.session.commit()
         else:
             rating = SafetyRating(
                 itinerary_id=itinerary_id,
-                traveler_sbt_id=user_id,
+                traveler_id=user_id,
+                traveler_sbt_id=traveler_sbt_id,
                 **rating_data
             )
             db.session.add(rating)

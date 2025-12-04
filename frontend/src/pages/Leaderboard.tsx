@@ -22,15 +22,19 @@ const FeaturedItinerariesSkeleton = ({ count = 6 }: { count?: number }) => (
   </div>
 );
 
-type LeaderboardTab = 'itineraries' | 'builders' | 'featured';
+type LeaderboardTab = 'itineraries' | 'travelers' | 'featured';
+const ALLOWED_TABS: LeaderboardTab[] = ['itineraries', 'travelers', 'featured'];
 
 export default function Leaderboard() {
-  const [searchParams] = useSearchParams();
-  const initialTab = (searchParams.get('tab') as LeaderboardTab) || 'itineraries';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialParam = searchParams.get('tab') as LeaderboardTab;
+  const initialTab = ALLOWED_TABS.includes(initialParam) ? initialParam : 'itineraries';
   const [tab, setTab] = useState<LeaderboardTab>(initialTab);
+
   useEffect(() => {
-    const t = (searchParams.get('tab') as LeaderboardTab) || 'itineraries';
-    setTab(t);
+    const param = searchParams.get('tab') as LeaderboardTab;
+    const safeTab = ALLOWED_TABS.includes(param) ? param : 'itineraries';
+    setTab(safeTab);
   }, [searchParams]);
 
   const { data: itinerariesData, isLoading: itinerariesLoading, error: itinerariesError } = useItinerariesLeaderboard();
@@ -44,6 +48,13 @@ export default function Leaderboard() {
     return <span className="text-lg font-black text-muted-foreground">{rank}</span>;
   };
 
+  const handleTabChange = (value: LeaderboardTab) => {
+    setTab(value);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', value);
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <div className="min-h-screen overflow-hidden">
       <div className="container mx-auto px-6 py-12 overflow-hidden">
@@ -52,25 +63,25 @@ export default function Leaderboard() {
           <div className="mb-6 card-elevated p-8">
             <h1 className="text-4xl font-black text-foreground mb-2">Leaderboard</h1>
             <p className="text-base text-muted-foreground">
-              Top itineraries and builders on Zer0
+              Top itineraries and travelers on Zer0
             </p>
           </div>
 
           {/* Tabs and image in one row */}
           <div className="mb-3 flex items-center justify-between gap-4 flex-wrap">
-            <Tabs value={tab} onValueChange={(v) => setTab(v as LeaderboardTab)}>
+            <Tabs value={tab} onValueChange={(v) => handleTabChange(v as LeaderboardTab)}>
               <TabsList className="inline-flex h-auto rounded-[15px] bg-secondary border-4 border-black p-1">
                 <TabsTrigger
-                  value="Itineraries"
+                  value="itineraries"
                   className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
                 >
-                  itineraries
+                  Itineraries
                 </TabsTrigger>
                 <TabsTrigger
                   value="travelers"
                   className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition-quick data-[state=active]:bg-primary data-[state=active]:text-black"
                 >
-                  Builders
+                  Travelers
                 </TabsTrigger>
                 <TabsTrigger
                   value="featured"
@@ -139,7 +150,6 @@ export default function Leaderboard() {
               </>
             )}
 
-            Travelers
             {tab === 'travelers' && (
               <>
                 {travelersLoading && (
@@ -184,7 +194,7 @@ export default function Leaderboard() {
                   !travelersLoading && !travelersError && (
                     <div className="card-elevated p-12 text-center">
                       <p className="text-lg font-bold text-foreground">No travelers yet</p>
-                      <p className="text-sm text-muted-foreground mt-2">Be the first to join the community!</p>
+                      <p className="text-sm text-muted-foreground mt-2">Be the first to join the caravan!</p>
                     </div>
                   )
                 )}

@@ -50,6 +50,8 @@ class SafetyRating(db.Model):
         return {
             'id': self.id,
             'itinerary_id': self.itinerary_id,
+            'traveler_id': self.traveler_id,
+            'traveler_sbt_id': self.traveler_sbt_id,
             'overall_safety_score': self.overall_safety_score,
             'experience_date': self.experience_date.isoformat() if self.experience_date else None,
             'rating_type': self.rating_type,
@@ -59,7 +61,10 @@ class SafetyRating(db.Model):
             'community_safety': self.community_safety,
             'women_safety_score': self.women_safety_score,
             'verified_traveler': self.verified_traveler,
+            # Expose both legacy and new naming for vote counts
             'helpful_votes': self.helpful_votes,
             'unhelpful_votes': self.unhelpful_votes,
+            'helpful_count': self.helpful_votes,
+            'unhelpful_count': self.unhelpful_votes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }

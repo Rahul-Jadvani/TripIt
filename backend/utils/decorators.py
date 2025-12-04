@@ -5,7 +5,18 @@ from functools import wraps
 from flask import jsonify, session, request
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from models.user import User
+from models.traveler import Traveler
 from extensions import db
+
+
+def get_user_from_either_table(user_id):
+    """Helper to get user from either User or Traveler table"""
+    # Try Traveler table first (Google OAuth users)
+    user = Traveler.query.get(user_id)
+    if user:
+        return user
+    # Fallback to User table (email/password users)
+    return User.query.get(user_id)
 
 
 def token_required(f):
@@ -15,7 +26,7 @@ def token_required(f):
         try:
             verify_jwt_in_request()
             user_id = get_jwt_identity()
-            user = User.query.get(user_id)
+            user = get_user_from_either_table(user_id)
             if not user or not user.is_active:
                 return jsonify({'error': 'User not found or inactive'}), 401
         except Exception as e:
@@ -33,7 +44,7 @@ def admin_required(f):
         try:
             verify_jwt_in_request()
             user_id = get_jwt_identity()
-            user = User.query.get(user_id)
+            user = get_user_from_either_table(user_id)
             if not user or not user.is_active:
                 return jsonify({'error': 'User not found or inactive'}), 401
             if not user.is_admin:
@@ -53,10 +64,10 @@ def validator_required(f):
         try:
             verify_jwt_in_request()
             user_id = get_jwt_identity()
-            user = User.query.get(user_id)
+            user = get_user_from_either_table(user_id)
             if not user or not user.is_active:
                 return jsonify({'error': 'User not found or inactive'}), 401
-            if not user.is_validator:
+            if not (hasattr(user, 'is_validator') and user.is_validator):
                 return jsonify({'error': 'Validator access required'}), 403
         except Exception as e:
             return jsonify({'error': 'Unauthorized', 'message': str(e)}), 401
@@ -73,10 +84,11 @@ def admin_or_validator_required(f):
         try:
             verify_jwt_in_request()
             user_id = get_jwt_identity()
-            user = User.query.get(user_id)
+            user = get_user_from_either_table(user_id)
             if not user or not user.is_active:
                 return jsonify({'error': 'User not found or inactive'}), 401
-            if not (user.is_admin or user.is_validator):
+            is_validator = hasattr(user, 'is_validator') and user.is_validator
+            if not (user.is_admin or is_validator):
                 return jsonify({'error': 'Admin or Validator access required'}), 403
         except Exception as e:
             return jsonify({'error': 'Unauthorized', 'message': str(e)}), 401
@@ -94,7 +106,7 @@ def optional_auth(f):
         try:
             verify_jwt_in_request()
             user_id = get_jwt_identity()
-            user = User.query.get(user_id)
+            user = get_user_from_either_table(user_id)
             if user and not user.is_active:
                 user_id = None
         except Exception:
@@ -119,7 +131,7 @@ def admin_or_session_required(f):
         try:
             verify_jwt_in_request()
             user_id = get_jwt_identity()
-            user = User.query.get(user_id)
+            user = get_user_from_either_table(user_id)
             if not user or not user.is_active:
                 return jsonify({'error': 'User not found or inactive'}), 401
             if not user.is_admin:

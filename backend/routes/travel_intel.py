@@ -52,7 +52,7 @@ def get_travel_intel(user_id):
 
         # Sorting
         if sort == 'helpful':
-            query = query.order_by(TravelIntel.helpful_count.desc())
+            query = query.order_by(TravelIntel.helpful_votes.desc())
         elif sort == 'critical':
             query = query.filter(TravelIntel.severity_level == 'critical').order_by(
                 TravelIntel.created_at.desc()
@@ -302,13 +302,16 @@ def mark_intel_helpful(user_id, intel_id):
         if not intel:
             return error_response('Not found', 'Travel intel not found', 404)
 
-        intel.helpful_count = (intel.helpful_count or 0) + 1
+        intel.helpful_votes = (intel.helpful_votes or 0) + 1
         db.session.commit()
 
         CacheService.invalidate_itinerary(intel.itinerary_id)
 
         return success_response(
-            {'helpful_count': intel.helpful_count},
+            {
+                'helpful_votes': intel.helpful_votes,
+                'helpful_count': intel.helpful_votes,
+            },
             'Intel marked as helpful',
             200
         )
@@ -327,13 +330,16 @@ def mark_intel_unhelpful(user_id, intel_id):
         if not intel:
             return error_response('Not found', 'Travel intel not found', 404)
 
-        intel.unhelpful_count = (intel.unhelpful_count or 0) + 1
+        intel.unhelpful_votes = (intel.unhelpful_votes or 0) + 1
         db.session.commit()
 
         CacheService.invalidate_itinerary(intel.itinerary_id)
 
         return success_response(
-            {'unhelpful_count': intel.unhelpful_count},
+            {
+                'unhelpful_votes': intel.unhelpful_votes,
+                'unhelpful_count': intel.unhelpful_votes,
+            },
             'Intel marked as unhelpful',
             200
         )

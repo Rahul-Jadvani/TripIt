@@ -492,7 +492,7 @@ export default function Publish() {
               <div className="flex-1">
                 <h1 className="mb-2 text-4xl font-black text-foreground">Publish Your Itinerary</h1>
                 <p className="text-base text-muted-foreground leading-relaxed">
-                  Share your incredible travel itinerary with our community. Get discovered, receive feedback, and connect with fellow travelers.
+                  Share your incredible travel itinerary with our caravan. Get discovered, receive feedback, and connect with fellow travelers.
                 </p>
               </div>
               <button
@@ -591,11 +591,11 @@ export default function Publish() {
                     </ul>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-foreground mb-2">Community Score (Max 10 points)</h3>
+                    <h3 className="text-sm font-bold text-foreground mb-2">Caravan Score (Max 10 points)</h3>
                     <ul className="space-y-1 text-muted-foreground text-xs">
                       <li>✓ Upvote ratio: up to 6 points</li>
                       <li>✓ Comment engagement: up to 4 points</li>
-                      <li>💡 Encourage community feedback!</li>
+                      <li>💡 Encourage caravan feedback!</li>
                     </ul>
                   </div>
                   <div>

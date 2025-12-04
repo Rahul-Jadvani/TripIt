@@ -198,14 +198,14 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
           <CardDescription>
-            Provide essential details about your community
+            Provide essential details about your caravan
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">
-              Community Name <span className="text-destructive">*</span>
+              Caravan Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
@@ -225,7 +225,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
             </Label>
             <Textarea
               id="description"
-              placeholder="Describe what your community is about..."
+              placeholder="Describe what your caravan is about..."
               rows={4}
               {...register('description')}
               className={errors.description ? 'border-destructive' : ''}
@@ -237,10 +237,10 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
 
           {/* Rules */}
           <div className="space-y-2">
-            <Label htmlFor="rules">Community Guidelines (Optional)</Label>
+            <Label htmlFor="rules">Caravan Guidelines (Optional)</Label>
             <Textarea
               id="rules"
-              placeholder="Set guidelines for your travel community..."
+              placeholder="Set guidelines for your travel caravan..."
               rows={4}
               {...register('rules')}
               className={errors.rules ? 'border-destructive' : ''}
@@ -249,7 +249,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
               <p className="text-xs text-destructive">{errors.rules.message}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              These will be shown to members when they join your community
+              These will be shown to members when they join your caravan
             </p>
           </div>
         </CardContent>
@@ -260,7 +260,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
         <CardHeader>
           <CardTitle>Visual Assets</CardTitle>
           <CardDescription>
-            Upload banner and logo images for your community
+            Upload banner and logo images for your caravan
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -387,7 +387,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
         <CardHeader>
           <CardTitle>Categories</CardTitle>
           <CardDescription>
-            Select categories that best describe your community
+            Select categories that best describe your caravan
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -411,7 +411,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
         <CardHeader>
           <CardTitle>Social Links</CardTitle>
           <CardDescription>
-            Add social media and external links for your community
+            Add social media and external links for your caravan
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -455,7 +455,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
       {/* Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Community Settings</CardTitle>
+          <CardTitle>Caravan Settings</CardTitle>
           <CardDescription>
             Configure privacy and approval settings
           </CardDescription>
@@ -465,7 +465,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 flex-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="is_public">Public Community</Label>
+                <Label htmlFor="is_public">Public Caravan</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -473,7 +473,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>
-                        Public communities are visible to everyone. Private communities are only
+                        Public caravans are visible to everyone. Private caravans are only
                         visible to members and the owner.
                       </p>
                     </TooltipContent>
@@ -481,7 +481,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
                 </TooltipProvider>
               </div>
               <p className="text-sm text-muted-foreground">
-                Make this community visible to everyone
+                Make this caravan visible to everyone
               </p>
             </div>
             <Switch
@@ -504,14 +504,14 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
                     <TooltipContent className="max-w-xs">
                       <p>
                         When enabled, itineraries must be approved by you before they
-                        appear in this community. Otherwise, itineraries are added instantly.
+                        appear in this caravan. Otherwise, itineraries are added instantly.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <p className="text-sm text-muted-foreground">
-                Manually approve itineraries before they appear in this community
+                Manually approve itineraries before they appear in this caravan
               </p>
             </div>
             <Switch
@@ -532,7 +532,7 @@ export function CommunityForm({ community, onSubmit, isLoading = false }: Commun
               {community ? 'Saving...' : 'Creating...'}
             </>
           ) : (
-            <>{community ? 'Save Changes' : 'Create Community'}</>
+            <>{community ? 'Save Changes' : 'Create Caravan'}</>
           )}
         </Button>
       </div>

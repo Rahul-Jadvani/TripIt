@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2, Image } from 'lucide-react';
+import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2, Image, Star, CheckCircle } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Badge } from '@/components/ui/badge';
 import { useNotificationCounts } from '@/hooks/useNotificationCounts';
@@ -20,6 +20,8 @@ export const Navbar = memo(function Navbar() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { unreadMessagesCount, pendingIntrosCount } = useNotificationCounts();
+
+  const isVerifiedUser = (user as any)?.isValidator || (user as any)?.is_validator;
 
   // Prefetch route modules on hover/focus to speed up navigation
   const prefetchRoute = useCallback((path: string) => {
@@ -84,9 +86,9 @@ export const Navbar = memo(function Navbar() {
               <Shield className="h-4 w-4" />
               <span>Women Guides</span>
             </Link>
-            <Link to="/communities" onMouseEnter={() => prefetchRoute('/communities')} onFocus={() => prefetchRoute('/communities')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Travel communities">
+            <Link to="/communities" onMouseEnter={() => prefetchRoute('/communities')} onFocus={() => prefetchRoute('/communities')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Travel caravans">
               <MessageSquare className="h-4 w-4" />
-              <span>Communities</span>
+              <span>Caravans</span>
             </Link>
             <Link to="/leaderboard" onMouseEnter={() => prefetchRoute('/leaderboard')} onFocus={() => prefetchRoute('/leaderboard')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Top travelers and itineraries">
               <Trophy className="h-4 w-4" />
@@ -224,7 +226,7 @@ export const Navbar = memo(function Navbar() {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                      <Link to="/my-Itineraries" className="cursor-pointer flex items-center gap-2 font-medium">
+                      <Link to="/my-projects" className="cursor-pointer flex items-center gap-2 font-medium">
                         <Plus className="h-4 w-4" />
                         <span>My Itineraries</span>
                       </Link>
@@ -266,6 +268,14 @@ export const Navbar = memo(function Navbar() {
                         <span>Edit Profile</span>
                       </Link>
                     </DropdownMenuItem>
+                    {!isVerifiedUser && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/settings" className="cursor-pointer flex items-center gap-2 font-medium">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Become a Verified User</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator className="my-2" />
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive flex items-center gap-2 font-medium">
                       <LogOut className="h-4 w-4" />

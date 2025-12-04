@@ -33,6 +33,19 @@ def search_users():
 
         # Search by username, display_name, or email (case-insensitive)
         search_term = f'%{query_param}%'
+
+        # Search Traveler table (Google OAuth users)
+        from models.traveler import Traveler
+        travelers = Traveler.query.filter(
+            and_(
+                Traveler.is_active == True,
+                (Traveler.username.ilike(search_term) |
+                 Traveler.display_name.ilike(search_term) |
+                 Traveler.email.ilike(search_term))
+            )
+        ).limit(limit).all()
+
+        # Search User table (email/password users)
         users = User.query.filter(
             and_(
                 User.is_active == True,
@@ -42,6 +55,10 @@ def search_users():
             )
         ).limit(limit).all()
 
+        # Combine results from both tables
+        all_users = list(travelers) + list(users)
+        all_users = all_users[:limit]  # Trim to limit
+
         # Return minimal user info for selection
         results = [{
             'id': user.id,
@@ -49,9 +66,9 @@ def search_users():
             'display_name': user.display_name,
             'email': user.email,
             'avatar_url': user.avatar_url,
-            'is_verified': user.email_verified,
-            'has_oxcert': user.has_oxcert
-        } for user in users]
+            'is_verified': user.email_verified if hasattr(user, 'email_verified') else False,
+            'has_oxcert': user.has_oxcert if hasattr(user, 'has_oxcert') else False
+        } for user in all_users]
 
         return success_response(results, f'Found {len(results)} users', 200)
     except Exception as e:
@@ -73,26 +90,52 @@ def get_user_profile(user_id, username):
             from flask import jsonify
             return jsonify(cached), 200
 
-        user = User.query.filter(
+        # Try Traveler table first (Google OAuth users)
+        from models.traveler import Traveler
+        user = Traveler.query.filter(
             and_(
-                User.is_active == True,
+                Traveler.is_active == True,
                 or_(
-                    func.lower(User.username) == normalized_username,
-                    func.lower(User.email) == normalized_username
+                    func.lower(Traveler.username) == normalized_username,
+                    func.lower(Traveler.email) == normalized_username
                 )
             )
         ).first()
 
+        # Fallback to User table (email/password users)
+        if not user:
+            user = User.query.filter(
+                and_(
+                    User.is_active == True,
+                    or_(
+                        func.lower(User.username) == normalized_username,
+                        func.lower(User.email) == normalized_username
+                    )
+                )
+            ).first()
+
         if not user:
             return error_response('Not found', 'User not found', 404)
 
-        # Use denormalized stats for karma, but always recompute itinerary_count to ensure accuracy
-        stats = user.dashboard_stats or UserDashboardStats.query.filter_by(user_id=user.id).first()
-        karma_value = stats.karma() if stats else 0
-        itinerary_count = db.session.query(func.count(Itinerary.id)).filter(
-            Itinerary.created_by_traveler_id == user.id,
-            Itinerary.is_deleted == False
-        ).scalar() or 0
+        # Handle stats differently for User vs Traveler
+        from models.traveler import Traveler
+        if isinstance(user, Traveler):
+            # Traveler doesn't have dashboard_stats, compute stats directly
+            karma_value = 0  # Travelers don't have karma system yet
+            itinerary_count = db.session.query(func.count(Itinerary.id)).filter(
+                Itinerary.created_by_traveler_id == user.id,
+                Itinerary.is_deleted == False
+            ).scalar() or 0
+        else:
+            # User has dashboard_stats
+            stats = user.dashboard_stats or UserDashboardStats.query.filter_by(user_id=user.id).first()
+            karma_value = stats.karma() if stats else 0
+            # For old users, count their projects
+            from models.project import Project
+            itinerary_count = db.session.query(func.count(Project.id)).filter(
+                Project.user_id == user.id,
+                Project.is_deleted == False
+            ).scalar() or 0
 
         profile = user.to_dict()
         profile['project_count'] = itinerary_count  # Backward compatibility
@@ -123,7 +166,11 @@ def get_user_profile(user_id, username):
 def update_profile(user_id):
     """Update own profile"""
     try:
-        user = User.query.get(user_id)
+        # Check both tables for user
+        from models.traveler import Traveler
+        user = Traveler.query.get(user_id)
+        if not user:
+            user = User.query.get(user_id)
         if not user:
             return error_response('Not found', 'User not found', 404)
 
@@ -143,9 +190,17 @@ def update_profile(user_id):
 
         # Emit Socket.IO event for real-time profile updates
         from services.socket_service import SocketService
-        SocketService.emit_profile_updated(user_id, user.to_dict())
+        # Handle different to_dict parameters for User vs Traveler
+        if isinstance(user, Traveler):
+            user_dict = user.to_dict(include_sensitive=False)
+            user_dict_full = user.to_dict(include_sensitive=True)
+        else:
+            user_dict = user.to_dict(include_email=False)
+            user_dict_full = user.to_dict(include_email=True)
 
-        return success_response(user.to_dict(include_email=True), 'Profile updated', 200)
+        SocketService.emit_profile_updated(user_id, user_dict)
+
+        return success_response(user_dict_full, 'Profile updated', 200)
 
     except ValidationError as e:
         return error_response('Validation error', str(e.messages), 400)
@@ -159,7 +214,11 @@ def update_profile(user_id):
 def get_user_stats(user_id):
     """Get user statistics (FAST - uses denormalized table)"""
     try:
-        user = User.query.get(user_id)
+        # Check both tables for user
+        from models.traveler import Traveler
+        user = Traveler.query.get(user_id)
+        if not user:
+            user = User.query.get(user_id)
         if not user:
             return error_response('Not found', 'User not found', 404)
 
@@ -492,3 +551,4 @@ def get_builders_leaderboard(user_id):
         return jsonify(response_data), 200
     except Exception as e:
         return error_response('Error', str(e), 500)
+

@@ -218,7 +218,7 @@ export default function Search() {
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {results.Itineraries.map((project) => (
-                      <ItineraryCard key={project.id} itinerary={project} />
+                      <ItineraryCard key={project.id} project={project} />
                     ))}
                   </div>
                 </div>

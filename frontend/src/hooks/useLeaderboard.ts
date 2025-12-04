@@ -30,6 +30,7 @@ function transformBuilder(backendUser: any) {
     avatar: backendUser.avatar_url,
     score: backendUser.karma || 0,
     projects: backendUser.project_count || 0,
+    itineraries: backendUser.project_count || 0,
   };
 }
 

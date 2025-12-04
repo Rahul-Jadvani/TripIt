@@ -139,9 +139,9 @@ export const Footer = memo(function Footer() {
             </ul>
           </div>
 
-          {/* Community */}
+          {/* Caravan */}
           <div>
-            <h3 className="text-sm font-semibold text-orange-500 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Community</h3>
+            <h3 className="text-sm font-semibold text-orange-500 uppercase tracking-wider mb-6" style={{ fontFamily: '"Comic Relief", system-ui', fontWeight: 700 }}>Caravan</h3>
             <ul className="space-y-3 text-sm">
               <li>
                 <a href="https://x.com/Z_0_io" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-orange-500 transition-colors duration-200 inline-flex items-center gap-1">

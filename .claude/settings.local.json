@@ -31,7 +31,14 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(pkill:*)",
-      "Bash(redis-cli:*)"
+      "Bash(redis-cli:*)",
+      "Bash(ls:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout 3 echo:*)",
+      "Bash(timeout 5 bash -c \"while ! curl -s http://localhost:5000/health > /dev/null; do sleep 0.5; done; echo ''Backend ready''; curl -s http://localhost:5000/api/trending/leading-tag | python -m json.tool\")",
+      "Bash(timeout 10 bash:*)",
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq backend*\")"
     ],
     "deny": [],
     "ask": []

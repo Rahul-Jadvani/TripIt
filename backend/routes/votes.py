@@ -10,6 +10,7 @@ from models.project import Project
 from schemas.vote import VoteCreateSchema
 from utils.decorators import token_required
 from utils.helpers import success_response, error_response, get_pagination_params, paginated_response
+from utils.content_utils import get_content_by_id
 # Legacy scoring removed - community score updated by AI system
 from utils.cache import CacheService
 from marshmallow import ValidationError
@@ -43,10 +44,10 @@ def cast_vote(user_id):
         if not vote_service.check_rate_limit(user_id, project_id):
             return error_response('Rate limit', 'Too many vote attempts. Please wait a moment.', 429)
 
-        # 3. Verify project exists (lightweight check - no locking)
-        project = Project.query.get(project_id)
-        if not project:
-            return error_response('Not found', 'Project not found', 404)
+        # 3. Verify content exists - check both Project and Itinerary tables (lightweight check - no locking)
+        content = get_content_by_id(project_id)
+        if not content:
+            return error_response('Not found', 'Content not found', 404)
 
         # 4. Fast-path vote processing via Redis
 

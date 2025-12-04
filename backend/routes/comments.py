@@ -13,6 +13,8 @@ from models.itinerary import Itinerary
 from schemas.comment import CommentCreateSchema, CommentUpdateSchema
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
+from utils.content_utils import get_content_by_id
+from utils.user_utils import get_user_by_id
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -38,9 +40,10 @@ def get_comments(user_id):
             from flask import jsonify
             return jsonify(cached), 200
 
-        itinerary = Itinerary.query.get(project_id)
-        if not itinerary:
-            return error_response('Not found', 'Itinerary not found', 404)
+        # Check both Project and Itinerary tables
+        content = get_content_by_id(project_id)
+        if not content:
+            return error_response('Not found', 'Content not found', 404)
 
         # OPTIMIZED: Eager load author to avoid N+1 queries
         from sqlalchemy.orm import joinedload
@@ -75,9 +78,10 @@ def create_comment(user_id):
         schema = CommentCreateSchema()
         validated_data = schema.load(data)
 
-        itinerary = Itinerary.query.get(validated_data['project_id'])
-        if not itinerary:
-            return error_response('Not found', 'Itinerary not found', 404)
+        # Check both Project and Itinerary tables
+        content = get_content_by_id(validated_data['project_id'])
+        if not content:
+            return error_response('Not found', 'Content not found', 404)
 
         comment = Comment(
             project_id=validated_data['project_id'],
@@ -86,11 +90,11 @@ def create_comment(user_id):
             content=validated_data['content']
         )
 
-        itinerary.comment_count += 1
+        content.comment_count += 1
 
         # Recalculate community score immediately
         from models.event_listeners import update_project_community_score
-        update_project_community_score(itinerary)
+        update_project_community_score(content)
 
         db.session.add(comment)
         db.session.commit()
@@ -109,11 +113,11 @@ def create_comment(user_id):
         from services.socket_service import SocketService
         SocketService.emit_comment_added(validated_data['project_id'], comment.to_dict(include_author=True))
 
-        # Notify itinerary owner of new comment
+        # Notify content owner of new comment
         try:
             from utils.notifications import notify_comment_posted, notify_comment_reply
-            from models.traveler import Traveler
-            commenter = Traveler.query.get(user_id)
+            # Check both user tables for commenter
+            commenter = get_user_by_id(user_id)
 
             if commenter:
                 # If it's a reply to another comment, notify the parent comment author
@@ -123,8 +127,10 @@ def create_comment(user_id):
                     if parent_comment and parent_comment.user_id != user_id:
                         notify_comment_reply(parent_comment.user_id, parent_comment, comment, commenter)
                 else:
-                    # Otherwise notify itinerary owner
-                    notify_comment_posted(itinerary.created_by_traveler_id, itinerary, comment, commenter)
+                    # Otherwise notify content owner (handle both created_by_traveler_id and user_id)
+                    content_owner_id = getattr(content, 'created_by_traveler_id', None) or getattr(content, 'user_id', None)
+                    if content_owner_id:
+                        notify_comment_posted(content_owner_id, content, comment, commenter)
         except Exception as e:
             logger.error(f"❌ POST /comments NOTIFICATION ERROR: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
@@ -191,14 +197,14 @@ def delete_comment(user_id, comment_id):
         if comment.user_id != user_id:
             return error_response('Forbidden', 'You can only delete your own comments', 403)
 
-        # Get the itinerary to update comment count
-        itinerary = Itinerary.query.get(comment.project_id)
-        if itinerary:
-            itinerary.comment_count = max(0, itinerary.comment_count - 1)
+        # Get the content (Project or Itinerary) to update comment count
+        content = get_content_by_id(comment.project_id)
+        if content:
+            content.comment_count = max(0, content.comment_count - 1)
 
             # Recalculate community score immediately
             from models.event_listeners import update_project_community_score
-            update_project_community_score(itinerary)
+            update_project_community_score(content)
 
         comment.is_deleted = True
         db.session.commit()

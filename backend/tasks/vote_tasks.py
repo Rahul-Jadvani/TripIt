@@ -120,14 +120,21 @@ def process_vote_event(
             reconciled=reconciliation_needed
         )
 
-        # 7. Send notification to project owner (only on new vote creation)
+        # 7. Send notification to project/itinerary owner (only on new vote creation)
         if vote_created and action == 'created':
             try:
                 from utils.notifications import notify_project_vote
-                voter = User.query.get(user_id)
-                project = Project.query.get(project_id)
-                if voter and project and project.user_id != user_id:
-                    notify_project_vote(project.user_id, project, voter, vote_type)
+                from utils.content_utils import get_content_by_id
+                from models.traveler import Traveler
+
+                voter = User.query.get(user_id) or Traveler.query.get(user_id)
+                content = get_content_by_id(project_id)
+
+                if voter and content:
+                    # Get owner ID - works for both Project (user_id) and Itinerary (created_by_traveler_id)
+                    owner_id = getattr(content, 'user_id', None) or getattr(content, 'created_by_traveler_id', None)
+                    if owner_id and owner_id != user_id:
+                        notify_project_vote(owner_id, content, voter, vote_type)
             except Exception as e:
                 print(f"[VoteTask] Warning: Notification failed: {e}")
                 # Non-critical
@@ -200,8 +207,8 @@ def sync_votes_to_db(self):
                 downvotes_count = db.session.query(func.count(Vote.id))\
                     .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
 
-                # 3. Update project in DB with raw SQL
-                result = db.session.execute(text("""
+                # 3. Update project/itinerary in DB with raw SQL - try both tables
+                result_projects = db.session.execute(text("""
                     UPDATE projects
                     SET upvotes = :upvotes,
                         downvotes = :downvotes
@@ -212,18 +219,43 @@ def sync_votes_to_db(self):
                     'project_id': project_id
                 })
 
+                result_itineraries = db.session.execute(text("""
+                    UPDATE itineraries
+                    SET upvotes = :upvotes,
+                        downvotes = :downvotes
+                    WHERE id = :project_id
+                """), {
+                    'upvotes': upvotes_count,
+                    'downvotes': downvotes_count,
+                    'project_id': project_id
+                })
+
+                result = result_projects if result_projects.rowcount > 0 else result_itineraries
+
                 # 3.5. CRITICAL: Recalculate community score + total score after raw SQL update
                 # Raw SQL bypasses event listeners, so we must manually update scores
                 if result.rowcount > 0:
                     # Expire session to fetch fresh data after raw SQL
                     db.session.expire_all()
-                    project = Project.query.get(project_id)
-                    if project:
+
+                    # Try to find as Project first, then as Itinerary
+                    from utils.content_utils import get_content_by_id
+                    content = get_content_by_id(project_id)
+
+                    if content and isinstance(content, Project):
                         from models.event_listeners import update_project_community_score
-                        update_project_community_score(project)
-                        # Explicitly mark project as modified so changes are committed
-                        db.session.add(project)
-                        # Note: update_project_community_score already updates proof_score
+                        update_project_community_score(content)
+                        db.session.add(content)
+                    elif content:
+                        # It's an Itinerary - update its community score if applicable
+                        from models.itinerary import Itinerary
+                        if isinstance(content, Itinerary):
+                            # Itineraries use proof_score components like projects
+                            # Update community score based on votes
+                            net_votes = (content.upvotes or 0) - (content.downvotes or 0)
+                            content.community_score = max(0, min(20, net_votes * 0.5))
+                            content.calculate_proof_score()
+                            db.session.add(content)
 
                 # 4. Update Redis to match votes table truth
                 if result.rowcount > 0:

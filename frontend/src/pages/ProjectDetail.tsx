@@ -12,6 +12,7 @@ import { IntroRequest } from '@/components/IntroRequest';
 import { ShareDialog } from '@/components/ShareDialog';
 import { VoteButtons } from '@/components/VoteButtons';
 import { CommentSection } from '@/components/CommentSection';
+import { RatingWidget } from '@/components/RatingWidget';
 import { useAuth } from '@/context/AuthContext';
 import { useProjectById } from '@/hooks/useProjects';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -642,7 +643,7 @@ export default function ProjectDetail() {
             )}
             {renderScoreComponent(
               'community',
-              'Community Engagement',
+              'Caravan Engagement',
               project.community_score || 0,
               'community_score'
             )}
@@ -664,7 +665,7 @@ export default function ProjectDetail() {
           <div className="pt-3 border-t border-border/50 space-y-2">
             {project.safety_score !== undefined && project.safety_score > 0 && (
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Community Safety Score</span>
+                <span className="text-muted-foreground">Caravan Safety Score</span>
                 <span className="font-medium text-foreground">{project.safety_score.toFixed(1)}/5.0</span>
               </div>
             )}
@@ -832,7 +833,15 @@ export default function ProjectDetail() {
                   Pitch Deck
                 </a>
               )}
-                {/* <BadgeAwarder projectId={project.id} /> */}
+                <RatingWidget
+                  projectId={project.id}
+                  currentRating={project.badges?.find((b: any) => b.validator_id === user?.id)}
+                  canRate={!!(user && (user.email_verified || user.is_admin || user.is_validator))}
+                  onRatingSubmitted={() => {
+                    queryClient.invalidateQueries({ queryKey: ['project', id] });
+                    queryClient.invalidateQueries({ queryKey: ['projects'] });
+                  }}
+                />
                 {user?.id !== project.authorId && (
                   <IntroRequest projectId={project.id} builderId={project.authorId} />
                 )}
