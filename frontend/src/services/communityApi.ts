@@ -69,19 +69,19 @@ export const communityApi = {
       stats: CommunityStats;
     };
   }> {
-    const response = await api.get(`/communities/${slug}`);
+    const response = await api.get(`/chains/${slug}`);
     return response.data;
   },
 
   // Update community
   async updateCommunity(slug: string, data: Partial<CreateCommunityData>): Promise<{ data: { community: Community } }> {
-    const response = await api.put(`/communities/${slug}`, data);
+    const response = await api.put(`/chains/${slug}`, data);
     return response.data;
   },
 
   // Delete community
   async deleteCommunity(slug: string): Promise<{ data: null }> {
-    const response = await api.delete(`/communities/${slug}`);
+    const response = await api.delete(`/chains/${slug}`);
     return response.data;
   },
 
@@ -98,7 +98,7 @@ export const communityApi = {
     }
   ): Promise<{ data: any }> {
     // Convert itinerary_id to project_id for backend compatibility
-    const response = await api.post(`/communities/${slug}/projects`, {
+    const response = await api.post(`/chains/${slug}/projects`, {
       project_id: data.itinerary_id,
       message: data.message
     });
@@ -107,7 +107,7 @@ export const communityApi = {
 
   // Remove itinerary from community
   async removeItineraryFromCommunity(slug: string, itineraryId: string): Promise<{ data: null }> {
-    const response = await api.delete(`/communities/${slug}/projects/${itineraryId}`);
+    const response = await api.delete(`/chains/${slug}/projects/${itineraryId}`);
     return response.data;
   },
 
@@ -141,13 +141,13 @@ export const communityApi = {
     if (filters?.min_trust_score) params.append('min_trust_score', filters.min_trust_score.toString());
     if (filters?.pinned_only) params.append('pinned_only', filters.pinned_only.toString());
 
-    const response = await api.get(`/communities/${slug}/projects?${params.toString()}`);
+    const response = await api.get(`/chains/${slug}/projects?${params.toString()}`);
     return response.data;
   },
 
   // Pin/unpin itinerary
   async togglePinItinerary(slug: string, itineraryId: string): Promise<{ data: { is_pinned: boolean } }> {
-    const response = await api.post(`/communities/${slug}/projects/${itineraryId}/pin`);
+    const response = await api.post(`/chains/${slug}/projects/${itineraryId}/pin`);
     return response.data;
   },
 
@@ -161,13 +161,13 @@ export const communityApi = {
       requests: CommunityItineraryRequest[];
     };
   }> {
-    const response = await api.get(`/communities/${slug}/requests?status=${status}`);
+    const response = await api.get(`/chains/${slug}/requests?status=${status}`);
     return response.data;
   },
 
   // Approve request
   async approveRequest(slug: string, requestId: string): Promise<{ data: any }> {
-    const response = await api.post(`/communities/${slug}/requests/${requestId}/approve`);
+    const response = await api.post(`/chains/${slug}/requests/${requestId}/approve`);
     return response.data;
   },
 
@@ -177,7 +177,7 @@ export const communityApi = {
     requestId: string,
     reason?: string
   ): Promise<{ data: null }> {
-    const response = await api.post(`/communities/${slug}/requests/${requestId}/reject`, { reason });
+    const response = await api.post(`/chains/${slug}/requests/${requestId}/reject`, { reason });
     return response.data;
   },
 
@@ -187,13 +187,13 @@ export const communityApi = {
 
   // Follow community
   async followCommunity(slug: string): Promise<{ data: { follower_count: number } }> {
-    const response = await api.post(`/communities/${slug}/follow`);
+    const response = await api.post(`/chains/${slug}/follow`);
     return response.data;
   },
 
   // Unfollow community
   async unfollowCommunity(slug: string): Promise<{ data: { follower_count: number } }> {
-    const response = await api.delete(`/communities/${slug}/follow`);
+    const response = await api.delete(`/chains/${slug}/follow`);
     return response.data;
   },
 
@@ -216,7 +216,7 @@ export const communityApi = {
       };
     };
   }> {
-    const response = await api.get(`/communities/${slug}/followers?page=${page}&limit=${limit}`);
+    const response = await api.get(`/chains/${slug}/followers?page=${page}&limit=${limit}`);
     return response.data;
   },
 
@@ -287,7 +287,7 @@ export const communityApi = {
       }>;
     };
   }> {
-    const response = await api.get(`/communities/${slug}/analytics`);
+    const response = await api.get(`/chains/${slug}/analytics`);
     return response.data;
   },
 
@@ -312,7 +312,7 @@ export const communityApi = {
 
   // Feature/unfeature community (admin only)
   async toggleFeatureCommunity(slug: string): Promise<{ data: { is_featured: boolean } }> {
-    const response = await api.post(`/communities/${slug}/feature`);
+    const response = await api.post(`/chains/${slug}/feature`);
     return response.data;
   },
 };

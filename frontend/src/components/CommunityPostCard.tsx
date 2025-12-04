@@ -237,7 +237,11 @@ export function CommunityPostCard({
                 <ReplyForm
                   chainSlug={communitySlug}
                   parentId={post.id}
-                  onSuccess={() => setShowReplyForm(false)}
+                  onSuccess={() => {
+                    setShowReplyForm(false);
+                    setShowAllReplies(true);
+                    try { localStorage.setItem(`community.replies.expanded.${post.id}`, '1'); } catch {}
+                  }}
                   onCancel={() => setShowReplyForm(false)}
                 />
               </div>

@@ -18,6 +18,9 @@ import { UserSearchSelect } from '@/components/UserSearchSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { authService } from '@/services/api';
+import { CaravanSelector } from '@/components/CaravanSelector';
+import { Community } from '@/types';
+import { communityApi } from '@/services/communityApi';
 
 export default function Publish() {
   const navigate = useNavigate();
@@ -26,7 +29,7 @@ export default function Publish() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const stepDefs: { index: number; label: string; anchors: string[] }[] = [
     { index: 1, label: 'Trip Details', anchors: ['basicsSection', 'linksSection'] },
-    { index: 2, label: 'Travel Types & Tags', anchors: ['categoriesSection', 'techStackSection'] },
+    { index: 2, label: 'Travel Types & Tags', anchors: ['categoriesSection', 'caravansSection', 'techStackSection'] },
     { index: 3, label: 'Journey & Team', anchors: ['teamSection', 'storySection', 'marketSection'] },
     { index: 4, label: 'Photos & Submit', anchors: ['screenshotsSection'] },
   ];
@@ -110,6 +113,7 @@ export default function Publish() {
   const [noveltyFactor, setNoveltyFactor] = useState('');
   const [safetyTips, setSafetyTips] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCaravans, setSelectedCaravans] = useState<Community[]>([]);
 
   const createProjectMutation = useCreateItinerary();
 
@@ -398,6 +402,35 @@ export default function Publish() {
       setPublishState('loading');
       const res: any = await createProjectMutation.mutateAsync(payload);
       const newId = res?.data?.data?.id || res?.data?.data?.project_id || res?.data?.id;
+
+      // Add itinerary to selected caravans
+      if (selectedCaravans.length > 0 && newId) {
+        if (import.meta.env.DEV) {
+          console.log('Adding itinerary to', selectedCaravans.length, 'caravans');
+        }
+        const caravanPromises = selectedCaravans.map(async (caravan) => {
+          try {
+            await communityApi.addItineraryToCommunity(caravan.slug, {
+              itinerary_id: newId,
+              message: `Published itinerary: ${data.title}`
+            });
+            if (import.meta.env.DEV) {
+              console.log(`Added to caravan: ${caravan.name}`);
+            }
+          } catch (error) {
+            console.error(`Failed to add to caravan ${caravan.name}:`, error);
+            // Don't throw - we want to show success even if some caravans fail
+          }
+        });
+
+        // Wait for all caravan additions (but don't block on errors)
+        await Promise.allSettled(caravanPromises);
+
+        if (selectedCaravans.length > 0) {
+          toast.success(`Itinerary added to ${selectedCaravans.length} caravan${selectedCaravans.length > 1 ? 's' : ''}!`);
+        }
+      }
+
       toast.success('Itinerary published successfully!');
       setPublishedId(newId);
       setPublishState('success');
@@ -411,6 +444,7 @@ export default function Publish() {
       setNoveltyFactor('');
       setSafetyTips('');
       setCategories([]);
+      setSelectedCaravans([]);
       // Navigation handled by success modal action
     } catch (error: any) {
       if (import.meta.env.DEV) console.error('Error publishing project:', error);
@@ -544,6 +578,7 @@ export default function Publish() {
               {[
                 { id: 'basicsSection', label: 'Basics' },
                 { id: 'categoriesSection', label: 'Travel Types' },
+                { id: 'caravansSection', label: 'Caravans' },
                 { id: 'linksSection', label: 'Links & Maps' },
                 { id: 'techStackSection', label: 'Safety & Gear' },
                 { id: 'teamSection', label: 'Companions' },
@@ -833,9 +868,26 @@ export default function Publish() {
                       )}
                     </div>
                   </div>
+
+                  {/* Caravan Selection */}
+                  <div className="space-y-3 mt-6" id="caravansSection">
+                    <Label className="text-base font-bold">
+                      Add to Caravans (Optional)
+                      <span className="ml-2 text-xs badge-info">Share with travel communities (max 5)</span>
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Add your itinerary to caravans to reach travelers interested in similar destinations. You can search or select from recommendations.
+                    </p>
+                    <CaravanSelector
+                      selectedCaravans={selectedCaravans}
+                      onCaravansChange={setSelectedCaravans}
+                      categories={categories}
+                      maxSelections={5}
+                    />
+                  </div>
                   </>
                 )}
-                
+
               </div>
 
               {/* NEW: Project Story & Vision Section */}

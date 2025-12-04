@@ -18,12 +18,14 @@ import { useProjectById } from '@/hooks/useProjects';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatScore, getProjectScore } from '@/utils/score';
+import { useItineraryCaravans } from '@/hooks/useItineraryCaravans';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { data, isLoading, error } = useProjectById(id || '');
   const { data: isSaved, isLoading: checkingIfSaved } = useCheckIfSavedItinerary(id || '');
+  const { data: caravans } = useItineraryCaravans(id);
   const saveMutation = useSaveItinerary();
   const unsaveMutation = useUnsaveItinerary();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -403,6 +405,37 @@ export default function ProjectDetail() {
   };
 
   // Chains card removed - layerz feature deprecated in TripIt
+
+  const renderCaravansCard = () => {
+    if (!caravans || caravans.length === 0) return null;
+
+    return (
+      <div className="card-elevated p-6">
+        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          Part of Caravans
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {caravans.map((caravan: any) => (
+            <Link
+              key={caravan.id}
+              to={`/c/${caravan.slug}`}
+              className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border hover:bg-secondary/30 transition-colors"
+            >
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={caravan.logo_url} alt={caravan.name} />
+                <AvatarFallback>{caravan.name[0]?.toUpperCase() || 'C'}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm text-foreground truncate">{caravan.name}</p>
+                <p className="text-xs text-muted-foreground">{caravan.follower_count || 0} followers</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const renderTechStackCard = () => {
     if (!project.techStack || project.techStack.length === 0) return null;
@@ -933,6 +966,7 @@ export default function ProjectDetail() {
               {renderScoringBreakdownCard()}
               {renderTeamCard()}
               {renderCategoriesCard()}
+              {renderCaravansCard()}
               {renderItineraryDetailsCard()}
               {renderTechStackCard()}
               {renderHackathonCard()}

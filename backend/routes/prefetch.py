@@ -26,29 +26,79 @@ prefetch_bp = Blueprint('prefetch', __name__)
 
 
 def fetch_user_stats(user_id):
-    """Fetch user statistics"""
+    """Fetch user statistics - works for both User and Traveler tables"""
     try:
         from models.comment import Comment
         from models.badge import ValidationBadge
         from models.intro import Intro
 
+        # Check if user is a traveler or old user
+        user = Traveler.query.get(user_id)
+        is_traveler = user is not None
+
+        if not user:
+            user = User.query.get(user_id)
+
+        if not user:
+            print(f"User {user_id} not found in either table")
+            return None
+
         # Count content from both tables
         project_count = count_user_content(user_id)
 
-        comment_count = Comment.query.filter_by(user_id=user_id).count()
+        # Comments: count both Comment AND TravelIntel (new system for travelers)
+        from models.travel_intel import TravelIntel
+        old_comments = Comment.query.filter_by(user_id=user_id).count()
+
+        # If traveler, also count travel intel entries
+        travel_intel_comments = 0
+        if is_traveler:
+            travel_intel_comments = TravelIntel.query.filter_by(traveler_id=user_id).count()
+
+        comment_count = old_comments + travel_intel_comments
+
+        # Calculate total upvotes - check both tables
+        # Projects table (user_id references users.id)
+        project_upvotes = db.session.query(
+            func.coalesce(func.sum(Project.upvotes), 0)
+        ).filter(
+            Project.user_id == user_id,
+            Project.is_deleted == False
+        ).scalar() or 0
+
+        # Itineraries table (created_by_traveler_id references travelers.id)
+        itinerary_upvotes = db.session.query(
+            func.coalesce(func.sum(Itinerary.upvotes), 0)
+        ).filter(
+            Itinerary.created_by_traveler_id == user_id,
+            Itinerary.is_deleted == False
+        ).scalar() or 0
+
+        # Total upvotes across both content types
+        total_upvotes = int(project_upvotes) + int(itinerary_upvotes)
+
+        # Badges: validator_id can reference either table
         badges_awarded = ValidationBadge.query.filter_by(validator_id=user_id).count()
-        intros_sent = db.session.query(func.count(Intro.id)).filter(Intro.requester_id == user_id).scalar() or 0
-        intros_received = db.session.query(func.count(Intro.id)).filter(Intro.recipient_id == user_id).scalar() or 0
+
+        # Intros: only for old users table (not travelers)
+        intros_sent = 0
+        intros_received = 0
+        if not is_traveler:
+            intros_sent = db.session.query(func.count(Intro.id)).filter(Intro.requester_id == user_id).scalar() or 0
+            intros_received = db.session.query(func.count(Intro.id)).filter(Intro.recipient_id == user_id).scalar() or 0
 
         return {
             'project_count': project_count,
             'comment_count': comment_count,
+            'total_upvotes': total_upvotes,
             'badges_awarded': badges_awarded,
             'intros_sent': intros_sent,
             'intros_received': intros_received
         }
     except Exception as e:
         print(f"Error fetching user stats: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return None
 
 

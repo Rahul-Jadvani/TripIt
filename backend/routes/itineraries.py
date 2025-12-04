@@ -221,6 +221,7 @@ def create_itinerary(user_id):
             duration_days=validated_data.get('duration_days'),
             best_season=validated_data.get('best_season'),
             women_safe_certified=validated_data.get('women_safe_certified', False),
+            is_published=True,  # Itineraries are published when created
             # Extended trip details
             trip_highlights=validated_data.get('trip_highlights'),
             trip_journey=validated_data.get('trip_journey'),
@@ -874,4 +875,34 @@ def remove_vote(user_id, itinerary_id):
         return success_response(None, 'Vote removed', 200)
     except Exception as e:
         db.session.rollback()
+        return error_response('Error', str(e), 500)
+
+
+@itineraries_bp.route('/<itinerary_id>/chains', methods=['GET'])
+@optional_auth
+def get_itinerary_caravans(user_id, itinerary_id):
+    """Get all caravans that an itinerary belongs to"""
+    try:
+        from models.chain import Chain, ChainProject
+
+        # Verify itinerary exists
+        itinerary = Itinerary.query.get(itinerary_id)
+        if not itinerary or itinerary.is_deleted:
+            return error_response('Not found', 'Itinerary not found', 404)
+
+        # Find all chain_projects for this itinerary
+        chain_projects = ChainProject.query.filter_by(project_id=itinerary_id).all()
+
+        # Get the associated chains
+        chains = []
+        for cp in chain_projects:
+            chain = Chain.query.filter_by(id=cp.chain_id, is_active=True).first()
+            if chain:
+                chain_data = chain.to_dict()
+                chain_data['added_at'] = cp.added_at.isoformat() if cp.added_at else None
+                chain_data['is_pinned'] = cp.is_pinned
+                chains.append(chain_data)
+
+        return success_response({'chains': chains}, 'Caravans retrieved successfully', 200)
+    except Exception as e:
         return error_response('Error', str(e), 500)

@@ -41,6 +41,9 @@ const CommunityDetailPage = lazy(() => import("./pages/CommunityDetailPage"));
 const CreateCommunityPage = lazy(() => import("./pages/CreateCommunityPage"));
 const EditCommunityPage = lazy(() => import("./pages/EditCommunityPage"));
 const SnapCamera = lazy(() => import("./pages/SnapCamera"));
+const TravelGroupsListPage = lazy(() => import("./pages/TravelGroupsListPage"));
+const TravelGroupDetailPage = lazy(() => import("./pages/TravelGroupDetailPage"));
+const CreateTravelGroupPage = lazy(() => import("./pages/CreateTravelGroupPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,9 +94,17 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/communities" element={<CommunitiesListPage />} />
-              <Route path="/community/:id" element={<CommunityDetailPage />} />
+              <Route path="/community/:slug" element={<CommunityDetailPage />} />
               <Route path="/community/create" element={<ProtectedRoute><CreateCommunityPage /></ProtectedRoute>} />
-              <Route path="/community/:id/edit" element={<ProtectedRoute><EditCommunityPage /></ProtectedRoute>} />
+              <Route path="/community/:slug/edit" element={<ProtectedRoute><EditCommunityPage /></ProtectedRoute>} />
+
+              {/* Travel Groups / Layerz Routes */}
+              <Route path="/layerz" element={<TravelGroupsListPage />} />
+              <Route path="/groups" element={<TravelGroupsListPage />} />
+              <Route path="/layerz/:id" element={<TravelGroupDetailPage />} />
+              <Route path="/groups/:id" element={<TravelGroupDetailPage />} />
+              <Route path="/layerz/create" element={<ProtectedRoute><CreateTravelGroupPage /></ProtectedRoute>} />
+              <Route path="/groups/create" element={<ProtectedRoute><CreateTravelGroupPage /></ProtectedRoute>} />
 
               {/* Snap Routes */}
               <Route path="/snap/camera" element={<ProtectedRoute><SnapCamera /></ProtectedRoute>} />
@@ -113,7 +124,10 @@ const App = () => (
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
 
-              
+              {/* Validator Routes - redirect to dashboard */}
+              <Route path="/validator" element={<ValidatorRoute><Dashboard /></ValidatorRoute>} />
+
+
 
               {/* 404 */}
               <Route path="*" element={<NotFound />} />

@@ -4,7 +4,7 @@ import { useChain, useChainProjects, useFollowChain, useUnfollowChain } from '@/
 import { useBanChain, useSuspendChain, useUnbanChain, useDeleteChainAdmin, useToggleChainFeatured } from '@/hooks/useAdminCommunities';
 import { CommunityHeader } from '@/components/CommunityHeader';
 import { CommunityHeaderSkeleton } from '@/components/CommunityHeaderSkeleton';
-import { ProjectCard } from '@/components/ItineraryCard';
+import { ItineraryCard } from '@/components/ItineraryCard';
 import { AddItineraryToCommunityDialog } from '@/components/AddItineraryToCommunityDialog';
 import { CommunityPostList } from '@/components/CommunityPostList';
 import { CreatePostDialog } from '@/components/CreatePostDialog';
@@ -52,6 +52,7 @@ export default function ChainDetailPage() {
   });
 
   const chain = chainData?.chain;
+  const stats = chainData?.stats;
   const projects = projectsData?.projects || [];
   const totalPages = projectsData?.total_pages || 1;
   const followMutation = useFollowChain();
@@ -110,9 +111,9 @@ export default function ChainDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8 space-y-8">
         <Button asChild variant="ghost" className="gap-2 w-fit">
-          <Link to="/layerz">
+          <Link to="/communities">
             <ArrowLeft className="h-4 w-4" />
-            Back to layerz
+            Back to Caravans
           </Link>
         </Button>
 
@@ -124,7 +125,15 @@ export default function ChainDetailPage() {
             <Skeleton className="h-6 w-24 rounded" />
             <Skeleton className="h-10 w-44 rounded" />
           </div>
-          <CommunityCardSkeletonGrid count={12} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Card key={i} className="p-6">
+                <Skeleton className="h-48 w-full rounded mb-4" />
+                <Skeleton className="h-4 w-3/4 rounded mb-2" />
+                <Skeleton className="h-4 w-1/2 rounded" />
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -134,11 +143,11 @@ export default function ChainDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="p-8 text-center">
-          <p className="text-destructive">Chain not found or failed to load</p>
+          <p className="text-destructive">Caravan not found or failed to load</p>
           <Button asChild className="mt-4" variant="outline">
-            <Link to="/layerz">
+            <Link to="/communities">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to layerz
+              Back to Caravans
             </Link>
           </Button>
         </Card>
@@ -150,16 +159,16 @@ export default function ChainDetailPage() {
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Back Button */}
       <Button asChild variant="ghost" size="sm">
-        <Link to="/layerz">
+        <Link to="/communities">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to layerz
+          Back to Caravans
         </Link>
       </Button>
 
       {/* Chain Header */}
-      <CommunityHeader chain={chain} />
+      <CommunityHeader community={chain} stats={stats} />
 
-      {/* Community actions like subreddit (Join + Create Post) */}
+      {/* Community actions like subreddit (Join + Create Post + Add Itinerary) */}
       <div className="flex items-center justify-between gap-3 px-1 -mt-4">
         <div className="flex items-center gap-2">
           {user && (
@@ -181,7 +190,16 @@ export default function ChainDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {user && (
-            <CreatePostDialog chainSlug={slug || ''} chainName={chain.name} />
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAddProjectDialog(true)}
+              >
+                Add Itinerary
+              </Button>
+              <CreatePostDialog chainSlug={slug || ''} chainName={chain.name} />
+            </>
           )}
         </div>
       </div>
@@ -264,16 +282,16 @@ export default function ChainDetailPage() {
         <Alert className="border-blue-500/50 bg-blue-500/10">
           <BarChart3 className="h-4 w-4 text-blue-500" />
           <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <span className="text-sm font-medium">Chain Owner Tools</span>
+            <span className="text-sm font-medium">Caravan Owner Tools</span>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="default" asChild>
-                <Link to={`/layerz/${slug}/analytics`}>
+                <Link to={`/community/${slug}/analytics`}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   View Analytics
                 </Link>
               </Button>
               <Button size="sm" variant="outline" asChild>
-                <Link to={`/layerz/${slug}/requests`}>
+                <Link to={`/community/${slug}/requests`}>
                   Manage Requests ({chain.pending_requests || 0})
                 </Link>
               </Button>
@@ -335,7 +353,15 @@ export default function ChainDetailPage() {
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-6">
           {projectsLoading ? (
-            <CommunityCardSkeletonGrid count={12} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Card key={i} className="p-6">
+                  <Skeleton className="h-48 w-full rounded mb-4" />
+                  <Skeleton className="h-4 w-3/4 rounded mb-2" />
+                  <Skeleton className="h-4 w-1/2 rounded" />
+                </Card>
+              ))}
+            </div>
           ) : projectsError ? (
             <Card className="p-8 text-center">
               <p className="text-destructive">Failed to load projects</p>
@@ -356,7 +382,7 @@ export default function ChainDetailPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {projects.map((project) => (
-                  <ItineraryCard key={project.id} itinerary={project} />
+                  <ItineraryCard key={project.id} project={project} />
                 ))}
               </div>
 
@@ -399,7 +425,7 @@ export default function ChainDetailPage() {
             </div>
             {user && <CreatePostDialog chainSlug={slug || ''} chainName={chain.name} />}
           </div>
-          <CommunityPostList chainSlug={slug || ''} isOwner={isOwner} />
+          <CommunityPostList communitySlug={slug || ''} isOwner={isOwner} />
         </TabsContent>
 
         {/* About Tab */}
@@ -549,8 +575,8 @@ export default function ChainDetailPage() {
         <AddItineraryToCommunityDialog
           open={showAddProjectDialog}
           onOpenChange={setShowAddProjectDialog}
-          chainSlug={slug || ''}
-          chainName={chain.name}
+          communitySlug={slug || ''}
+          communityName={chain.name}
           requiresApproval={chain.requires_approval}
         />
       )}

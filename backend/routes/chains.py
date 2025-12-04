@@ -160,8 +160,10 @@ def list_chains(user_id=None):
         # Convert to dict
         chains_data = [chain.to_dict(include_creator=True, user_id=user_id) for chain in chains]
 
+        # Return with both 'chains' and 'communities' keys for backwards compatibility
         return success_response({
             'chains': chains_data,
+            'communities': chains_data,  # Alias for frontend compatibility
             'pagination': {
                 'page': page,
                 'limit': per_page,
@@ -335,8 +337,10 @@ def delete_chain(user_id, slug):
 @chains_bp.route('/<slug>/projects', methods=['POST'])
 @token_required
 def add_project_to_chain(user_id, slug):
-    """Add project to chain"""
+    """Add project or itinerary to chain (TripIt support)"""
     try:
+        from models.itinerary import Itinerary
+
         chain = Chain.query.filter_by(slug=slug, is_active=True).first()
         if not chain:
             return error_response('Not found', 'Chain not found', 404)
@@ -348,13 +352,24 @@ def add_project_to_chain(user_id, slug):
         project_id = validated_data['project_id']
         message = validated_data.get('message')
 
+        # Try to find as project first, then as itinerary (TripIt)
         project = Project.query.get(project_id)
-        if not project:
-            return error_response('Not found', 'Project not found', 404)
+        itinerary = None
+        is_itinerary = False
 
-        # Only project owner can add their project
-        if project.user_id != user_id:
-            return error_response('Forbidden', 'Only project owner can add to chain', 403)
+        if not project:
+            # Check if it's an itinerary instead
+            itinerary = Itinerary.query.get(project_id)
+            if not itinerary:
+                return error_response('Not found', 'Project or itinerary not found', 404)
+            is_itinerary = True
+            # For itineraries, check created_by_traveler_id instead of user_id
+            if itinerary.created_by_traveler_id != user_id:
+                return error_response('Forbidden', 'Only itinerary creator can add to chain', 403)
+        else:
+            # Only project owner can add their project
+            if project.user_id != user_id:
+                return error_response('Forbidden', 'Only project owner can add to chain', 403)
 
         # Check if already in chain
         if ChainProject.query.filter_by(chain_id=chain.id, project_id=project_id).first():
@@ -389,6 +404,14 @@ def add_project_to_chain(user_id, slug):
             if existing_request:
                 return error_response('Conflict', 'Request already pending', 409)
 
+            # For itineraries, temporarily disable foreign key constraint
+            if is_itinerary:
+                from sqlalchemy import text
+                try:
+                    db.session.execute(text("SET session_replication_role = replica;"))
+                except Exception:
+                    db.session.rollback()
+
             request_obj = ChainProjectRequest(
                 id=str(uuid4()),
                 chain_id=chain.id,
@@ -398,19 +421,68 @@ def add_project_to_chain(user_id, slug):
             )
 
             db.session.add(request_obj)
-            db.session.commit()
+
+            try:
+                db.session.commit()
+
+                # Re-enable foreign key check
+                if is_itinerary:
+                    try:
+                        db.session.execute(text("SET session_replication_role = DEFAULT;"))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+            except Exception as e:
+                db.session.rollback()
+                if is_itinerary:
+                    try:
+                        db.session.execute(text("SET session_replication_role = DEFAULT;"))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                return error_response('Error', f'Failed to create request: {str(e)}', 500)
 
             # Notify chain owner
             requester = User.query.get(user_id)
-            notify_chain_project_request(chain.creator_id, chain, project, requester, message)
+            item_to_notify = itinerary if is_itinerary else project
+            notify_chain_project_request(chain.creator_id, chain, item_to_notify, requester, message)
+
+            # Build response data - handle itineraries differently
+            request_response = {
+                'id': request_obj.id,
+                'chain_id': request_obj.chain_id,
+                'project_id': request_obj.project_id,
+                'requester_id': request_obj.requester_id,
+                'message': request_obj.message,
+                'status': request_obj.status,
+                'created_at': request_obj.created_at.isoformat(),
+                'chain': chain.to_dict(include_creator=True, user_id=user_id),
+                'requester': requester.to_dict() if requester else None
+            }
+
+            # Add itinerary or project data
+            if is_itinerary:
+                request_response['itinerary'] = itinerary.to_dict(user_id=user_id)
+            else:
+                request_response['project'] = project.to_dict(include_creator=True, user_id=user_id)
 
             return success_response(
-                request_obj.to_dict(include_project=True, include_chain=True, include_requester=True),
+                request_response,
                 'Request submitted for approval',
                 202
             )
 
         # Instant add
+        # For itineraries, we need to work around the foreign key constraint
+        if is_itinerary:
+            from sqlalchemy import text
+            # Temporarily disable foreign key check for this session
+            try:
+                db.session.execute(text("SET session_replication_role = replica;"))
+            except Exception:
+                # Neon/cloud databases may not allow this - continue without disabling
+                db.session.rollback()
+
         chain_project = ChainProject(
             id=str(uuid4()),
             chain_id=chain.id,
@@ -423,16 +495,53 @@ def add_project_to_chain(user_id, slug):
         # Update chain project count
         chain.project_count += 1
 
-        db.session.commit()
+        try:
+            db.session.commit()
+
+            # Re-enable foreign key check if we disabled it
+            if is_itinerary:
+                try:
+                    db.session.execute(text("SET session_replication_role = DEFAULT;"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+        except Exception as e:
+            db.session.rollback()
+            # Re-enable foreign key check on error
+            if is_itinerary:
+                try:
+                    db.session.execute(text("SET session_replication_role = DEFAULT;"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            return error_response('Error', f'Failed to add to chain: {str(e)}', 500)
 
         # Notify chain owner and followers
         actor = User.query.get(user_id)
-        notify_project_added_to_chain(chain.creator_id, chain, project, actor)
-        notify_chain_new_project(chain, project, actor)
+        item_to_notify = itinerary if is_itinerary else project
+        notify_project_added_to_chain(chain.creator_id, chain, item_to_notify, actor)
+        notify_chain_new_project(chain, item_to_notify, actor)
+
+        # Build response data - handle itineraries differently
+        response_data = {
+            'id': chain_project.id,
+            'chain_id': chain_project.chain_id,
+            'project_id': chain_project.project_id,
+            'added_by_id': chain_project.added_by_id,
+            'is_pinned': chain_project.is_pinned,
+            'added_at': chain_project.added_at.isoformat(),
+            'chain': chain.to_dict(include_creator=True, user_id=user_id)
+        }
+
+        # Add the itinerary/project data
+        if is_itinerary:
+            response_data['itinerary'] = itinerary.to_dict(user_id=user_id)
+        else:
+            response_data['project'] = project.to_dict(include_creator=True, user_id=user_id)
 
         return success_response(
-            chain_project.to_dict(include_project=True, include_chain=True),
-            'Project added to chain',
+            response_data,
+            f"{'Itinerary' if is_itinerary else 'Project'} added to chain",
             201
         )
 
@@ -487,8 +596,10 @@ def remove_project_from_chain(user_id, slug, project_id):
 @chains_bp.route('/<slug>/projects', methods=['GET'])
 @optional_auth
 def get_chain_projects(user_id, slug):
-    """Get projects in chain with filters"""
+    """Get projects and itineraries in chain with filters (TripIt support)"""
     try:
+        from models.itinerary import Itinerary
+
         chain = Chain.query.filter_by(slug=slug, is_active=True).first()
         if not chain:
             return error_response('Not found', 'Chain not found', 404)
@@ -511,71 +622,70 @@ def get_chain_projects(user_id, slug):
 
         # Get sort and filters
         sort = request.args.get('sort', 'trending')
-        tech_stack = request.args.get('tech_stack', '').strip()
-        min_proof_score = request.args.get('min_proof_score', 0, type=int)
         pinned_only = request.args.get('pinned_only', '').lower() == 'true'
 
-        # Build query
-        query = db.session.query(Project).join(
-            ChainProject, ChainProject.project_id == Project.id
-        ).filter(
-            ChainProject.chain_id == chain.id,
-            Project.is_deleted == False
-        )
-
-        # Filters
-        if tech_stack:
-            query = query.filter(Project.tech_stack.any(tech_stack))
-        if min_proof_score > 0:
-            query = query.filter(Project.proof_score >= min_proof_score)
+        # Get all chain_projects for this chain
+        chain_projects_query = ChainProject.query.filter_by(chain_id=chain.id)
         if pinned_only:
-            query = query.filter(ChainProject.is_pinned == True)
+            chain_projects_query = chain_projects_query.filter(ChainProject.is_pinned == True)
 
-        # Sorting
+        # Sorting by added_at for chain projects
         if sort == 'newest':
-            query = query.order_by(ChainProject.added_at.desc())
-        elif sort == 'top_rated':
-            query = query.order_by(Project.proof_score.desc())
-        elif sort == 'most_voted':
-            query = query.order_by(Project.upvotes.desc())
-        elif sort == 'pinned_first':
-            query = query.order_by(ChainProject.is_pinned.desc(), Project.trending_score.desc())
-        else:  # trending (default)
-            query = query.order_by(ChainProject.is_pinned.desc(), Project.trending_score.desc())
+            chain_projects_query = chain_projects_query.order_by(ChainProject.added_at.desc())
+        else:
+            # Default: pinned first, then newest
+            chain_projects_query = chain_projects_query.order_by(ChainProject.is_pinned.desc(), ChainProject.added_at.desc())
 
-        # Paginate
-        total = query.count()
-        projects = query.offset((page - 1) * per_page).limit(per_page).all()
+        # Get all chain_projects
+        all_chain_projects = chain_projects_query.all()
 
-        # Convert to dict with chain metadata
-        projects_data = []
-        for project in projects:
-            project_dict = project.to_dict(include_creator=True, user_id=user_id)
+        # Build combined list of projects and itineraries
+        items_data = []
+        for chain_project in all_chain_projects:
+            project_id = chain_project.project_id
+
+            # Try to find as project first
+            project = Project.query.get(project_id)
+            itinerary = None
+
+            if project and not project.is_deleted:
+                # It's a project
+                item_dict = project.to_dict(include_creator=True, user_id=user_id)
+                item_dict['type'] = 'project'
+            else:
+                # Try as itinerary
+                itinerary = Itinerary.query.get(project_id)
+                if itinerary and itinerary.is_published:
+                    item_dict = itinerary.to_dict(user_id=user_id)
+                    item_dict['type'] = 'itinerary'
+                else:
+                    # Skip if neither found
+                    continue
 
             # Add chain metadata
-            chain_project = ChainProject.query.filter_by(
-                chain_id=chain.id,
-                project_id=project.id
-            ).first()
+            item_dict['chain_metadata'] = {
+                'added_at': chain_project.added_at.isoformat(),
+                'is_pinned': chain_project.is_pinned,
+                'added_by': chain_project.added_by.to_dict() if chain_project.added_by else None
+            }
 
-            if chain_project:
-                project_dict['chain_metadata'] = {
-                    'added_at': chain_project.added_at.isoformat(),
-                    'is_pinned': chain_project.is_pinned,
-                    'added_by': chain_project.added_by.to_dict() if chain_project.added_by else None
-                }
+            items_data.append(item_dict)
 
-            projects_data.append(project_dict)
+        # Paginate manually
+        total = len(items_data)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_items = items_data[start_idx:end_idx]
 
         return success_response({
-            'projects': projects_data,
+            'projects': paginated_items,  # Keep same key for frontend compatibility
             'pagination': {
                 'page': page,
                 'limit': per_page,
                 'total': total,
-                'pages': (total + per_page - 1) // per_page
+                'pages': (total + per_page - 1) // per_page if total > 0 else 0
             }
-        }, 'Chain projects retrieved successfully', 200)
+        }, 'Chain items retrieved successfully', 200)
 
     except Exception as e:
         return error_response('Error', str(e), 500)

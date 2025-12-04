@@ -7,17 +7,17 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 
-export default function CreateChainPage() {
+export default function CreateCommunityPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const createChainMutation = useCreateChain();
+  const createCommunityMutation = useCreateChain();
 
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="p-8 text-center">
           <p className="text-muted-foreground mb-4">
-            You must be logged in to create a chain
+            You must be logged in to create a caravan
           </p>
           <Button asChild>
             <Link to="/login">Login</Link>
@@ -29,12 +29,12 @@ export default function CreateChainPage() {
 
   const handleSubmit = async (data: CommunityFormData) => {
     try {
-      const result = await createChainMutation.mutateAsync(data);
-      toast.success('layerz created successfully!');
-      navigate(`/layerz/${result.data.slug}`);
+      const result = await createCommunityMutation.mutateAsync(data);
+      toast.success('Caravan created successfully!');
+      navigate(`/community/${result.data.slug}`);
     } catch (error: any) {
-      console.error('Create layerz error:', error);
-      toast.error(error.response?.data?.error || 'Failed to create layerz');
+      console.error('Create caravan error:', error);
+      toast.error(error.response?.data?.error || 'Failed to create caravan');
     }
   };
 
@@ -43,22 +43,22 @@ export default function CreateChainPage() {
       {/* Header */}
       <div className="space-y-4">
         <Button asChild variant="ghost" size="sm">
-          <Link to="/layerz">
+          <Link to="/communities">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to layerz
+            Back to Caravans
           </Link>
         </Button>
 
         <div>
-          <h1 className="text-4xl font-bold">Create layerz</h1>
+          <h1 className="text-4xl font-bold">Create New Caravan</h1>
           <p className="text-muted-foreground mt-2">
-            Create a new collection to organize and showcase projects
+            Create a new travel caravan to connect with fellow travelers
           </p>
         </div>
       </div>
 
       {/* Form */}
-      <CommunityForm onSubmit={handleSubmit} isLoading={createChainMutation.isPending} />
+      <CommunityForm onSubmit={handleSubmit} isLoading={createCommunityMutation.isPending} />
     </div>
   );
 }

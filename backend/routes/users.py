@@ -212,17 +212,64 @@ def update_profile(user_id):
 @users_bp.route('/stats', methods=['GET'])
 @token_required
 def get_user_stats(user_id):
-    """Get user statistics (FAST - uses denormalized table)"""
+    """Get user statistics - works for both User and Traveler tables"""
     try:
         # Check both tables for user
         from models.traveler import Traveler
+        from models.comment import Comment
         user = Traveler.query.get(user_id)
+        is_traveler = user is not None
+
         if not user:
             user = User.query.get(user_id)
         if not user:
             return error_response('Not found', 'User not found', 404)
 
-        # ULTRA-FAST: Query denormalized stats table (no joins, instant!)
+        # If traveler, calculate stats dynamically (no denormalized table for travelers)
+        if is_traveler:
+            # Count itineraries created by this traveler
+            itinerary_count = Itinerary.query.filter_by(
+                created_by_traveler_id=user_id,
+                is_deleted=False
+            ).count()
+
+            # Calculate total upvotes on itineraries
+            itinerary_upvotes = db.session.query(
+                func.coalesce(func.sum(Itinerary.upvotes), 0)
+            ).filter(
+                Itinerary.created_by_traveler_id == user_id,
+                Itinerary.is_deleted == False
+            ).scalar() or 0
+
+            # Count comments by this traveler
+            # For travelers: count both old comments AND travel intel (new comment system)
+            from models.travel_intel import TravelIntel
+            old_comments = Comment.query.filter_by(user_id=user_id).count()
+            travel_intel_comments = TravelIntel.query.filter_by(traveler_id=user_id).count()
+            comment_count = old_comments + travel_intel_comments
+
+            # Travelers don't use intros system (that's for old users table)
+            stats = {
+                'user_id': user_id,
+                'username': user.username,
+                'project_count': itinerary_count,  # Total itineraries
+                'active_projects': itinerary_count,
+                'total_proof_score': 0,
+                'comment_count': comment_count,
+                'total_upvotes': int(itinerary_upvotes),
+                'badges_given': 0,
+                'badges_awarded': 0,
+                'badges_received': 0,
+                'intros_sent': 0,
+                'intros_received': 0,
+                'intro_requests_pending': 0,
+                'karma_score': 0,
+                'unread_messages': 0,
+                'unread_notifications': 0,
+            }
+            return success_response(stats, 'Traveler stats retrieved', 200)
+
+        # For old users table - use denormalized stats
         from sqlalchemy import text
         result = db.session.execute(
             text("SELECT * FROM user_dashboard_stats WHERE user_id = :user_id"),
@@ -237,14 +284,32 @@ def get_user_stats(user_id):
             # Map field names to match existing API
             stats['badges_awarded'] = stats.get('badges_given', 0)
 
+            # Calculate total upvotes dynamically from projects
+            project_upvotes = db.session.query(
+                func.coalesce(func.sum(Project.upvotes), 0)
+            ).filter(
+                Project.user_id == user_id,
+                Project.is_deleted == False
+            ).scalar() or 0
+
+            stats['total_upvotes'] = int(project_upvotes)
+
             return success_response(stats, 'User stats retrieved', 200)
         else:
-            # First time user - create empty stats entry
+            # First time user from users table - create empty stats entry
             db.session.execute(
                 text("INSERT INTO user_dashboard_stats (user_id) VALUES (:user_id) ON CONFLICT (user_id) DO NOTHING"),
                 {'user_id': user_id}
             )
             db.session.commit()
+
+            # Calculate upvotes from projects
+            project_upvotes = db.session.query(
+                func.coalesce(func.sum(Project.upvotes), 0)
+            ).filter(
+                Project.user_id == user_id,
+                Project.is_deleted == False
+            ).scalar() or 0
 
             # Return default stats
             stats = {
@@ -254,6 +319,7 @@ def get_user_stats(user_id):
                 'active_projects': 0,
                 'total_proof_score': 0,
                 'comment_count': 0,
+                'total_upvotes': int(project_upvotes),
                 'badges_given': 0,
                 'badges_awarded': 0,
                 'badges_received': 0,
@@ -267,6 +333,9 @@ def get_user_stats(user_id):
             return success_response(stats, 'User stats initialized', 200)
 
     except Exception as e:
+        import traceback
+        print(f"Error in get_user_stats: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
         return error_response('Error', str(e), 500)
 
 
