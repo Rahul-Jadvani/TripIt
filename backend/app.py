@@ -48,6 +48,7 @@ def import_models():
     from models.guide_booking import GuideBooking
     from models.guide_review import GuideReview
     from models.women_safety_resource import WomenSafetyResource
+    from models.snap import Snap
 
     return True
 
@@ -432,6 +433,7 @@ def register_blueprints(app):
     from routes.travel_groups import travel_groups_bp
     from routes.women_safety import women_safety_bp
     from routes.trending import trending_bp
+    from routes.snaps import snaps_bp
 
     # PERFORMANCE: Ultra-fast optimized routes
     from routes.prefetch import prefetch_bp
@@ -471,6 +473,7 @@ def register_blueprints(app):
     app.register_blueprint(travel_groups_bp, url_prefix='/api/travel-groups')
     app.register_blueprint(women_safety_bp, url_prefix='/api/women-safety')
     app.register_blueprint(trending_bp, url_prefix='/api')
+    app.register_blueprint(snaps_bp, url_prefix='/api/snaps')
 
     # PERFORMANCE: Ultra-fast optimized endpoints
     app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')
@@ -479,6 +482,13 @@ def register_blueprints(app):
 
     from routes.admin_auth import admin_auth_bp
     app.register_blueprint(admin_auth_bp)
+
+    # Route to serve uploaded snap images
+    @app.route('/uploads/snaps/<path:filename>')
+    def serve_snap_image(filename):
+        """Serve uploaded snap images"""
+        upload_folder = os.path.join(os.path.dirname(__file__), 'uploads', 'snaps')
+        return send_from_directory(upload_folder, filename)
 
 
 def register_error_handlers(app):

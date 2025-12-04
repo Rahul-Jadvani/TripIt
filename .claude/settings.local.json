@@ -38,7 +38,15 @@
       "Bash(timeout 3 echo:*)",
       "Bash(timeout 5 bash -c \"while ! curl -s http://localhost:5000/health > /dev/null; do sleep 0.5; done; echo ''Backend ready''; curl -s http://localhost:5000/api/trending/leading-tag | python -m json.tool\")",
       "Bash(timeout 10 bash:*)",
-      "Bash(taskkill /F /FI \"WINDOWTITLE eq backend*\")"
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq backend*\")",
+      "Bash(timeout /t:*)",
+      "Bash(taskkill:*)",
+      "Bash(for pid in 13920 20812 28300 25680)",
+      "Bash(do taskkill //F //PID $pid)",
+      "Bash(done)",
+      "Bash(for pid in dd87b2 d9b7ae cf5d80 5a0d0c 9179c4 22cd67 3434b4 58d2dd e65a0e c49824 6f7555 ca9e19 9cdae0 d870e5 d085ee 380ab4 695a82 37a4d3 b99f44 a69c34)",
+      "Bash(do pkill -f \"bash_$pid\")",
+      "Bash(timeout 5 bash:*)"
     ],
     "deny": [],
     "ask": []

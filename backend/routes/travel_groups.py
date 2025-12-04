@@ -108,13 +108,21 @@ def create_travel_group(user_id):
         if not data.get('start_date') or not data.get('end_date'):
             return error_response('Validation error', 'Start and end dates are required', 400)
 
+        # Parse ISO datetime strings to date objects
+        try:
+            from datetime import datetime as dt
+            start_date = dt.fromisoformat(data.get('start_date').replace('Z', '+00:00')).date()
+            end_date = dt.fromisoformat(data.get('end_date').replace('Z', '+00:00')).date()
+        except (ValueError, AttributeError) as e:
+            return error_response('Validation error', f'Invalid date format: {str(e)}', 400)
+
         # Create group
         group = TravelGroup(
             name=data.get('name'),
             description=data.get('description'),
             destination=data.get('destination'),
-            start_date=data.get('start_date'),
-            end_date=data.get('end_date'),
+            start_date=start_date,
+            end_date=end_date,
             group_type=data.get('group_type', 'interest_based'),
             max_members=data.get('max_members', 10),
             activity_tags=data.get('activity_tags', []),
@@ -211,9 +219,19 @@ def update_travel_group(user_id, group_id):
         if 'destination' in data:
             group.destination = data['destination']
         if 'start_date' in data:
-            group.start_date = data['start_date']
+            from datetime import datetime as dt
+            try:
+                group.start_date = dt.fromisoformat(data['start_date'].replace('Z', '+00:00')).date()
+            except (ValueError, AttributeError):
+                # If it fails, might already be a date object
+                group.start_date = data['start_date']
         if 'end_date' in data:
-            group.end_date = data['end_date']
+            from datetime import datetime as dt
+            try:
+                group.end_date = dt.fromisoformat(data['end_date'].replace('Z', '+00:00')).date()
+            except (ValueError, AttributeError):
+                # If it fails, might already be a date object
+                group.end_date = data['end_date']
         if 'activity_tags' in data:
             group.activity_tags = data['activity_tags']
         if 'max_members' in data:

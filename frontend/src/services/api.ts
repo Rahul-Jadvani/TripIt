@@ -468,6 +468,23 @@ export const travelGroupsService = {
     api.get(`/travel-groups/matching${page ? `?page=${page}` : ''}`),
 };
 
+// Snaps
+export const snapsService = {
+  getAll: (page: number = 1, limit: number = 20) =>
+    api.get(`/snaps?page=${page}&limit=${limit}`),
+  getById: (snapId: string) => api.get(`/snaps/${snapId}`),
+  create: (formData: FormData) =>
+    api.post('/snaps', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  delete: (snapId: string) => api.delete(`/snaps/${snapId}`),
+  like: (snapId: string) => api.post(`/snaps/${snapId}/like`),
+  getFeed: (page: number = 1, limit: number = 20) =>
+    api.get(`/snaps/feed?page=${page}&limit=${limit}`),
+  getByUser: (userId: string, page: number = 1, limit: number = 20) =>
+    api.get(`/snaps/user/${userId}?page=${page}&limit=${limit}`),
+};
+
 // Women's Safety Feature
 export const womenSafetyService = {
   // Women Guides

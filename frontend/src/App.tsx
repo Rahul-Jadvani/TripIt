@@ -40,6 +40,7 @@ const CommunitiesListPage = lazy(() => import("./pages/CommunitiesListPage"));
 const CommunityDetailPage = lazy(() => import("./pages/CommunityDetailPage"));
 const CreateCommunityPage = lazy(() => import("./pages/CreateCommunityPage"));
 const EditCommunityPage = lazy(() => import("./pages/EditCommunityPage"));
+const SnapCamera = lazy(() => import("./pages/SnapCamera"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +94,9 @@ const App = () => (
               <Route path="/community/:id" element={<CommunityDetailPage />} />
               <Route path="/community/create" element={<ProtectedRoute><CreateCommunityPage /></ProtectedRoute>} />
               <Route path="/community/:id/edit" element={<ProtectedRoute><EditCommunityPage /></ProtectedRoute>} />
+
+              {/* Snap Routes */}
+              <Route path="/snap/camera" element={<ProtectedRoute><SnapCamera /></ProtectedRoute>} />
 
               {/* Protected Routes */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

@@ -1,5 +1,8 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useSnaps } from '@/hooks/useSnaps';
+import SnapCard from '@/components/SnapCard';
 // Lazy load heavy carousels (named exports -> map to default)
 const TopRatedCarousel = lazy(() =>
   import('@/components/TopRatedCarousel').then((m) => ({ default: m.TopRatedCarousel }))
@@ -16,7 +19,7 @@ const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
 const TopRatedCarouselSkeleton = () => (
   <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
 );
-import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield } from 'lucide-react';
+import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield, Camera } from 'lucide-react';
 import { useItineraries, transformProject } from '@/hooks/useProjects';
 import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
 import { usePublicInvestors } from '@/hooks/useInvestors';
@@ -68,6 +71,10 @@ function LazyOnVisible({
 export default function Feed() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // Fetch snaps for the feed
+  const { data: snapsData, isLoading: snapsLoading } = useSnaps(1, 10);
 
   // PROGRESSIVE LOADING: Load trending & top-rated first (priority), newest loads immediately after
   const { data: hotData, isLoading: hotLoading } = useItineraries('trending', 1);
@@ -407,6 +414,45 @@ export default function Feed() {
                 <a href="#new-launches" className="badge badge-dash badge-secondary hover:opacity-90">Latest Adventures ({categorizedProjects.newLaunches.length})</a>
               </div>
             </nav>
+
+            {/* Snaps Section - Orange Theme */}
+            <section id="snaps" className="scroll-mt-24">
+              <div className="mb-4">
+                <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
+                  <Camera className="h-6 w-6 text-orange-500" />
+                  Travel Snaps
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">Live moments from travelers around the world</p>
+              </div>
+              {snapsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-96 bg-gray-800 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : snapsData?.data && snapsData.data.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {snapsData.data.slice(0, 6).map((snap: any) => (
+                    <SnapCard key={snap.id} snap={snap} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card-elevated py-12 text-center p-8 rounded-2xl bg-gradient-to-br from-orange-500/5 to-orange-600/5 border-2 border-orange-500/20">
+                  <Camera className="w-16 h-16 text-orange-500 mx-auto mb-4" />
+                  <p className="text-xl font-bold text-foreground mb-2">No snaps yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Be the first to share a moment from your travels!
+                  </p>
+                  <button
+                    onClick={() => navigate('/snap/camera')}
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all"
+                  >
+                    Create First Snap
+                  </button>
+                </div>
+              )}
+            </section>
+
             {/* Highest-Rated Journeys Carousel */}
             {categorizedProjects.topScored.length > 0 && (
               <section id="top-rated" className="scroll-mt-24">
@@ -774,6 +820,20 @@ export default function Feed() {
           </div>
         )}
       </div>
+
+      {/* Floating SNAP Button - Orange Theme */}
+      {user && (
+        <button
+          onClick={() => navigate('/snap/camera')}
+          className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-200 group border-2 border-white/20"
+          title="Create a Snap"
+        >
+          <Camera className="w-8 h-8 text-white group-hover:rotate-12 transition-transform" />
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-bold animate-pulse">
+            +
+          </span>
+        </button>
+      )}
     </div>
   );
 }
