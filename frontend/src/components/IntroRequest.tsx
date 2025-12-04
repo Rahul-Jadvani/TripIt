@@ -24,24 +24,25 @@ const getBackendUrl = (): string => {
 };
 
 interface IntroRequestProps {
-  projectId: string;
-  builderId: string;
+  projectId?: string;  // Can be project ID or itinerary ID
+  recipientId: string;  // User to connect with
+  contentType?: 'project' | 'itinerary';
 }
 
-export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
+export function IntroRequest({ projectId, recipientId, contentType = 'project' }: IntroRequestProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Only show for investors
-  if (!user?.is_investor) {
+  // Don't show if not logged in
+  if (!user) {
     return null;
   }
 
-  // Don't show for own projects
-  if (user.id === builderId) {
+  // Don't show for own content
+  if (user.id === recipientId) {
     return null;
   }
 
@@ -54,15 +55,16 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
     setLoading(true);
     try {
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/send`, {
+      const response = await fetch(`${backendUrl}/api/intros/request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          project_id: projectId,
-          message: message,
+          project_id: projectId,  // Can be project or itinerary ID
+          recipient_id: recipientId,
+          message: message.trim(),
         }),
       });
 
@@ -70,11 +72,12 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
       if (data.status === 'success') {
         setMessage('');
         setIsOpen(false);
-        toast.success('Intro request sent successfully!');
+        toast.success('Intro request sent! They\'ll be notified.');
       } else {
         toast.error(data.message || 'Failed to send intro request');
       }
     } catch (error) {
+      console.error('Intro request error:', error);
       toast.error('Failed to send intro request');
     } finally {
       setLoading(false);
@@ -99,7 +102,7 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
             <span className="truncate">Request Intro</span>
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-base">
-            Introduce yourself and let the builder know why you'd like to connect
+            Introduce yourself and let them know why you'd like to connect
           </DialogDescription>
         </DialogHeader>
 
@@ -113,7 +116,10 @@ export function IntroRequest({ projectId, builderId }: IntroRequestProps) {
             </Label>
             <Textarea
               id="message"
-              placeholder="Hi! I'm interested in learning more about your project. I think there might be some interesting opportunities to collaborate..."
+              placeholder={contentType === 'itinerary'
+                ? "Hi! I loved your itinerary and would love to connect. Maybe we can travel together or share tips..."
+                : "Hi! I'm interested in learning more about your project. I think there might be some interesting opportunities to collaborate..."
+              }
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}

@@ -12,23 +12,24 @@ import {
 interface IntroRequest {
   id: string;
   project_id: string;
-  investor_id: string;
-  builder_id: string;
+  requester_id: string;
+  recipient_id: string;
   message: string;
   status: 'pending' | 'accepted' | 'declined';
   created_at: string;
-  project?: {
+  content?: {
     id: string;
     title: string;
     tagline: string;
+    type: 'itinerary' | 'project';
   };
-  investor?: {
+  requester?: {
     id: string;
     username: string;
     display_name?: string;
     avatar_url?: string;
   };
-  builder?: {
+  recipient?: {
     id: string;
     username: string;
     display_name?: string;
@@ -106,63 +107,57 @@ export default function Intros() {
             <div className="flex-1">
               <h1 className="text-3xl font-black mb-2">Intro Requests</h1>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                {user?.is_investor
-                  ? 'Connect with talented builders and discover new opportunities'
-                  : 'Review introduction requests from investors interested in your work'}
+                Connect with travelers and explorers who share your interests
               </p>
             </div>
           </div>
         </div>
 
-        {/* Tabs - Only show for investors */}
-        {user?.is_investor ? (
-          <div className="mb-8 card-elevated inline-flex p-1.5 gap-1">
-            <button
-              onClick={() => setTab('received')}
-              className={`px-6 py-2.5 font-bold rounded-[12px] transition-all flex items-center gap-2 ${
-                tab === 'received'
-                  ? 'bg-primary text-black shadow-lg scale-105'
-                  : 'hover:bg-secondary/50'
-              }`}
-            >
-              <Mail className="h-4 w-4" />
-              Received
-              {receivedRequests.length > 0 && (
-                <span className="px-2 py-0.5 bg-foreground/20 rounded-full text-xs">
-                  {receivedRequests.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setTab('sent')}
-              className={`px-6 py-2.5 font-bold rounded-[12px] transition-all flex items-center gap-2 ${
-                tab === 'sent'
-                  ? 'bg-primary text-black shadow-lg scale-105'
-                  : 'hover:bg-secondary/50'
-              }`}
-            >
-              <Send className="h-4 w-4" />
-              Sent
-              {sentRequests.length > 0 && (
-                <span className="px-2 py-0.5 bg-foreground/20 rounded-full text-xs">
-                  {sentRequests.length}
-                </span>
-              )}
-            </button>
-          </div>
-        ) : null}
+        {/* Tabs - Available for everyone */}
+        <div className="mb-8 card-elevated inline-flex p-1.5 gap-1">
+          <button
+            onClick={() => setTab('received')}
+            className={`px-6 py-2.5 font-bold rounded-[12px] transition-all flex items-center gap-2 ${
+              tab === 'received'
+                ? 'bg-primary text-black shadow-lg scale-105'
+                : 'hover:bg-secondary/50'
+            }`}
+          >
+            <Mail className="h-4 w-4" />
+            Received
+            {receivedRequests.length > 0 && (
+              <span className="px-2 py-0.5 bg-foreground/20 rounded-full text-xs">
+                {receivedRequests.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setTab('sent')}
+            className={`px-6 py-2.5 font-bold rounded-[12px] transition-all flex items-center gap-2 ${
+              tab === 'sent'
+                ? 'bg-primary text-black shadow-lg scale-105'
+                : 'hover:bg-secondary/50'
+            }`}
+          >
+            <Send className="h-4 w-4" />
+            Sent
+            {sentRequests.length > 0 && (
+              <span className="px-2 py-0.5 bg-foreground/20 rounded-full text-xs">
+                {sentRequests.length}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Received Requests */}
-        {(!user?.is_investor || tab === 'received') && (
+        {tab === 'received' && (
           <div className="space-y-4">
             {receivedRequests.length === 0 ? (
               <div className="card-elevated p-12 text-center">
                 <Mail className="h-16 w-16 mx-auto mb-4 opacity-30 text-muted-foreground" />
                 <p className="text-xl font-bold mb-2">No intro requests</p>
                 <p className="text-muted-foreground">
-                  {user?.is_investor
-                    ? 'Builders you requested intros with will appear here'
-                    : 'Investors interested in your projects will appear here'}
+                  People who want to connect with you will appear here
                 </p>
               </div>
             ) : (
@@ -171,20 +166,20 @@ export default function Intros() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start gap-4 flex-1">
                       <div className="h-14 w-14 rounded-[15px] bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center font-black text-primary text-xl border-2 border-primary/50 group-hover:scale-110 transition-transform">
-                        {intro.investor?.username[0]?.toUpperCase()}
+                        {intro.requester?.username[0]?.toUpperCase()}
                       </div>
                       <div className="flex-1">
                         <p className="font-black text-lg mb-1">
-                          {intro.investor?.display_name || intro.investor?.username}
+                          {intro.requester?.display_name || intro.requester?.username}
                         </p>
-                        <p className="text-sm text-muted-foreground mb-2">@{intro.investor?.username}</p>
-                        {intro.project && (
+                        <p className="text-sm text-muted-foreground mb-2">@{intro.requester?.username}</p>
+                        {intro.content && (
                           <button
-                            onClick={() => navigate(`/project/${intro.project?.id}`)}
+                            onClick={() => navigate(`/project/${intro.content?.id}`)}
                             className="inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-[8px] border border-primary/30 hover:border-primary/60 transition-all"
                           >
                             <Sparkles className="h-3.5 w-3.5" />
-                            "{intro.project.title}"
+                            "{intro.content.title}"
                           </button>
                         )}
                       </div>
@@ -248,7 +243,7 @@ export default function Intros() {
 
                   {intro.status === 'accepted' && (
                     <button
-                      onClick={() => navigate(`/messages?user=${intro.investor?.id}`)}
+                      onClick={() => navigate(`/messages?user=${intro.requester?.id}`)}
                       className="btn-primary w-full inline-flex items-center justify-center gap-2 group hover:scale-[1.02] transition-transform"
                     >
                       <Mail className="h-4 w-4 group-hover:rotate-12 transition-transform" />
@@ -261,15 +256,15 @@ export default function Intros() {
           </div>
         )}
 
-        {/* Sent Requests (Investors Only) */}
-        {user?.is_investor && tab === 'sent' && (
+        {/* Sent Requests */}
+        {tab === 'sent' && (
           <div className="space-y-4">
             {sentRequests.length === 0 ? (
               <div className="card-elevated p-12 text-center">
                 <Mail className="h-16 w-16 mx-auto mb-4 opacity-30 text-muted-foreground" />
                 <p className="text-xl font-bold mb-2">No sent requests</p>
                 <p className="text-muted-foreground">
-                  Request intros to projects you're interested in
+                  Request intros to travelers whose content you're interested in
                 </p>
               </div>
             ) : (
@@ -278,20 +273,20 @@ export default function Intros() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start gap-4 flex-1">
                       <div className="h-14 w-14 rounded-[15px] bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center font-black text-primary text-xl border-2 border-primary/50 group-hover:scale-110 transition-transform">
-                        {intro.builder?.username[0]?.toUpperCase()}
+                        {intro.recipient?.username[0]?.toUpperCase()}
                       </div>
                       <div className="flex-1">
                         <p className="font-black text-lg mb-1">
-                          {intro.builder?.display_name || intro.builder?.username}
+                          {intro.recipient?.display_name || intro.recipient?.username}
                         </p>
-                        <p className="text-sm text-muted-foreground mb-2">@{intro.builder?.username}</p>
-                        {intro.project && (
+                        <p className="text-sm text-muted-foreground mb-2">@{intro.recipient?.username}</p>
+                        {intro.content && (
                           <button
-                            onClick={() => navigate(`/project/${intro.project?.id}`)}
+                            onClick={() => navigate(`/project/${intro.content?.id}`)}
                             className="inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-[8px] border border-primary/30 hover:border-primary/60 transition-all"
                           >
                             <Sparkles className="h-3.5 w-3.5" />
-                            "{intro.project.title}"
+                            "{intro.content.title}"
                           </button>
                         )}
                       </div>
@@ -316,7 +311,7 @@ export default function Intros() {
 
                   {intro.status === 'accepted' && (
                     <button
-                      onClick={() => navigate(`/messages?user=${intro.builder?.id}`)}
+                      onClick={() => navigate(`/messages?user=${intro.recipient?.id}`)}
                       className="btn-primary w-full inline-flex items-center justify-center gap-2 group hover:scale-[1.02] transition-transform"
                     >
                       <Mail className="h-4 w-4 group-hover:rotate-12 transition-transform" />
@@ -328,7 +323,7 @@ export default function Intros() {
                     <div className="bg-primary border-2 border-primary rounded-[12px] p-4 flex items-center gap-3">
                       <Clock className="h-5 w-5 text-black animate-spin" />
                       <p className="text-sm font-semibold text-black">
-                        Waiting for builder to respond
+                        Waiting for them to respond
                       </p>
                     </div>
                   )}

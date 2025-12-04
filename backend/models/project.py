@@ -86,7 +86,9 @@ class Project(db.Model):
     # comments = db.relationship('Comment', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     badges = db.relationship('ValidationBadge', backref='project', lazy='dynamic',
                               cascade='all, delete-orphan')
-    intros = db.relationship('Intro', backref='project', lazy='dynamic', cascade='all, delete-orphan')
+    # intros relationship disabled - Intro model now uses flexible string references (no FK constraints)
+    # intros are fetched dynamically to support both projects and itineraries
+    # intros = db.relationship('Intro', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     event_associations = db.relationship('EventProject', backref='project', lazy='dynamic',
                                           cascade='all, delete-orphan')
 

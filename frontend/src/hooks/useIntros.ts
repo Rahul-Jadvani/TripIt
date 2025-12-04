@@ -25,7 +25,7 @@ export function useReceivedIntroRequests() {
     queryKey: ['intro-requests', 'received'],
     queryFn: async () => {
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/received`, {
+      const response = await fetch(`${backendUrl}/api/intros/received`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -36,12 +36,11 @@ export function useReceivedIntroRequests() {
       }
       throw new Error(data.message || 'Failed to fetch intro requests');
     },
-    staleTime: 1000 * 60, // Fresh for 1 minute
+    staleTime: 0, // Always refetch to ensure fresh data
     gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
-    refetchOnMount: false, // Don't refetch on mount if data is fresh
+    refetchOnMount: true, // Always refetch on mount to get latest data
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true, // Refetch if internet reconnects
-    placeholderData: (previousData) => previousData,
+    refetchOnReconnect: true,
   });
 }
 
@@ -50,7 +49,7 @@ export function useSentIntroRequests() {
     queryKey: ['intro-requests', 'sent'],
     queryFn: async () => {
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/sent`, {
+      const response = await fetch(`${backendUrl}/api/intros/sent`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -61,12 +60,11 @@ export function useSentIntroRequests() {
       }
       throw new Error(data.message || 'Failed to fetch sent intro requests');
     },
-    staleTime: 1000 * 60,
+    staleTime: 0, // Always refetch to ensure fresh data
     gcTime: 1000 * 60 * 5,
-    refetchOnMount: false,
+    refetchOnMount: true, // Always refetch on mount to get latest data
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -132,8 +130,8 @@ export function useAcceptIntroRequest() {
   return useMutation({
     mutationFn: async (requestId: string) => {
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/${requestId}/accept`, {
-        method: 'POST',
+      const response = await fetch(`${backendUrl}/api/intros/${requestId}/accept`, {
+        method: 'PUT',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -196,8 +194,8 @@ export function useDeclineIntroRequest() {
   return useMutation({
     mutationFn: async (requestId: string) => {
       const backendUrl = getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/intro-requests/${requestId}/decline`, {
-        method: 'POST',
+      const response = await fetch(`${backendUrl}/api/intros/${requestId}/decline`, {
+        method: 'PUT',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },

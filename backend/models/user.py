@@ -51,10 +51,10 @@ class User(db.Model):
     # comments = db.relationship('Comment', backref='author', lazy='dynamic', cascade='all, delete-orphan')
     badges_awarded = db.relationship('ValidationBadge', backref='validator', lazy='dynamic',
                                       foreign_keys='ValidationBadge.validator_id')
-    intros_sent = db.relationship('Intro', backref='requester', lazy='dynamic',
-                                    foreign_keys='Intro.requester_id')
-    intros_received = db.relationship('Intro', backref='recipient', lazy='dynamic',
-                                        foreign_keys='Intro.recipient_id')
+    # intros relationships disabled - Intro model now uses flexible string references (no FK constraints)
+    # intros are fetched dynamically to support both users and travelers tables
+    # intros_sent = db.relationship('Intro', backref='requester', lazy='dynamic', foreign_keys='Intro.requester_id')
+    # intros_received = db.relationship('Intro', backref='recipient', lazy='dynamic', foreign_keys='Intro.recipient_id')
     organized_events = db.relationship('Event', backref='organizer', lazy='dynamic',
                                         foreign_keys='Event.organizer_id')
     event_subscriptions = db.relationship('EventSubscriber', backref='subscriber', lazy='dynamic',

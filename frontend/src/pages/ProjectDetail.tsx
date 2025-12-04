@@ -875,10 +875,14 @@ export default function ProjectDetail() {
                     queryClient.invalidateQueries({ queryKey: ['projects'] });
                   }}
                 />
-                {user?.id !== project.authorId && (
-                  <IntroRequest projectId={project.id} builderId={project.authorId} />
+                {user?.id !== (project.authorId || project.user_id) && (
+                  <IntroRequest
+                    projectId={project.id}
+                    recipientId={project.authorId || project.user_id}
+                    contentType={project.destination ? "itinerary" : "project"}
+                  />
                 )}
-                {user?.id === project.authorId && (
+                {user?.id === (project.authorId || project.user_id) && (
                   <>
                     <Link to={`/project/${project.id}/edit`} className="btn-primary h-10 px-4 text-sm flex items-center gap-1.5">
                       <Edit className="h-4 w-4" />

@@ -48,7 +48,9 @@
       "Bash(do pkill -f \"bash_$pid\")",
       "Bash(timeout 5 bash:*)",
       "Bash(del /S /Q \"C:\\Users\\JARVIS\\Desktop\\TripIt\\backend\\routes\\__pycache__\")",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(dir:*)",
+      "Bash(timeout 5 echo:*)"
     ],
     "deny": [],
     "ask": []
