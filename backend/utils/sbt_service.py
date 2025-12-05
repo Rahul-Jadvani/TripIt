@@ -20,21 +20,23 @@ class SBTService:
     @staticmethod
     def get_web3_instance() -> Web3:
         """
-        Get Web3 instance for Base network (Sepolia or Mainnet)
+        Get Web3 instance for blockchain network (Hardhat local, Base Sepolia, or Base Mainnet)
         Returns:
-            Web3 instance connected to Base RPC
+            Web3 instance connected to the configured RPC
         """
-        network = current_app.config.get('BLOCKCHAIN_NETWORK', 'base_sepolia')
+        network = current_app.config.get('BLOCKCHAIN_NETWORK', 'hardhat')
 
         if network == 'base_mainnet':
             rpc_url = current_app.config['BASE_MAINNET_RPC']
-        else:
+        elif network == 'base_sepolia':
             rpc_url = current_app.config['BASE_SEPOLIA_RPC']
+        else:  # hardhat or localhost
+            rpc_url = current_app.config['HARDHAT_LOCAL_RPC']
 
         w3 = Web3(Web3.HTTPProvider(rpc_url))
 
         if not w3.is_connected():
-            raise ConnectionError(f"Failed to connect to Base network at {rpc_url}")
+            raise ConnectionError(f"Failed to connect to blockchain network at {rpc_url}")
 
         return w3
 
@@ -171,8 +173,9 @@ class SBTService:
             # Sign transaction
             signed_tx = w3.eth.account.sign_transaction(tx, backend_key)
 
-            # Send transaction
-            tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            # Send transaction (web3.py v6+ uses raw_transaction instead of rawTransaction)
+            raw_tx = signed_tx.raw_transaction if hasattr(signed_tx, 'raw_transaction') else signed_tx.rawTransaction
+            tx_hash = w3.eth.send_raw_transaction(raw_tx)
 
             # Wait for receipt (with timeout)
             receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
@@ -292,7 +295,8 @@ class SBTService:
 
             # Sign and send
             signed_tx = w3.eth.account.sign_transaction(tx, backend_key)
-            tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            raw_tx = signed_tx.raw_transaction if hasattr(signed_tx, 'raw_transaction') else signed_tx.rawTransaction
+            tx_hash = w3.eth.send_raw_transaction(raw_tx)
 
             # Wait for receipt
             receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
@@ -349,7 +353,8 @@ class SBTService:
 
             # Sign and send
             signed_tx = w3.eth.account.sign_transaction(tx, backend_key)
-            tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            raw_tx = signed_tx.raw_transaction if hasattr(signed_tx, 'raw_transaction') else signed_tx.rawTransaction
+            tx_hash = w3.eth.send_raw_transaction(raw_tx)
 
             # Wait for receipt
             receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)

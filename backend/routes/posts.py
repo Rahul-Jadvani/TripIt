@@ -67,8 +67,12 @@ def create_post(user_id):
     if traveler.wallet_address.lower() != wallet_address.lower():
         return error_response('Wallet address does not match bound wallet', status_code=400)
 
-    # Verify signature
-    timestamp = int(datetime.utcnow().timestamp())
+    # Get timestamp from request (must match frontend signed message)
+    timestamp = data.get('timestamp')
+    if not timestamp:
+        return error_response('Missing timestamp in request', status_code=400)
+
+    # Verify signature using the same timestamp that was signed
     message = f"TripIt Post\nContent: {content_url}\nCaption: {caption}\nTimestamp: {timestamp}"
 
     w3 = Web3()

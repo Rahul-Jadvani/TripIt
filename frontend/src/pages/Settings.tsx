@@ -8,6 +8,7 @@ import { Wallet, Shield, Star, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { WalletBindFlow } from '@/components/WalletBindFlow';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -163,18 +164,8 @@ export default function Settings() {
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Wallet Connection</CardTitle>
-              <CardDescription>Connect your wallet to verify builder credentials</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                <Wallet className="mr-2 h-4 w-4" />
-                Connect Wallet
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Blockchain Identity - Wallet Binding */}
+          <WalletBindFlow />
 
           <Card>
             <CardHeader>

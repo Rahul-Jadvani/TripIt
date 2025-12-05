@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Shield, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import api from '@/lib/api';
+import api from '@/services/api';
 import { toast } from 'sonner';
 
 interface CreatePostWithSignatureProps {
@@ -78,7 +78,7 @@ export const CreatePostWithSignature = ({ onPostCreated }: CreatePostWithSignatu
         post_type: 'photo', // Default to photo, can be extended
       });
 
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         toast.success('Post created and verified! 🎉');
 
         // Reset form

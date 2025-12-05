@@ -48,6 +48,8 @@ const SnapCamera = lazy(() => import("./pages/SnapCamera"));
 const TravelGroupsListPage = lazy(() => import("./pages/TravelGroupsListPage"));
 const TravelGroupDetailPage = lazy(() => import("./pages/TravelGroupDetailPage"));
 const CreateTravelGroupPage = lazy(() => import("./pages/CreateTravelGroupPage"));
+const BlockchainIdentity = lazy(() => import("./pages/BlockchainIdentity"));
+const VerifiedPosts = lazy(() => import("./pages/VerifiedPosts"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -121,6 +123,11 @@ const App = () => (
 
                   {/* Snap Routes */}
                   <Route path="/snap/camera" element={<ProtectedRoute><SnapCamera /></ProtectedRoute>} />
+
+                  {/* Blockchain Identity Routes */}
+                  <Route path="/blockchain-identity" element={<ProtectedRoute><BlockchainIdentity /></ProtectedRoute>} />
+                  <Route path="/identity" element={<ProtectedRoute><BlockchainIdentity /></ProtectedRoute>} />
+                  <Route path="/verified-posts" element={<ProtectedRoute><VerifiedPosts /></ProtectedRoute>} />
 
                   {/* Protected Routes */}
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

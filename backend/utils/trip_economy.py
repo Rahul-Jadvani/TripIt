@@ -21,7 +21,7 @@ Spend Rates:
 
 from datetime import datetime
 from typing import Optional, Dict, Any
-from models import db
+from extensions import db
 from models.traveler import Traveler
 from flask import current_app
 

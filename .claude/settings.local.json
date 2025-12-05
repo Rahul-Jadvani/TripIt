@@ -51,7 +51,10 @@
       "Bash(tasklist:*)",
       "Bash(dir:*)",
       "Bash(timeout 5 echo:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(timeout 3 bash:*)",
+      "Bash(npx hardhat node)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []

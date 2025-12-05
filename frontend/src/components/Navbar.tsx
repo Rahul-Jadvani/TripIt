@@ -9,19 +9,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { TrendingUp, Trophy, Search, Plus, LogOut, User, Settings, LayoutDashboard, Send, Menu, X, MessageSquare, Building2, Sparkles, Shield, Link2, Image, Star, CheckCircle } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
+  TrendingUp,
+  Trophy,
+  Search,
+  Plus,
+  LogOut,
+  User,
+  Settings,
+  LayoutDashboard,
+  Send,
+  Menu,
+  MessageSquare,
+  Shield,
+  Image,
+  Users,
+  MapPin,
+  AlertCircle,
+  Sparkles,
+  Coins
+} from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
+import { TripBalance } from '@/components/TripBalance';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { useNotificationCounts } from '@/hooks/useNotificationCounts';
 import { memo, useCallback, useState } from 'react';
 
 export const Navbar = memo(function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { unreadMessagesCount, pendingIntrosCount } = useNotificationCounts();
-
-  const isVerifiedUser = (user as any)?.isValidator || (user as any)?.is_validator;
 
   // Prefetch route modules on hover/focus to speed up navigation
   const prefetchRoute = useCallback((path: string) => {
@@ -48,6 +75,19 @@ export const Navbar = memo(function Navbar() {
       case '/register':
         import('@/pages/Register');
         break;
+      case '/leaderboard':
+        import('@/pages/Leaderboard');
+        break;
+      case '/communities':
+        import('@/pages/CommunitiesListPage');
+        break;
+      case '/groups':
+      case '/layerz':
+        import('@/pages/TravelGroupsListPage');
+        break;
+      case '/blockchain-identity':
+        import('@/pages/BlockchainIdentity');
+        break;
       default:
         break;
     }
@@ -56,62 +96,186 @@ export const Navbar = memo(function Navbar() {
   const handleLogout = useCallback(() => {
     logout();
     navigate('/');
-    setMobileMenuOpen(false);
+    setMenuOpen(false);
   }, [logout, navigate]);
+
+  const handleMenuItemClick = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b-4 border-black bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="container mx-auto px-6">
-        <div className="flex h-16 items-center justify-between gap-4">
-          {/* Logo */}
-          <Link to="/" onMouseEnter={() => prefetchRoute('/')} onFocus={() => prefetchRoute('/')} className="transition-quick hover:opacity-80 flex-shrink-0">
-            <img src="/logo.svg" alt="ZERO" className="h-20 w-20" loading="lazy" />
-          </Link>
+      <div className="container mx-auto px-4 md:px-6">
+        <div className="flex h-16 items-center justify-between gap-2">
+          {/* Logo & Hamburger Menu */}
+          <div className="flex items-center">
+            {/* Hamburger Menu */}
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0 h-12 w-12 rounded-full border border-border bg-secondary/60 hover:bg-secondary flex items-center justify-center"
+                >
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[280px] sm:w-[320px]">
+                <SheetHeader>
+                  <SheetTitle>Navigation</SheetTitle>
+                  <SheetDescription>Explore TripIt features</SheetDescription>
+                </SheetHeader>
+                <div className="flex flex-col items-center gap-3 pt-4">
+                  <Link
+                    to="/"
+                    onClick={handleMenuItemClick}
+                    className="flex items-center gap-4 rounded-lg px-3 py-2 transition-colors hover:bg-secondary"
+                  >
+                    <img src="/logo.svg" alt="TripIt logo" className="h-16 w-16" loading="lazy" />
+                    <div className="text-left">
+                      <p className="text-lg font-semibold leading-tight">TripIt</p>
+                      <p className="text-xs text-muted-foreground">Trusted travel identity</p>
+                    </div>
+                  </Link>
+                </div>
+                <Separator className="my-4" />
+                <div className="flex flex-col gap-4">
+                  {/* Main Menu Items */}
+                  <div className="space-y-1">
+                    <Link
+                      to="/"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      <span>Discover Itineraries</span>
+                    </Link>
+                    <Link
+                      to="/search"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <Search className="h-4 w-4" />
+                      <span>Search</span>
+                    </Link>
+                    {user && (
+                      <Link
+                        to="/publish"
+                        onClick={handleMenuItemClick}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Publish Itinerary</span>
+                      </Link>
+                    )}
+                  </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
-            <Link to="/" onMouseEnter={() => prefetchRoute('/')} onFocus={() => prefetchRoute('/')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
-              <TrendingUp className="h-4 w-4" />
-              <span>Discover</span>
-            </Link>
-            <Link to="/search" onMouseEnter={() => prefetchRoute('/search')} onFocus={() => prefetchRoute('/search')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick">
-              <Search className="h-4 w-4" />
-              <span>Search</span>
-            </Link>
-            <Link to="/travel-groups" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Find travel companions">
-              <MessageSquare className="h-4 w-4" />
-              <span>Travel Groups</span>
-            </Link>
-            <Link to="/women-guides" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Women's safety guides">
-              <Shield className="h-4 w-4" />
-              <span>Women Guides</span>
-            </Link>
-            <Link to="/communities" onMouseEnter={() => prefetchRoute('/communities')} onFocus={() => prefetchRoute('/communities')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Travel caravans">
-              <MessageSquare className="h-4 w-4" />
-              <span>Caravans</span>
-            </Link>
-            <Link to="/leaderboard" onMouseEnter={() => prefetchRoute('/leaderboard')} onFocus={() => prefetchRoute('/leaderboard')} className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick" title="Top travelers and itineraries">
-              <Trophy className="h-4 w-4" />
-              <span>Leaderboard</span>
-            </Link>
-          </nav>
+                  <Separator />
 
-          {/* Right side actions */}
-          <div className="flex items-center gap-2 ml-auto">
+                  {/* Community Features */}
+                  <div className="space-y-1">
+                    <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Community
+                    </p>
+                    <Link
+                      to="/layerz"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>Travel Groups (Layerz)</span>
+                    </Link>
+                    <Link
+                      to="/communities"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Caravans</span>
+                    </Link>
+                    <Link
+                      to="/leaderboard"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      <span>Leaderboard</span>
+                    </Link>
+                  </div>
+
+                  <Separator />
+
+                  {/* Safety & Features */}
+                  <div className="space-y-1">
+                    <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Features
+                    </p>
+                    <Link
+                      to="/women-guides"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <Shield className="h-4 w-4" />
+                      <span>Women's Safety Guides</span>
+                    </Link>
+                    <Link
+                      to="/safety-ratings"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Safety Ratings</span>
+                    </Link>
+                    <Link
+                      to="/snap/camera"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <Image className="h-4 w-4" />
+                      <span>Snaps (Stories)</span>
+                    </Link>
+                    <Link
+                      to="/travel-intel"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      <span>Travel Intel</span>
+                    </Link>
+                  </div>
+
+                  {user && (
+                    <>
+                      <Separator />
+
+                      {/* Blockchain Identity */}
+                      <div className="space-y-1">
+                        <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Blockchain
+                        </p>
+                        <Link
+                          to="/blockchain-identity"
+                          onClick={handleMenuItemClick}
+                          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+                        >
+                          <Sparkles className="h-4 w-4 text-primary" />
+                          <span>Blockchain Identity</span>
+                        </Link>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Right Side Actions */}
+          <div className="flex items-center gap-1 sm:gap-2 ml-auto">
             {user ? (
               <>
-                {/* Publish Button */}
-                <Link
-                  to="/publish"
-                  aria-label="Publish a new project"
-                  title="Publish"
-                  onMouseEnter={() => prefetchRoute('/publish')}
-                  onFocus={() => prefetchRoute('/publish')}
-                  className="btn-primary hidden md:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Publish</span>
-                </Link>
+                {/* TRIP Balance */}
+                <TripBalance variant="navbar" />
 
                 {/* Intros */}
                 <div className="relative inline-flex">
@@ -121,7 +285,7 @@ export const Navbar = memo(function Navbar() {
                     title="Intros"
                     onMouseEnter={() => prefetchRoute('/intros')}
                     onFocus={() => prefetchRoute('/intros')}
-                    className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="btn-secondary inline-flex gap-2 px-2 sm:px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <Send className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Intros</span>
@@ -129,7 +293,7 @@ export const Navbar = memo(function Navbar() {
                   {pendingIntrosCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-2.5 -right-2.5 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
                     >
                       {pendingIntrosCount > 9 ? '9+' : pendingIntrosCount}
                     </Badge>
@@ -144,7 +308,7 @@ export const Navbar = memo(function Navbar() {
                     title="Messages"
                     onMouseEnter={() => prefetchRoute('/messages')}
                     onFocus={() => prefetchRoute('/messages')}
-                    className="btn-secondary hidden sm:inline-flex gap-2 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="btn-secondary inline-flex gap-2 px-2 sm:px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Messages</span>
@@ -152,249 +316,96 @@ export const Navbar = memo(function Navbar() {
                   {unreadMessagesCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-2.5 -right-2.5 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
                     >
                       {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                     </Badge>
                   )}
                 </div>
 
-                {/* Notifications */}
+                {/* Notification Bell */}
                 <NotificationBell />
 
-                {/* Mobile Menu Button */}
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  aria-label="Toggle mobile menu"
-                  aria-expanded={mobileMenuOpen}
-                  className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </button>
-
-                {/* User Menu */}
+                {/* User Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      aria-label="Open user menu"
-                      title="User menu"
-                      className="flex items-center gap-2 rounded-full transition-quick hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+                    <Button
+                      variant="ghost"
+                      className="relative h-9 w-9 rounded-full hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all"
                     >
-                      <Avatar className="h-8 w-8 border-3 border-primary">
-                        <AvatarImage src={user.avatar} alt={user.username} />
-                        <AvatarFallback className="bg-primary text-black font-bold text-xs">
-                          {user.username.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[320px] rounded-2xl border-4 border-black p-0 overflow-hidden shadow-[10px_10px_0_0_#000]">
-                    {/* Header */}
-                    <div className="px-4 py-3 bg-secondary/60 border-b-2 border-black flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={user.avatar} alt={user.username} />
-                        <AvatarFallback className="text-xs font-black bg-primary text-black">
-                          {user.username.slice(0, 2).toUpperCase()}
+                        <AvatarImage
+                          src={user.profilePictureUrl || user.profile_picture_url || undefined}
+                          alt={user.username || 'User'}
+                        />
+                        <AvatarFallback>
+                          {(user.username || user.email || 'U')[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0">
-                        <p className="font-black truncate">{user.displayName || user.username}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user.username || 'User'}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user.email}
+                        </p>
                       </div>
                     </div>
-                    <div className="p-2">
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="cursor-pointer flex items-center gap-2 font-medium">
-                        <LayoutDashboard className="h-4 w-4" />
+                      <Link to="/dashboard" className="cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
                         <span>Dashboard</span>
                       </Link>
                     </DropdownMenuItem>
-                    {user.is_admin && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
-                          <Shield className="h-4 w-4 text-purple-600" />
-                          <span className="font-bold text-foreground">Admin Dashboard</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    {user.is_validator && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/validator" className="cursor-pointer flex items-center gap-2 font-medium rounded-xl px-2 py-2 transition-all duration-150 hover:-translate-y-0.5 hover:bg-secondary/60 border-2 border-transparent hover:border-black hover:shadow-[4px_4px_0_0_#000]">
-                          <Shield className="h-4 w-4 text-blue-600" />
-                          <span className="font-bold text-foreground">Validator Dashboard</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuItem asChild>
-                      <Link to="/my-projects" className="cursor-pointer flex items-center gap-2 font-medium">
-                        <Plus className="h-4 w-4" />
-                        <span>My Itineraries</span>
+                      <Link to="/profile" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/intros" className="cursor-pointer flex items-center gap-2 font-medium">
-                        <Send className="h-4 w-4" />
-                        <span>Intro Requests</span>
+                      <Link to="/settings" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/messages" className="cursor-pointer flex items-center gap-2 font-medium">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>Messages</span>
+                      <Link to="/blockchain-identity" className="cursor-pointer">
+                        <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                        <span>Blockchain Identity</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="my-2" />
-                    {user.is_investor ? (
-                      <>
-                        <DropdownMenuItem asChild>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <DropdownMenuItem asChild>
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to={`/u/${user.username}`} className="cursor-pointer flex items-center gap-2 font-medium">
-                        <User className="h-4 w-4" />
-                        <span>Public Profile</span>
-                      </Link>
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/profile" className="cursor-pointer flex items-center gap-2 font-medium">
-                        <Settings className="h-4 w-4" />
-                        <span>Edit Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    {!isVerifiedUser && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/settings" className="cursor-pointer flex items-center gap-2 font-medium">
-                          <CheckCircle className="h-4 w-4" />
-                          <span>Become a Verified User</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator className="my-2" />
-                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive flex items-center gap-2 font-medium">
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
-                    </DropdownMenuItem>
-                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                {/* Mobile Navigation Drawer */}
-                {mobileMenuOpen && (
-                  <div className="absolute top-16 left-0 right-0 md:hidden bg-background border-b-4 border-black shadow-lg z-40">
-                    <nav className="flex flex-col p-4 gap-2">
-                      <Link
-                        to="/"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          prefetchRoute('/');
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
-                      >
-                        <TrendingUp className="h-4 w-4" />
-                        <span>Feed</span>
-                      </Link>
-                      <Link
-                        to="/leaderboard"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          prefetchRoute('/leaderboard');
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
-                      >
-                        <Trophy className="h-4 w-4" />
-                        <span>Leaderboard</span>
-                      </Link>
-                      <Link
-                        to="/layerz"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          prefetchRoute('/layerz');
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
-                      >
-                        <Link2 className="h-4 w-4" />
-                        <span>Layerz</span>
-                      </Link>
-                      {user && (
-                        <Link
-                          to="/investor-directory"
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            prefetchRoute('/investor-directory');
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
-                        >
-                          <Building2 className="h-4 w-4" />
-                          <span>Investors</span>
-                        </Link>
-                      )}
-                      <Link
-                        to="/explore"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          prefetchRoute('/explore');
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
-                      >
-                        <Image className="h-4 w-4" />
-                        <span>Explore</span>
-                      </Link>
-                      <Link
-                        to="/search"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          prefetchRoute('/search');
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-quick"
-                      >
-                        <Search className="h-4 w-4" />
-                        <span>Search</span>
-                      </Link>
-                      <Link
-                        to="/publish"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          prefetchRoute('/publish');
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold btn-primary transition-quick"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Publish</span>
-                      </Link>
-                    </nav>
-                  </div>
-                )}
               </>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/login"
-                  aria-label="Login"
-                  title="Login"
+              <>
+                <Button
+                  variant="ghost"
+                  asChild
+                  className="text-sm hidden sm:inline-flex"
                   onMouseEnter={() => prefetchRoute('/login')}
                   onFocus={() => prefetchRoute('/login')}
-                  className="btn-secondary px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  aria-label="Sign up"
-                  title="Sign up"
+                  <Link to="/login">Log in</Link>
+                </Button>
+                <Button
+                  asChild
+                  className="btn-primary text-sm"
                   onMouseEnter={() => prefetchRoute('/register')}
                   onFocus={() => prefetchRoute('/register')}
-                  className="btn-primary px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  Sign Up
-                </Link>
-              </div>
+                  <Link to="/register">Sign up</Link>
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -402,6 +413,3 @@ export const Navbar = memo(function Navbar() {
     </header>
   );
 });
-
-
-

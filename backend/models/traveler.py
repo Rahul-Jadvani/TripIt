@@ -35,6 +35,24 @@ class Traveler(db.Model):
     date_of_birth = db.Column(db.Date, nullable=True)
     gender = db.Column(db.String(20), nullable=True)  # male, female, other, prefer_not_to_say
 
+    # Blockchain Identity (Wallet Binding)
+    wallet_address = db.Column(db.String(42), unique=True, nullable=True, index=True)  # Ethereum address (0x...)
+    wallet_bound_at = db.Column(db.DateTime, nullable=True)
+    google_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)  # Google OAuth subject ID
+
+    # Profile Hashing (for privacy-preserving identity)
+    profile_hash = db.Column(db.String(64), nullable=True)  # SHA-256 hash of profile data
+    profile_hash_salt = db.Column(db.String(32), nullable=True)  # Salt for hashing (16 bytes hex)
+    profile_hash_updated_at = db.Column(db.DateTime, nullable=True)
+    emergency_contacts_hash = db.Column(db.String(64), nullable=True)  # SHA-256 hash of emergency contacts
+
+    # Aadhaar Verification (India-specific, optional)
+    aadhaar_status = db.Column(db.String(20), default='not_verified')  # not_verified, pending, verified
+    aadhaar_verified_at = db.Column(db.DateTime, nullable=True)
+
+    # Reputation Score (for SBT)
+    reputation_score = db.Column(db.Float, default=0.0)  # 0-100 score for on-chain storage
+
     # SBT Integration
     sbt_id = db.Column(db.String(256), unique=True, nullable=True, index=True)
     sbt_contract_address = db.Column(db.String(42), nullable=True)
@@ -131,6 +149,14 @@ class Traveler(db.Model):
                 'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
                 'emergency_contact_1_name': self.emergency_contact_1_name,
                 'insurance_provider': self.insurance_provider,
+                # Blockchain Identity Fields
+                'wallet_address': self.wallet_address,
+                'wallet_bound_at': self.wallet_bound_at.isoformat() if self.wallet_bound_at else None,
+                'profile_hash': self.profile_hash,
+                'profile_hash_updated_at': self.profile_hash_updated_at.isoformat() if self.profile_hash_updated_at else None,
+                'reputation_score': self.reputation_score,
+                'sbt_verified_date': self.sbt_verified_date.isoformat() if self.sbt_verified_date else None,
+                'sbt_blockchain_hash': self.sbt_blockchain_hash,
             })
 
         return data

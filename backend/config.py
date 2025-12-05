@@ -68,7 +68,7 @@ class Config:
         '0x0000000000000000000000000000000000000000'  # Update with actual contract
     )
 
-    # Blockchain - TripIt (Base Sepolia)
+    # Blockchain - TripIt (Base Sepolia / Hardhat Local)
     BASE_SEPOLIA_RPC = os.getenv(
         'BASE_SEPOLIA_RPC',
         'https://sepolia.base.org'
@@ -77,7 +77,11 @@ class Config:
         'BASE_MAINNET_RPC',
         'https://mainnet.base.org'
     )
-    BLOCKCHAIN_NETWORK = os.getenv('BLOCKCHAIN_NETWORK', 'base_sepolia')  # base_sepolia or base_mainnet
+    HARDHAT_LOCAL_RPC = os.getenv(
+        'HARDHAT_LOCAL_RPC',
+        'http://localhost:8545'
+    )
+    BLOCKCHAIN_NETWORK = os.getenv('BLOCKCHAIN_NETWORK', 'hardhat')  # hardhat, base_sepolia, or base_mainnet
 
     # SBT Contract (Soul-Bound Travel Card)
     SBT_CONTRACT_ADDRESS = os.getenv(

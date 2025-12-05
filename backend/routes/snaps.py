@@ -123,6 +123,19 @@ def create_snap(user_id):
         db.session.add(snap)
         db.session.commit()
 
+        # Award TRIP tokens for posting snap (2 TRIP)
+        try:
+            trip_result = TripEconomy.award_trip(
+                traveler_id=user_id,
+                transaction_type=TripEconomy.TransactionType.SNAP_POST,
+                reference_id=snap.id,
+                description=f"Posted snap at {location_name or 'location'}"
+            )
+            if trip_result['success']:
+                current_app.logger.info(f"Awarded 2 TRIP to traveler {user_id} for snap {snap.id}")
+        except Exception as e:
+            current_app.logger.error(f"Failed to award TRIP tokens: {e}")
+
         # Trigger AI analysis task with local file path (async with sync fallback)
         try:
             from tasks.ai_analysis_tasks import analyze_snap_ai

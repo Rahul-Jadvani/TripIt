@@ -87,9 +87,40 @@ def bind_wallet(user_id):
         return error_response(f'Signature verification failed: {str(e)}', status_code=400)
 
     # Bind wallet (IMMUTABLE)
-    traveler.wallet_address = wallet_address
-    traveler.wallet_bound_at = datetime.utcnow()
-    db.session.commit()
+    try:
+        current_app.logger.info(f"[BIND_WALLET] User ID: {user_id}")
+        current_app.logger.info(f"[BIND_WALLET] Traveler ID: {traveler.id}")
+        current_app.logger.info(f"[BIND_WALLET] Before assignment - wallet_address: {traveler.wallet_address}")
+
+        traveler.wallet_address = wallet_address
+        traveler.wallet_bound_at = datetime.utcnow()
+
+        current_app.logger.info(f"[BIND_WALLET] After assignment - wallet_address: {traveler.wallet_address}")
+        current_app.logger.info(f"[BIND_WALLET] After assignment - wallet_bound_at: {traveler.wallet_bound_at}")
+
+        # Check if object is in session
+        current_app.logger.info(f"[BIND_WALLET] Is traveler in session: {traveler in db.session}")
+        current_app.logger.info(f"[BIND_WALLET] Session dirty objects: {db.session.dirty}")
+        current_app.logger.info(f"[BIND_WALLET] Session new objects: {db.session.new}")
+
+        db.session.commit()
+        current_app.logger.info(f"[BIND_WALLET] Commit completed successfully")
+
+        # Verify the commit
+        db.session.refresh(traveler)
+        current_app.logger.info(f"[BIND_WALLET] After refresh - wallet_address: {traveler.wallet_address}")
+        current_app.logger.info(f"[BIND_WALLET] After refresh - wallet_bound_at: {traveler.wallet_bound_at}")
+
+        # Double-check with a fresh query
+        fresh_traveler = Traveler.query.get(user_id)
+        current_app.logger.info(f"[BIND_WALLET] Fresh query - wallet_address: {fresh_traveler.wallet_address}")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[BIND_WALLET] ERROR during commit: {str(e)}")
+        import traceback
+        current_app.logger.error(f"[BIND_WALLET] Traceback: {traceback.format_exc()}")
+        return error_response(f'Failed to bind wallet: {str(e)}', status_code=500)
 
     return success_response(
         {
@@ -144,25 +175,56 @@ def create_profile_hash(user_id):
     )
 
     # Update traveler
-    traveler.profile_hash = result['hash']
-    traveler.profile_hash_salt = result['salt']
-    traveler.profile_hash_updated_at = datetime.utcnow()
-    traveler.full_name = full_name
-    traveler.date_of_birth = dob
-    if phone:
-        traveler.phone = phone
+    try:
+        current_app.logger.info(f"[CREATE_HASH] User ID: {user_id}")
+        current_app.logger.info(f"[CREATE_HASH] Traveler ID: {traveler.id}")
+        current_app.logger.info(f"[CREATE_HASH] Before assignment - profile_hash: {traveler.profile_hash}")
 
-    # Update emergency contacts hash if emergency contacts exist
-    if traveler.emergency_contact_1_name or traveler.emergency_contact_2_name:
-        emergency_hash = EmergencyContactHasher.generate_emergency_hash(
-            traveler.emergency_contact_1_name,
-            traveler.emergency_contact_1_phone,
-            traveler.emergency_contact_2_name,
-            traveler.emergency_contact_2_phone
-        )
-        traveler.emergency_contacts_hash = emergency_hash
+        traveler.profile_hash = result['hash']
+        traveler.profile_hash_salt = result['salt']
+        traveler.profile_hash_updated_at = datetime.utcnow()
+        traveler.full_name = full_name
+        traveler.date_of_birth = dob
+        if phone:
+            traveler.phone = phone
 
-    db.session.commit()
+        current_app.logger.info(f"[CREATE_HASH] After assignment - profile_hash: {traveler.profile_hash}")
+        current_app.logger.info(f"[CREATE_HASH] After assignment - profile_hash_salt: {traveler.profile_hash_salt}")
+        current_app.logger.info(f"[CREATE_HASH] After assignment - full_name: {traveler.full_name}")
+
+        # Update emergency contacts hash if emergency contacts exist
+        if traveler.emergency_contact_1_name or traveler.emergency_contact_2_name:
+            emergency_hash = EmergencyContactHasher.generate_emergency_hash(
+                traveler.emergency_contact_1_name,
+                traveler.emergency_contact_1_phone,
+                traveler.emergency_contact_2_name,
+                traveler.emergency_contact_2_phone
+            )
+            traveler.emergency_contacts_hash = emergency_hash
+            current_app.logger.info(f"[CREATE_HASH] Emergency contacts hash: {emergency_hash}")
+
+        # Check session state
+        current_app.logger.info(f"[CREATE_HASH] Is traveler in session: {traveler in db.session}")
+        current_app.logger.info(f"[CREATE_HASH] Session dirty objects: {db.session.dirty}")
+
+        db.session.commit()
+        current_app.logger.info(f"[CREATE_HASH] Commit completed successfully")
+
+        # Verify the commit
+        db.session.refresh(traveler)
+        current_app.logger.info(f"[CREATE_HASH] After refresh - profile_hash: {traveler.profile_hash}")
+        current_app.logger.info(f"[CREATE_HASH] After refresh - full_name: {traveler.full_name}")
+
+        # Double-check with fresh query
+        fresh_traveler = Traveler.query.get(user_id)
+        current_app.logger.info(f"[CREATE_HASH] Fresh query - profile_hash: {fresh_traveler.profile_hash}")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[CREATE_HASH] ERROR during commit: {str(e)}")
+        import traceback
+        current_app.logger.error(f"[CREATE_HASH] Traceback: {traceback.format_exc()}")
+        return error_response(f'Failed to create profile hash: {str(e)}', status_code=500)
 
     return success_response(
         {
@@ -305,9 +367,12 @@ def update_emergency_contacts(user_id):
         400: Invalid input
     """
     data = request.get_json()
+    current_app.logger.info(f"[EMERGENCY_CONTACTS] 🔄 Update request for user {user_id}")
+    current_app.logger.info(f"[EMERGENCY_CONTACTS] Data: {data}")
 
     traveler = Traveler.query.get(user_id)
     if not traveler:
+        current_app.logger.error(f"[EMERGENCY_CONTACTS] ❌ Traveler not found: {user_id}")
         return error_response('Traveler not found', status_code=404)
 
     # Update emergency contacts
@@ -315,6 +380,7 @@ def update_emergency_contacts(user_id):
     traveler.emergency_contact_1_phone = data.get('contact1_phone')
     traveler.emergency_contact_2_name = data.get('contact2_name')
     traveler.emergency_contact_2_phone = data.get('contact2_phone')
+    current_app.logger.info(f"[EMERGENCY_CONTACTS] Set contact 1: {traveler.emergency_contact_1_name}")
 
     # Generate new emergency contacts hash
     emergency_hash = EmergencyContactHasher.generate_emergency_hash(
@@ -350,6 +416,9 @@ def update_emergency_contacts(user_id):
                 )
 
     db.session.commit()
+    current_app.logger.info(f"[EMERGENCY_CONTACTS] ✅ Successfully updated for user {user_id}")
+    current_app.logger.info(f"[EMERGENCY_CONTACTS] Emergency hash: {emergency_hash}")
+    current_app.logger.info(f"[EMERGENCY_CONTACTS] Profile hash: {traveler.profile_hash}")
 
     return success_response(
         {
