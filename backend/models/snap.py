@@ -17,8 +17,9 @@ class Snap(db.Model):
 
     # Content
     caption = db.Column(db.Text, nullable=True)
-    image_url = db.Column(db.String(500), nullable=False)  # URL to the uploaded image
+    image_url = db.Column(db.String(500), nullable=False)  # IPFS gateway URL to the image
     image_filename = db.Column(db.String(255), nullable=False)  # Original filename
+    ipfs_hash = db.Column(db.String(100), nullable=True)  # IPFS content hash (CID)
 
     # Geolocation - Real-time location where pic was clicked
     latitude = db.Column(db.Float, nullable=True)  # GPS latitude
@@ -53,6 +54,7 @@ class Snap(db.Model):
             'caption': self.caption,
             'image_url': self.image_url,
             'image_filename': self.image_filename,
+            'ipfs_hash': self.ipfs_hash,
             'latitude': self.latitude,
             'longitude': self.longitude,
             'location_name': self.location_name,

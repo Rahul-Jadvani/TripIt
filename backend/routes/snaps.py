@@ -7,30 +7,23 @@ from datetime import datetime
 from sqlalchemy import func, or_
 from werkzeug.utils import secure_filename
 import os
-import uuid
 
 from extensions import db
 from models.snap import Snap
 from models.traveler import Traveler
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
+from utils.ipfs import PinataService
 
 snaps_bp = Blueprint('snaps', __name__)
 
 # Configuration for file uploads
-UPLOAD_FOLDER = 'uploads/snaps'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-def get_upload_folder():
-    """Get or create upload folder"""
-    upload_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), UPLOAD_FOLDER)
-    os.makedirs(upload_path, exist_ok=True)
-    return upload_path
 
 
 @snaps_bp.route('', methods=['POST'])
@@ -70,17 +63,24 @@ def create_snap(user_id):
         if not (-180 <= longitude <= 180):
             return error_response('Invalid longitude. Must be between -180 and 180', 400)
 
-        # Save the file
+        # Check file size
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+
+        if file_size > MAX_FILE_SIZE:
+            return error_response(f'File size exceeds {MAX_FILE_SIZE / 1024 / 1024}MB limit', 413)
+
+        # Upload to IPFS via Pinata
         original_filename = secure_filename(file.filename)
-        file_extension = original_filename.rsplit('.', 1)[1].lower()
-        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        result = PinataService.upload_file(file, filename=original_filename)
 
-        upload_folder = get_upload_folder()
-        file_path = os.path.join(upload_folder, unique_filename)
-        file.save(file_path)
+        if not result['success']:
+            return error_response(f'IPFS upload failed: {result["error"]}', 500)
 
-        # Create relative URL for the image
-        image_url = f"/uploads/snaps/{unique_filename}"
+        # Use IPFS URL
+        image_url = result['url']  # IPFS gateway URL
+        ipfs_hash = result['ipfs_hash']
 
         # Create snap object
         snap = Snap(
@@ -88,6 +88,7 @@ def create_snap(user_id):
             caption=caption,
             image_url=image_url,
             image_filename=original_filename,
+            ipfs_hash=ipfs_hash,
             latitude=latitude,
             longitude=longitude,
             location_name=location_name,
