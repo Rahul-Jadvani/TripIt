@@ -264,6 +264,24 @@ def create_itinerary(user_id):
         except Exception as e:
             print(f"Failed to queue scoring task: {e}")
 
+        # Trigger AI analysis task (async with sync fallback)
+        try:
+            from tasks.ai_analysis_tasks import analyze_itinerary_ai
+            analyze_itinerary_ai.delay(itinerary.id)
+            print(f"[Itineraries] ✅ AI analysis task queued for itinerary {itinerary.id}")
+        except Exception as e:
+            print(f"[Itineraries] ⚠️ Failed to queue AI analysis task: {e}")
+            # Sync fallback: Run AI analysis immediately
+            try:
+                from services.ai_analyzer import AIAnalyzer
+                ai_analyzer = AIAnalyzer()
+                if ai_analyzer.is_available():
+                    print(f"[Itineraries] 🔄 Running AI analysis synchronously (fallback)")
+                    alerts = ai_analyzer.analyze_itinerary(itinerary.to_dict(include_creator=True))
+                    print(f"[Itineraries] ✅ Sync AI analysis completed: {len(alerts)} alerts")
+            except Exception as sync_error:
+                print(f"[Itineraries] ❌ Sync AI analysis also failed: {sync_error}")
+
         CacheService.invalidate_itinerary_feed()
         CacheService.invalidate_leaderboard()
         CacheService.invalidate_user_itineraries(user_id)

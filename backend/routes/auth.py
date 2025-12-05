@@ -178,6 +178,10 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        # AUTO-SYNC: Create corresponding User record for notifications
+        from utils.user_sync import ensure_user_for_traveler
+        ensure_user_for_traveler(user.id)
+
         # Invalidate search cache when a new user is created
         CacheService.invalidate_search_results()
 
@@ -422,6 +426,10 @@ def google_callback():
             db.session.commit()
 
             print(f"[Google OAuth] New user created: {candidate}")
+
+            # AUTO-SYNC: Create corresponding User record for notifications
+            from utils.user_sync import ensure_user_for_traveler
+            ensure_user_for_traveler(user.id)
 
             # Invalidate search cache when a new user is created via OAuth
             CacheService.invalidate_search_results()

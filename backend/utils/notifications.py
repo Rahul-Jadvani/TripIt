@@ -88,7 +88,7 @@ def notify_chain_new_project(chain, project, actor):
             project_id=project.id,
             chain_id=chain.id,
             actor_id=actor.id,
-            redirect_url=f"/chains/{chain.slug}"
+            redirect_url=f"/layerz/{chain.id}"
         )
 
 

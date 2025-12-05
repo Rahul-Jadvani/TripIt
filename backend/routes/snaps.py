@@ -75,12 +75,33 @@ def create_snap(user_id):
 
         # Upload to IPFS via Pinata
         original_filename = secure_filename(file.filename)
+
+        # Save to local directory for AI analysis
+        upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'snaps')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        # Generate unique filename for local storage
+        from uuid import uuid4
+        local_filename = f"{uuid4()}.{original_filename.rsplit('.', 1)[1].lower()}"
+        local_path = os.path.join(upload_folder, local_filename)
+
+        # Reset file pointer and save locally
+        file.seek(0)
+        file.save(local_path)
+
+        # Reset file pointer again for IPFS upload
+        file.seek(0)
         result = PinataService.upload_file(file, filename=original_filename)
 
         if not result['success']:
+            # Clean up local file if IPFS upload fails
+            try:
+                os.remove(local_path)
+            except:
+                pass
             return error_response(f'IPFS upload failed: {result["error"]}', 500)
 
-        # Use IPFS URL
+        # Use IPFS URL for frontend/feed
         image_url = result['url']  # IPFS gateway URL
         ipfs_hash = result['ipfs_hash']
 
@@ -102,18 +123,34 @@ def create_snap(user_id):
         db.session.add(snap)
         db.session.commit()
 
-        # Award TRIP tokens for uploading snap (2 TRIP)
+        # Trigger AI analysis task with local file path (async with sync fallback)
         try:
-            trip_result = TripEconomy.award_trip(
-                traveler_id=user_id,
-                transaction_type=TripEconomy.TransactionType.SNAP_POST,
-                reference_id=snap.id,
-                description=f"Uploaded snap at {location_name or city or 'unknown location'}"
-            )
-            if trip_result['success']:
-                current_app.logger.info(f"Awarded 2 TRIP to traveler {user_id} for snap {snap.id}")
+            from tasks.ai_analysis_tasks import analyze_snap_ai
+            analyze_snap_ai.delay(snap.id, local_filename)
+            print(f"[Snaps] ✅ AI analysis task queued for snap {snap.id}")
         except Exception as e:
-            current_app.logger.error(f"Failed to award TRIP tokens: {e}")
+            print(f"[Snaps] ⚠️ Failed to queue AI analysis task: {e}")
+            # Sync fallback: Run AI analysis immediately with local file
+            try:
+                from services.ai_analyzer import AIAnalyzer
+                import base64
+                ai_analyzer = AIAnalyzer()
+                if ai_analyzer.is_available():
+                    print(f"[Snaps] 🔄 Running AI analysis synchronously (fallback)")
+                    snap_data = snap.to_dict(include_creator=True)
+
+                    # Convert local file to base64 for AI analysis
+                    if os.path.exists(local_path):
+                        with open(local_path, 'rb') as img_file:
+                            image_data = base64.b64encode(img_file.read()).decode('utf-8')
+                        ext = local_filename.rsplit('.', 1)[1].lower()
+                        mime_type = f"image/{ext}" if ext != 'jpg' else "image/jpeg"
+                        snap_data['image_url'] = f"data:{mime_type};base64,{image_data}"
+
+                    alerts = ai_analyzer.analyze_snap(snap_data)
+                    print(f"[Snaps] ✅ Sync AI analysis completed: {len(alerts)} alerts")
+            except Exception as sync_error:
+                print(f"[Snaps] ❌ Sync AI analysis also failed: {sync_error}")
 
         return success_response(
             data=snap.to_dict(include_creator=True),

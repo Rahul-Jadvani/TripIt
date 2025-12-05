@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Settings, Check, Trash2, Loader2, Send, MessageSquare } from 'lucide-react';
+import { Bell, Settings, Check, Trash2, Loader2, Send, MessageSquare, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,15 +20,16 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const { data: notificationsData, isLoading } = useNotifications({
+  const { data: notificationsData, isLoading, refetch } = useNotifications({
     limit: 10,
   });
 
-  const { data: unreadCountData } = useUnreadNotificationCount();
+  const { data: unreadCountData, refetch: refetchUnreadCount } = useUnreadNotificationCount();
   const { unreadMessagesCount, pendingIntrosCount } = useNotificationCounts();
   const markAsReadMutation = useMarkNotificationAsRead();
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
   const clearAllMutation = useClearAllNotifications();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const notifications = notificationsData?.notifications || [];
   const unreadCount = unreadCountData?.unread_count ?? 0;
@@ -52,6 +53,15 @@ export function NotificationBell() {
 
   const handleClearAll = async () => {
     return clearAllMutation.mutateAsync();
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetch(), refetchUnreadCount()]);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -86,16 +96,27 @@ export function NotificationBell() {
               <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Inbox</p>
               <h3 className="text-lg font-semibold text-foreground">Notifications</h3>
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              asChild
-              className="h-9 w-9 rounded-full bg-secondary/50 border-border/70 hover:bg-secondary/80"
-            >
-              <Link to="/notifications" onClick={() => setOpen(false)}>
-                <Settings className="h-4 w-4" />
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="h-9 w-9 rounded-full bg-secondary/50 border-border/70 hover:bg-secondary/80"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                asChild
+                className="h-9 w-9 rounded-full bg-secondary/50 border-border/70 hover:bg-secondary/80"
+              >
+                <Link to="/notifications" onClick={() => setOpen(false)}>
+                  <Settings className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {/* Action Buttons */}

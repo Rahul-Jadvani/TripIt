@@ -13,7 +13,7 @@ export function useNotifications(options?: {
     queryKey: ['notifications', options],
     queryFn: () => notificationApi.getNotifications(options),
     select: (response) => response.data,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 60000, // Refetch every 60 seconds (we have real-time updates via socket)
   });
 }
 
@@ -22,7 +22,7 @@ export function useUnreadNotificationCount() {
     queryKey: ['unreadCount'],
     queryFn: () => notificationApi.getUnreadCount(),
     select: (response) => response.data,
-    refetchInterval: 15000, // Refetch every 15 seconds
+    refetchInterval: 60000, // Refetch every 60 seconds (we have real-time updates via socket)
   });
 }
 

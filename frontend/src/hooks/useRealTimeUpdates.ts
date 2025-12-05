@@ -329,6 +329,8 @@ export function useRealTimeUpdates() {
       });
       // New persistent notification (from votes, comments, etc.)
       socket.on('new_notification', (notification) => {
+        console.log('[Socket.IO] Received notification:', notification);
+
         // Show toast for immediate feedback
         const title = notification.title || 'New Notification';
         const message = notification.message || '';
@@ -358,24 +360,7 @@ export function useRealTimeUpdates() {
             });
         }
 
-        // Update notifications cache (add to top of list)
-        queryClient.setQueryData(
-          ['notifications', {}],
-          (old: any = {}) => {
-            const oldData = old.data || [];
-            // Check if notification already exists
-            const exists = oldData.some((n: any) => n.id === notification.id);
-            return exists
-              ? old
-              : {
-                  ...old,
-                  data: [notification, ...oldData],
-                  total: (old?.total || 0) + 1,
-                };
-          }
-        );
-
-        // Update unread count
+        // Update unread count immediately
         queryClient.setQueryData(
           ['unreadCount'],
           (old: any = { unread_count: 0 }) => ({
@@ -383,8 +368,33 @@ export function useRealTimeUpdates() {
           })
         );
 
-        // Invalidate to ensure sync with server
-        queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+        // Update ALL notification query caches (handles different filter options)
+        queryClient.setQueriesData(
+          { queryKey: ['notifications'] },
+          (old: any) => {
+            if (!old?.notifications) return old;
+
+            // Check if notification already exists
+            const exists = old.notifications.some((n: any) => n.id === notification.id);
+            if (exists) return old;
+
+            // Add to top of list
+            return {
+              ...old,
+              notifications: [notification, ...old.notifications],
+              total: (old.total || 0) + 1,
+              unread_count: (old.unread_count || 0) + 1,
+            };
+          }
+        );
+
+        // Force immediate refetch for any queries that weren't in cache
+        setTimeout(() => {
+          queryClient.refetchQueries({
+            queryKey: ['notifications'],
+            type: 'active' // Only refetch active/mounted queries
+          });
+        }, 100);
       });
 
       socket.on('message:read', () => {
@@ -445,6 +455,7 @@ export function useRealTimeUpdates() {
         socket.off('intro:accepted');
         socket.off('intro:declined');
         socket.off('message:received');
+        socket.off('new_notification');
         socket.off('message:read');
         socket.off('messages:read');
         listenersAttached = false;
