@@ -50,7 +50,8 @@
       "Bash(del /S /Q \"C:\\Users\\JARVIS\\Desktop\\TripIt\\backend\\routes\\__pycache__\")",
       "Bash(tasklist:*)",
       "Bash(dir:*)",
-      "Bash(timeout 5 echo:*)"
+      "Bash(timeout 5 echo:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

@@ -14,6 +14,8 @@ from models.traveler import Traveler
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
 from utils.ipfs import PinataService
+from utils.trip_economy import TripEconomy
+from flask import current_app
 
 snaps_bp = Blueprint('snaps', __name__)
 
@@ -99,6 +101,19 @@ def create_snap(user_id):
 
         db.session.add(snap)
         db.session.commit()
+
+        # Award TRIP tokens for uploading snap (2 TRIP)
+        try:
+            trip_result = TripEconomy.award_trip(
+                traveler_id=user_id,
+                transaction_type=TripEconomy.TransactionType.SNAP_POST,
+                reference_id=snap.id,
+                description=f"Uploaded snap at {location_name or city or 'unknown location'}"
+            )
+            if trip_result['success']:
+                current_app.logger.info(f"Awarded 2 TRIP to traveler {user_id} for snap {snap.id}")
+        except Exception as e:
+            current_app.logger.error(f"Failed to award TRIP tokens: {e}")
 
         return success_response(
             data=snap.to_dict(include_creator=True),

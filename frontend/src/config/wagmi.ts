@@ -1,8 +1,8 @@
 import { http, createConfig } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { mainnet, sepolia, baseSepolia, base, localhost } from 'wagmi/chains';
 import { injected, walletConnect } from 'wagmi/connectors';
 
-// Kaia Testnet (Kairos) configuration
+// Kaia Testnet (Kairos) configuration - Legacy 0xCert
 const kaiaTestnet = {
   id: 1001,
   name: 'Kaia Testnet (Kairos)',
@@ -18,7 +18,14 @@ const kaiaTestnet = {
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '00000000000000000000000000000000';
 
 export const wagmiConfig = createConfig({
-  chains: [mainnet, sepolia, kaiaTestnet],
+  chains: [
+    baseSepolia,  // Primary for SBT system
+    localhost,    // Hardhat local testing
+    base,         // Base Mainnet (future)
+    kaiaTestnet,  // Legacy 0xCert
+    mainnet,
+    sepolia,
+  ],
   connectors: [
     injected(),
     ...(projectId !== '00000000000000000000000000000000'
@@ -27,8 +34,11 @@ export const wagmiConfig = createConfig({
     ),
   ],
   transports: {
+    [baseSepolia.id]: http('https://sepolia.base.org'),
+    [base.id]: http('https://mainnet.base.org'),
+    [localhost.id]: http('http://localhost:8545'),  // Hardhat local
+    [kaiaTestnet.id]: http(import.meta.env.VITE_KAIA_KAIROS_RPC || 'https://public-en-kairos.node.kaia.io'),
     [mainnet.id]: http(),
     [sepolia.id]: http(),
-    [kaiaTestnet.id]: http(import.meta.env.VITE_KAIA_KAIROS_RPC || 'https://public-en-kairos.node.kaia.io'),
   },
 });

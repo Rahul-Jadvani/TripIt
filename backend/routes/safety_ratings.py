@@ -14,7 +14,9 @@ from schemas.itinerary import SafetyRatingSchema
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, get_pagination_params
 from utils.cache import CacheService
+from utils.trip_economy import TripEconomy
 from marshmallow import ValidationError
+from flask import current_app
 
 safety_ratings_bp = Blueprint('safety_ratings', __name__)
 
@@ -94,6 +96,19 @@ def add_safety_rating(user_id):
             )
             db.session.add(rating)
             db.session.commit()
+
+            # Award TRIP tokens for new safety rating (5 TRIP)
+            try:
+                trip_result = TripEconomy.award_trip(
+                    traveler_id=user_id,
+                    transaction_type=TripEconomy.TransactionType.SAFETY_RATING,
+                    reference_id=rating.id,
+                    description=f"Submitted safety rating for itinerary {itinerary_id}"
+                )
+                if trip_result['success']:
+                    current_app.logger.info(f"Awarded 5 TRIP to traveler {user_id} for safety rating {rating.id}")
+            except Exception as e:
+                current_app.logger.error(f"Failed to award TRIP tokens: {e}")
 
         # Recalculate itinerary's average safety score
         all_ratings = SafetyRating.query.filter_by(itinerary_id=itinerary_id).all()

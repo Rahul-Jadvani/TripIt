@@ -96,6 +96,10 @@ class Config:
     BLOCKCHAIN_DEPLOYER_PRIVATE_KEY = os.getenv('BLOCKCHAIN_DEPLOYER_PRIVATE_KEY')
     BLOCKCHAIN_GAS_PRICE_MULTIPLIER = float(os.getenv('BLOCKCHAIN_GAS_PRICE_MULTIPLIER', 1.2))
 
+    # Backend Signer (for SBT minting - server-side wallet)
+    BACKEND_SIGNER_ADDRESS = os.getenv('BACKEND_SIGNER_ADDRESS')
+    BACKEND_SIGNER_KEY = os.getenv('BACKEND_SIGNER_KEY')
+
     # Pinata IPFS
     PINATA_API_KEY = os.getenv('PINATA_API_KEY')
     PINATA_SECRET_API_KEY = os.getenv('PINATA_SECRET_API_KEY')

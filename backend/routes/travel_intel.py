@@ -15,6 +15,7 @@ from schemas.itinerary import TravelIntelSchema
 from utils.decorators import token_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
 from utils.cache import CacheService
+from utils.trip_economy import TripEconomy
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,19 @@ def create_travel_intel(user_id):
 
         db.session.add(intel)
         db.session.commit()
+
+        # Award TRIP tokens for submitting travel intel (10 TRIP)
+        try:
+            trip_result = TripEconomy.award_trip(
+                traveler_id=user_id,
+                transaction_type=TripEconomy.TransactionType.TRAVEL_INTEL,
+                reference_id=intel.id,
+                description=f"Submitted travel intel: {intel.intel_type}"
+            )
+            if trip_result['success']:
+                logger.info(f"Awarded 10 TRIP to traveler {user_id} for travel intel {intel.id}")
+        except Exception as e:
+            logger.error(f"Failed to award TRIP tokens: {e}")
 
         # Reload with relationships
         from sqlalchemy.orm import joinedload

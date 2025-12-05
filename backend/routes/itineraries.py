@@ -19,6 +19,7 @@ from utils.decorators import token_required, admin_required, optional_auth
 from utils.helpers import success_response, error_response, paginated_response, get_pagination_params
 from tasks.scoring_tasks import score_itinerary_task, check_rate_limit
 from utils.cache import CacheService
+from utils.trip_economy import TripEconomy
 
 itineraries_bp = Blueprint('itineraries', __name__)
 
@@ -243,6 +244,19 @@ def create_itinerary(user_id):
         itinerary.proof_score = 0
 
         db.session.commit()
+
+        # Award TRIP tokens for creating itinerary (50 TRIP)
+        try:
+            trip_result = TripEconomy.award_trip(
+                traveler_id=user_id,
+                transaction_type=TripEconomy.TransactionType.VERIFIED_ITINERARY,
+                reference_id=itinerary.id,
+                description=f"Created itinerary: {itinerary.title}"
+            )
+            if trip_result['success']:
+                current_app.logger.info(f"Awarded 50 TRIP to traveler {user_id} for itinerary {itinerary.id}")
+        except Exception as e:
+            current_app.logger.error(f"Failed to award TRIP tokens: {e}")
 
         # Trigger async scoring task
         try:

@@ -434,6 +434,8 @@ def register_blueprints(app):
     from routes.women_safety import women_safety_bp
     from routes.trending import trending_bp
     from routes.snaps import snaps_bp
+    from routes.identity import identity_bp
+    from routes.posts import posts_bp
 
     # PERFORMANCE: Ultra-fast optimized routes
     from routes.prefetch import prefetch_bp
@@ -474,6 +476,8 @@ def register_blueprints(app):
     app.register_blueprint(women_safety_bp, url_prefix='/api/women-safety')
     app.register_blueprint(trending_bp, url_prefix='/api')
     app.register_blueprint(snaps_bp, url_prefix='/api/snaps')
+    app.register_blueprint(identity_bp, url_prefix='/api/identity')
+    app.register_blueprint(posts_bp, url_prefix='/api')
 
     # PERFORMANCE: Ultra-fast optimized endpoints
     app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')
