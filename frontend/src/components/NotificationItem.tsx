@@ -58,10 +58,14 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
     }
   };
 
+  // Check if this is a snap notification
+  const isSnapNotification = notification.redirect_url?.includes('/snaps/');
+
   const notificationContent = (
     <div
       className={cn(
-        "flex gap-3 p-4 rounded-xl border transition-all duration-200 cursor-pointer bg-background/60 hover:bg-background/80 shadow-sm",
+        "flex gap-3 p-4 rounded-xl border transition-all duration-200 bg-background/60 shadow-sm",
+        !isSnapNotification && "cursor-pointer hover:bg-background/80",
         notification.is_read
           ? "border-border/50 hover:border-primary/40"
           : "border-primary/40 bg-primary/10 hover:bg-primary/15 shadow-[0_12px_35px_rgba(59,130,246,0.18)]"
@@ -82,7 +86,7 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
           )}
         </div>
 
-        <p className="text-sm text-muted-foreground line-clamp-2">
+        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
           {notification.message}
         </p>
 
@@ -93,14 +97,15 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
     </div>
   );
 
-  // If there's a redirect URL, wrap in Link
-  if (notification.redirect_url) {
-    return (
-      <Link to={notification.redirect_url} className="block">
-        {notificationContent}
-      </Link>
-    );
+  // For snap notifications, just show the content without link
+  if (isSnapNotification) {
+    return notificationContent;
   }
 
-  return notificationContent;
+  // For other notifications, link to notifications page for full details
+  return (
+    <Link to="/notifications" className="block">
+      {notificationContent}
+    </Link>
+  );
 }

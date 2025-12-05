@@ -483,10 +483,13 @@ def register_blueprints(app):
     from routes.admin_auth import admin_auth_bp
     app.register_blueprint(admin_auth_bp)
 
-    # Route to serve uploaded snap images
+    # Route to serve uploaded snap images (for AI analysis)
     @app.route('/uploads/snaps/<path:filename>')
     def serve_snap_image(filename):
-        """Serve uploaded snap images"""
+        """
+        Serve snap images from local storage (used for AI analysis)
+        Note: Frontend uses IPFS URLs, this is only for AI vision API
+        """
         upload_folder = os.path.join(os.path.dirname(__file__), 'uploads', 'snaps')
         return send_from_directory(upload_folder, filename)
 
