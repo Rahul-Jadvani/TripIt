@@ -1,8 +1,46 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useSnaps } from '@/hooks/useSnaps';
 import SnapCard from '@/components/SnapCard';
+import { TravelSnapsCarousel } from '@/components/TravelSnapsCarousel';
+
+// OPTIMIZED: Lazy image loading component for better performance
+function LazyImage({ src, alt, className, ...props }: { src: string; alt: string; className?: string; [key: string]: any }) {
+  const [loaded, setLoaded] = useState(false);
+  const [inView, setInView] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <img
+      ref={imgRef}
+      src={inView ? src : undefined}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      onLoad={() => setLoaded(true)}
+      {...props}
+    />
+  );
+}
 // Lazy load heavy carousels (named exports -> map to default)
 const TopRatedCarousel = lazy(() =>
   import('@/components/TopRatedCarousel').then((m) => ({ default: m.TopRatedCarousel }))
@@ -26,7 +64,7 @@ import { usePublicInvestors } from '@/hooks/useInvestors';
 import { useDashboardStats } from '@/hooks/useStats';
 import { useMostRequestedProjects, useRecentConnections, useFeaturedProjects, useRisingStars, useCategoryProjects } from '@/hooks/useFeed';
 import { useAuth } from '@/context/AuthContext';
-import { itinerariesService } from '@/services/api';
+import { itinerariesService, snapsService } from '@/services/api';
 import { Itinerary } from '@/types';
 import { FeedMiniThread } from '@/components/FeedMiniThread';
 import { FeedLeaderTagCard } from '@/components/FeedLeaderTagCard';
@@ -69,33 +107,41 @@ function LazyOnVisible({
 }
 
 export default function Feed() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+   const { user } = useAuth();
+   const queryClient = useQueryClient();
+   const navigate = useNavigate();
 
-  // Fetch snaps for the feed
-  const { data: snapsData, isLoading: snapsLoading } = useSnaps(1, 10);
+   // PROGRESSIVE LOADING: Load hooks but control data processing/display
+   const [loadPhase, setLoadPhase] = useState<'initial' | 'secondary' | 'tertiary'>('initial');
 
-  // PROGRESSIVE LOADING: Load trending & top-rated first (priority), newest loads immediately after
-  const { data: hotData, isLoading: hotLoading } = useItineraries('trending', 1);
-  const { data: topData, isLoading: topLoading } = useItineraries('top-rated', 1);
-  const { data: newData, isLoading: newLoading } = useItineraries('newest', 1);
-  const { data: topBuilders = [] } = useBuildersLeaderboard(8);
-  const { data: buildersForCount = [] } = useBuildersLeaderboard(50);
-  const { data: investors = [] } = usePublicInvestors();
-  // Only load dashboard stats if user is authenticated (prevents 401 errors for guests)
-  const { data: dashboard } = useDashboardStats(!!user);
-  // Load feed-specific data (cached for 1 hour on backend)
-  const { data: mostRequestedData } = useMostRequestedProjects(30);
-  const { data: recentConnectionsData } = useRecentConnections(30);
-  const { data: featuredData } = useFeaturedProjects(30);
-  const { data: risingStarsData } = useRisingStars(30);
+   // OPTIMIZED: Reduced initial payload sizes for faster loading
+   const { data: snapsData, isLoading: snapsLoading } = useSnaps(1, 6); // Reduced from 10 to 6
+   const { data: hotData, isLoading: hotLoading } = useItineraries('trending', 1); // Keep full for hero
+   const { data: topData, isLoading: topLoading } = useItineraries('top-rated', 1); // Keep for carousel
+   const { data: newData, isLoading: newLoading } = useItineraries('newest', 1); // Keep for latest
+   const { data: topBuilders = [] } = useBuildersLeaderboard(6); // Reduced from 8 to 6
+   const { data: buildersForCount = [] } = useBuildersLeaderboard(25); // Reduced from 50 to 25
+   const { data: investors = [] } = usePublicInvestors();
+   const { data: dashboard } = useDashboardStats(!!user);
+   const { data: mostRequestedData } = useMostRequestedProjects(15); // Reduced from 30 to 15
+   const { data: recentConnectionsData } = useRecentConnections(15); // Reduced from 30 to 15
+   const { data: featuredData } = useFeaturedProjects(15); // Reduced from 30 to 15
+   const { data: risingStarsData } = useRisingStars(15); // Reduced from 30 to 15
 
-  // Travel-specific sections - fetch multiple pages to get more itineraries
-  const { data: page2Data } = useItineraries('trending', 2);
-  const { data: page3Data } = useItineraries('trending', 3);
-  const { data: page4Data } = useItineraries('top-rated', 2);
-  const { data: page5Data } = useItineraries('newest', 2);
+   // OPTIMIZED: Load additional pages only when needed (lazy loading)
+   const { data: page2Data } = useItineraries('trending', 2);
+   const { data: page3Data } = useItineraries('trending', 3);
+   const { data: page4Data } = useItineraries('top-rated', 2);
+   const { data: page5Data } = useItineraries('newest', 2);
+
+   // Progressive phase management
+   useEffect(() => {
+     if (!hotLoading) {
+       setLoadPhase('secondary');
+       const timer = setTimeout(() => setLoadPhase('tertiary'), 2000);
+       return () => clearTimeout(timer);
+     }
+   }, [hotLoading]);
 
   const investorsHref = user ? '/investor-directory' : '/investors';
 
@@ -107,12 +153,11 @@ export default function Feed() {
         : []);
 
   // Prefetch additional pages on-demand when user scrolls (lazy prefetch)
-  // Pages 2-3 are already prefetched by usePrefetch hook in idle time, so we only prefetch deeper pages here
+  // Only prefetch when secondary data is loaded to avoid competing with initial load
   useEffect(() => {
-    // Only prefetch page 3 on-demand to avoid duplicate work with usePrefetch
-    if (!hotLoading && !topLoading) {
+    if (loadPhase === 'secondary' && !hotLoading) {
       const prefetchDeepPages = async () => {
-        // Prefetch page 3 only (page 2 handled by usePrefetch idle batch)
+        // Prefetch deeper pages only after initial load is complete
         for (const sort of ['trending', 'top-rated', 'newest']) {
           queryClient.prefetchQuery({
             queryKey: ['itineraries', sort, 3],
@@ -128,36 +173,49 @@ export default function Feed() {
         }
       };
 
-      // Schedule this for idle time to avoid competing with critical prefetch
+      // Schedule this for idle time to avoid competing with secondary loading
       const scheduleIdle = (cb: () => void) => {
         const win: any = typeof window !== 'undefined' ? window : undefined;
         if (win && typeof win.requestIdleCallback === 'function') {
           win.requestIdleCallback(cb, { timeout: 5000 });
         } else {
-          setTimeout(cb, 2000); // Delay on older browsers
+          setTimeout(cb, 3000); // Longer delay for progressive loading
         }
       };
 
       scheduleIdle(prefetchDeepPages);
     }
-  }, [hotLoading, topLoading, queryClient]);
+  }, [loadPhase, hotLoading, queryClient]);
 
-  // Progressive loading: Show page when trending & top-rated are loaded
-  const isLoading = hotLoading || topLoading;
+  useEffect(() => {
+    queryClient.prefetchQuery({
+        queryKey: ['snaps', 1, 100],
+        queryFn: async () => {
+            const response = await snapsService.getFeed(1, 100);
+            return response.data;
+        },
+    });
+  }, [queryClient]);
 
-  // Categorize itineraries by activity tags
+
+  // Progressive loading: Show page when trending is loaded (phase 1)
+  const isLoading = hotLoading;
+
+  // Categorize itineraries by activity tags (progressive loading aware)
   const categorizedProjects = useMemo(() => {
-    // Combine all data sources
+    // Combine available data sources based on loading phase
     const allItineraries = [
       ...(hotData?.data || []),
-      ...(topData?.data || []),
-      ...(newData?.data || []),
-      ...(page2Data?.data || []),
-      ...(page3Data?.data || []),
-      ...(page4Data?.data || []),
-      ...(page5Data?.data || []),
-      ...(featuredData?.data || []),
-      ...(risingStarsData?.data || []),
+      ...(loadPhase === 'secondary' || loadPhase === 'tertiary' ? (topData?.data || []) : []),
+      ...(loadPhase === 'tertiary' ? [
+        ...(newData?.data || []),
+        ...(page2Data?.data || []),
+        ...(page3Data?.data || []),
+        ...(page4Data?.data || []),
+        ...(page5Data?.data || []),
+        ...(featuredData?.data || []),
+        ...(risingStarsData?.data || []),
+      ] : []),
     ];
 
     // Remove duplicates
@@ -202,22 +260,25 @@ export default function Feed() {
 
     const womenSafe = unique.filter((p: any) => p.women_safe_certified === true);
 
-    return {
-      hot: (hotData?.data || []).slice(0, 30),
-      topScored: (topData?.data || []).slice(0, 30),
-      featured: (featuredData?.data || []).slice(0, 30),
-      risingStars: (risingStarsData?.data || []).slice(0, 30),
-      newLaunches: (newData?.data || []).slice(0, 30),
-      adventure: adventure.slice(0, 30),
-      beach: beach.slice(0, 30),
-      cultural: cultural.slice(0, 30),
-      digitalNomad: digitalNomad.slice(0, 30),
-      womenSafe: womenSafe.slice(0, 30),
-      mostRequested: (mostRequestedData?.data || []).slice(0, 30),
-    };
-  }, [hotData, topData, newData, page2Data, page3Data, page4Data, page5Data, mostRequestedData, featuredData, risingStarsData]);
+    // OPTIMIZED: Limit initial data processing for faster rendering
+    const limit = loadPhase === 'initial' ? 12 : 30; // 12 items initially, 30 when fully loaded
 
-  // Merge all feed projects once to power stats + tag leader without duplicates
+    return {
+      hot: (hotData?.data || []).slice(0, limit),
+      topScored: (topData?.data || []).slice(0, limit),
+      featured: (featuredData?.data || []).slice(0, limit),
+      risingStars: (risingStarsData?.data || []).slice(0, limit),
+      newLaunches: (newData?.data || []).slice(0, limit),
+      adventure: adventure.slice(0, limit),
+      beach: beach.slice(0, limit),
+      cultural: cultural.slice(0, limit),
+      digitalNomad: digitalNomad.slice(0, limit),
+      womenSafe: womenSafe.slice(0, limit),
+      mostRequested: (mostRequestedData?.data || []).slice(0, limit),
+    };
+  }, [hotData, topData, newData, page2Data, page3Data, page4Data, page5Data, mostRequestedData, featuredData, risingStarsData, loadPhase]);
+
+  // Merge all feed projects once to power stats + tag leader without duplicates (progressive loading aware)
   const visibleFeedProjects = useMemo(() => {
     const unique = new Map<string, Itinerary>();
     const addProjects = (projects?: Itinerary[]) => {
@@ -227,19 +288,23 @@ export default function Feed() {
         unique.set(project.id, project);
       }
     };
-    // Include all sections for total count
+    // Include available sections for total count
     addProjects(hotData?.data);
-    addProjects(topData?.data);
-    addProjects(newData?.data);
-    addProjects(page2Data?.data);
-    addProjects(page3Data?.data);
-    addProjects(page4Data?.data);
-    addProjects(page5Data?.data);
-    addProjects(featuredData?.data);
-    addProjects(risingStarsData?.data);
-    addProjects(mostRequestedData?.data);
+    if (loadPhase === 'secondary' || loadPhase === 'tertiary') {
+      addProjects(topData?.data);
+    }
+    if (loadPhase === 'tertiary') {
+      addProjects(newData?.data);
+      addProjects(page2Data?.data);
+      addProjects(page3Data?.data);
+      addProjects(page4Data?.data);
+      addProjects(page5Data?.data);
+      addProjects(featuredData?.data);
+      addProjects(risingStarsData?.data);
+      addProjects(mostRequestedData?.data);
+    }
     return Array.from(unique.values());
-  }, [hotData?.data, topData?.data, newData?.data, page2Data?.data, page3Data?.data, page4Data?.data, page5Data?.data, featuredData?.data, risingStarsData?.data, mostRequestedData?.data]);
+  }, [hotData?.data, topData?.data, newData?.data, page2Data?.data, page3Data?.data, page4Data?.data, page5Data?.data, featuredData?.data, risingStarsData?.data, mostRequestedData?.data, loadPhase]);
 
   // Compute leading tag from activity_tags (travel-focused)
   const leader = useMemo(() => {
@@ -407,35 +472,36 @@ export default function Feed() {
             {/* Quick Section Nav - Travel Focused */}
             <nav aria-label="Quick sections" className="feed-quick-nav -mt-6">
               <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-                <a href="#top-rated" className="badge badge-dash badge-primary hover:opacity-90">Highest-Rated ({categorizedProjects.topScored.length})</a>
+                <a href="#top-rated" className="badge badge-dash badge-primary hover:opacity-90">
+                  Highest-Rated ({categorizedProjects.topScored.length})
+                  {topLoading && loadPhase === 'secondary' && <span className="ml-1 w-2 h-2 bg-current rounded-full animate-pulse" />}
+                </a>
                 {categorizedProjects.featured.length > 0 && <a href="#women-safe" className="badge badge-dash badge-accent hover:opacity-90">Women-Safe ({categorizedProjects.featured.length})</a>}
                 <a href="#trending" className="badge badge-dash badge-secondary hover:opacity-90">Trending Destinations ({categorizedProjects.hot.length})</a>
                 {categorizedProjects.risingStars.length > 0 && <a href="#hidden-gems" className="badge badge-dash badge-secondary hover:opacity-90">Hidden Gems ({categorizedProjects.risingStars.length})</a>}
-                <a href="#new-launches" className="badge badge-dash badge-secondary hover:opacity-90">Latest Adventures ({categorizedProjects.newLaunches.length})</a>
+                <a href="#new-launches" className="badge badge-dash badge-secondary hover:opacity-90">
+                  Latest Adventures ({categorizedProjects.newLaunches.length})
+                  {newLoading && loadPhase === 'tertiary' && <span className="ml-1 w-2 h-2 bg-current rounded-full animate-pulse" />}
+                </a>
+                {loadPhase !== 'tertiary' && (
+                  <div className="badge badge-dash badge-muted animate-pulse">
+                    Loading more...
+                  </div>
+                )}
               </div>
             </nav>
 
-            {/* Snaps Section - Orange Theme */}
+            {/* Travel Snaps Carousel - Premium Infinite Scrolling */}
             <section id="snaps" className="scroll-mt-24">
-              <div className="mb-4">
-                <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
-                  <Camera className="h-6 w-6 text-orange-500" />
-                  Travel Snaps
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">Live moments from travelers around the world</p>
-              </div>
               {snapsLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-96 bg-gray-800 rounded-lg animate-pulse" />
-                  ))}
+                <div className="h-96 bg-secondary/20 rounded-xl animate-pulse flex items-center justify-center">
+                  <div className="text-center">
+                    <Camera className="w-12 h-12 text-orange-500 mx-auto mb-4 animate-pulse" />
+                    <p className="text-muted-foreground">Loading travel snaps...</p>
+                  </div>
                 </div>
               ) : snapsData?.data && snapsData.data.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {snapsData.data.slice(0, 6).map((snap: any) => (
-                    <SnapCard key={snap.id} snap={snap} />
-                  ))}
-                </div>
+                <TravelSnapsCarousel snaps={snapsData.data} />
               ) : (
                 <div className="card-elevated py-12 text-center p-8 rounded-2xl bg-gradient-to-br from-orange-500/5 to-orange-600/5 border-2 border-orange-500/20">
                   <Camera className="w-16 h-16 text-orange-500 mx-auto mb-4" />
@@ -507,25 +573,27 @@ export default function Feed() {
 
             
 
-            {/* Mini-threads: quick bites between sections */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {topBuilders[0] && (
-                <FeedMiniThread
-                  title={`Top Travel Creator: @${topBuilders[0].username}`}
-                  subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} caravan score`}
-                  href={`/u/${topBuilders[0].username}`}
-                  badge="Featured"
-                />
-              )}
-              {hotData?.data?.[0] && (
-                <FeedMiniThread
-                  title={`Hot Project: ${hotData.data[0].title}`}
-                  subtitle={hotData.data[0].tagline}
-                  href={`/project/${hotData.data[0].id}`}
-                  badge="Trending"
-                />
-              )}
-            </div>
+            {/* OPTIMIZED: Mini-threads only show when secondary data is loaded */}
+            {loadPhase !== 'initial' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {topBuilders[0] && (
+                  <FeedMiniThread
+                    title={`Top Travel Creator: @${topBuilders[0].username}`}
+                    subtitle={`${topBuilders[0].projects} itineraries • ${topBuilders[0].score} caravan score`}
+                    href={`/u/${topBuilders[0].username}`}
+                    badge="Featured"
+                  />
+                )}
+                {hotData?.data?.[0] && (
+                  <FeedMiniThread
+                    title={`Hot Project: ${hotData.data[0].title}`}
+                    subtitle={hotData.data[0].tagline}
+                    href={`/project/${hotData.data[0].id}`}
+                    badge="Trending"
+                  />
+                )}
+              </div>
+            )}
 
             {/* Trending Destinations Carousel */}
             {categorizedProjects.hot.length > 0 && (
@@ -731,8 +799,9 @@ export default function Feed() {
 
             {/* Removed Top Investor card per request */}
 
-            {/* Community Highlights: Top Travel Creators, Open Investors, Recent Connections */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* OPTIMIZED: Community highlights only show when tertiary data is loaded */}
+            {loadPhase === 'tertiary' && (
+              <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Top Travel Creators */}
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -799,6 +868,7 @@ export default function Feed() {
                 </div>
               </div>
             </section>
+            )}
 
             {/* Empty State */}
             {Object.values(categorizedProjects).every(cat => cat.length === 0) && (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Itinerary } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -10,8 +10,49 @@ import { useAuth } from '@/context/AuthContext';
 import { ShareDialog } from '@/components/ShareDialog';
 import { VoteButtons } from '@/components/VoteButtons';
 
+// OPTIMIZED: Lazy image loading component for better performance
+function LazyImage({ src, alt, className, ...props }: { src: string; alt: string; className?: string; [key: string]: any }) {
+  const [loaded, setLoaded] = useState(false);
+  const [inView, setInView] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <img
+      ref={imgRef}
+      src={inView ? src : undefined}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      onLoad={() => setLoaded(true)}
+      {...props}
+    />
+  );
+}
+
 interface ItineraryCardProps {
   project: Itinerary;
+}
+
+interface TravelCompanion {
+  name: string;
 }
 
 export function ItineraryCard({ project }: ItineraryCardProps) {
@@ -28,13 +69,17 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
     ? project.screenshots
     : [];
 
+  const author = project.creator || project.author;
+  const authorUsername = author?.username || 'NA';
+  const authorAvatar = author?.avatar_url || author?.avatar;
+
   // Auto-scroll carousel
   useEffect(() => {
     if (images.length <= 1) return;
 
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % images.length);
-    }, 4000); // Change image every 4 seconds
+    }, 6000); // Change image every 6 seconds (slower)
 
     return () => clearInterval(interval);
   }, [images.length]);
@@ -96,27 +141,31 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
     return 'N/A';
   };
 
+  const isSavedState = savedLocal ?? isSaved;
+  const userVote = project.user_vote || project.userVote;
+  const projectOwnerId = project.created_by_traveler_id || project.user_id;
+
   return (
     <div className="group relative w-full">
       <Card className="overflow-hidden relative w-full border border-border/40 hover:border-primary/30 transition-all duration-300">
         {/* Caption Section - Creator + Title */}
         <div className="p-4 pb-2">
           <div className="flex items-center gap-3">
-            <Link to={`/profile/${project.creator?.username || project.author?.username}`} onClick={(e) => e.stopPropagation()}>
+            <Link to={`/profile/${authorUsername}`} onClick={(e) => e.stopPropagation()}>
               <Avatar className="h-10 w-10 ring-2 ring-primary/20">
                 <AvatarImage
-                  src={project.creator?.avatar_url || project.author?.avatar || project.author?.avatar_url}
-                  alt={project.creator?.username || project.author?.username}
+                  src={authorAvatar}
+                  alt={authorUsername}
                 />
                 <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                  {(project.creator?.username || project.author?.username)?.slice(0, 2).toUpperCase() || 'NA'}
+                  {authorUsername.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </Link>
             <div className="flex-1 min-w-0">
-              <Link to={`/profile/${project.creator?.username || project.author?.username}`} onClick={(e) => e.stopPropagation()}>
+              <Link to={`/profile/${authorUsername}`} onClick={(e) => e.stopPropagation()}>
                 <p className="text-sm font-bold text-foreground hover:text-primary transition-colors">
-                  {project.creator?.username || project.author?.username}
+                  {authorUsername}
                 </p>
               </Link>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -154,7 +203,7 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
         {images.length > 0 && (
           <Link to={`/project/${project.id}`}>
             <div className="relative w-full aspect-[4/3] bg-secondary/20 overflow-hidden group/carousel">
-              <img
+              <LazyImage
                 src={images[currentImageIndex]}
                 alt={`${project.title} - ${currentImageIndex + 1}`}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover/carousel:scale-105"
@@ -166,12 +215,14 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
                   <button
                     onClick={prevImage}
                     className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                    aria-label="Previous image"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   <button
                     onClick={nextImage}
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                    aria-label="Next image"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>
@@ -191,6 +242,7 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
                             ? 'w-6 bg-white'
                             : 'w-1.5 bg-white/50 hover:bg-white/75'
                         }`}
+                        aria-label={`Go to image ${idx + 1}`}
                       />
                     ))}
                   </div>
@@ -206,8 +258,8 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
             <VoteButtons
               projectId={project.id}
               voteCount={(project.upvotes || 0) - (project.downvotes || 0)}
-              userVote={project.user_vote || project.userVote}
-              projectOwnerId={project.created_by_traveler_id || project.user_id}
+              userVote={userVote}
+              projectOwnerId={projectOwnerId}
             />
 
             <Link
@@ -222,6 +274,7 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
             <button
               onClick={handleShare}
               className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors ml-auto"
+              aria-label="Share itinerary"
             >
               <Share2 className="h-5 w-5" />
             </button>
@@ -230,10 +283,11 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
               onClick={handleSave}
               disabled={checkingIfSaved || saveMutation.isPending || unsaveMutation.isPending}
               className={`transition-colors disabled:opacity-50 ${
-                (savedLocal ?? isSaved) ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+                isSavedState ? 'text-primary' : 'text-muted-foreground hover:text-primary'
               }`}
+              aria-label={isSavedState ? "Remove from saved" : "Save itinerary"}
             >
-              <Bookmark className={`h-5 w-5 ${(savedLocal ?? isSaved) ? 'fill-current' : ''}`} />
+              <Bookmark className={`h-5 w-5 ${isSavedState ? 'fill-current' : ''}`} />
             </button>
           </div>
         </div>
@@ -314,7 +368,7 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
             <p className="text-xs font-semibold text-muted-foreground mb-2">Travel Crew</p>
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
-                {project.travel_companions.slice(0, 4).map((companion: any, idx) => (
+                {project.travel_companions.slice(0, 4).map((companion: TravelCompanion, idx) => (
                   <div
                     key={idx}
                     className="w-8 h-8 rounded-full bg-primary/10 border-2 border-card flex items-center justify-center text-xs font-bold text-primary"

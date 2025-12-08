@@ -231,6 +231,7 @@ export interface Itinerary {
   uuid?: string;
   title: string;
   description: string;
+  tagline?: string;
   // Travel Details
   destination: string;
   regions?: string[];
@@ -245,6 +246,8 @@ export interface Itinerary {
   estimated_budget_min?: number;
   estimated_budget_max?: number;
   actual_budget_spent?: number;
+  budget_amount?: number;
+  budget_currency?: string;
   // Route & GPS
   route_gpx?: string;
   route_waypoints?: Array<{ lat: number; lon: number; name?: string; elevation?: number }>;
@@ -255,6 +258,7 @@ export interface Itinerary {
   travel_style?: string;
   activity_tags?: string[];
   travel_companions?: Array<{ name: string; role?: string }>;
+  screenshots?: string[];
   // Safety & Verification
   women_safe_certified?: boolean;
   safety_score?: number;
@@ -278,6 +282,11 @@ export interface Itinerary {
     };
   };
   // Engagement Metrics
+  upvotes?: number;
+  downvotes?: number;
+  comment_count?: number;
+  user_vote?: 'up' | 'down' | null;
+  userVote?: 'up' | 'down' | null;
   safety_ratings?: SafetyRating[];
   travel_intel?: TravelIntel[];
   helpful_count?: number;
@@ -289,7 +298,10 @@ export interface Itinerary {
   is_deleted?: boolean;
   // Relations
   traveler_id?: string;
+  user_id?: string;
+  created_by_traveler_id?: string;
   creator?: Traveler;
+  author?: User;
   // Timestamps
   created_at: string;
   updated_at: string;

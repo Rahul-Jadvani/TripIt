@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { snapsService } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -23,8 +23,20 @@ export interface Snap {
   };
 }
 
+// Keep the specific response type if you know it, otherwise `any` is a fallback.
+// Assuming the API returns an object with a 'data' property which is an array of snaps
+type SnapsApiResponse = {
+  data: Snap[];
+  // include other properties like total, page, limit if they exist
+  [key: string]: any; 
+};
+
 // Fetch all snaps (feed)
-export function useSnaps(page: number = 1, limit: number = 20) {
+export function useSnaps(
+  page: number = 1,
+  limit: number = 20,
+  options: Omit<UseQueryOptions<SnapsApiResponse, Error, SnapsApiResponse, (string | number)[]>, 'queryKey' | 'queryFn'> = {}
+) {
   return useQuery({
     queryKey: ['snaps', page, limit],
     queryFn: async () => {
@@ -32,6 +44,7 @@ export function useSnaps(page: number = 1, limit: number = 20) {
       return response.data;
     },
     staleTime: 1000 * 60 * 5, // Fresh for 5 minutes
+    ...options,
   });
 }
 

@@ -45,6 +45,7 @@ const CommunityDetailPage = lazy(() => import("./pages/CommunityDetailPage"));
 const CreateCommunityPage = lazy(() => import("./pages/CreateCommunityPage"));
 const EditCommunityPage = lazy(() => import("./pages/EditCommunityPage"));
 const SnapCamera = lazy(() => import("./pages/SnapCamera"));
+const SnapGalleryPage = lazy(() => import("./pages/SnapGalleryPage"));
 const TravelGroupsListPage = lazy(() => import("./pages/TravelGroupsListPage"));
 const TravelGroupDetailPage = lazy(() => import("./pages/TravelGroupDetailPage"));
 const CreateTravelGroupPage = lazy(() => import("./pages/CreateTravelGroupPage"));
@@ -54,12 +55,14 @@ const VerifiedPosts = lazy(() => import("./pages/VerifiedPosts"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 10,      // Data fresh for 10 min (increased for better caching)
-      gcTime: 1000 * 60 * 30,         // Keep in cache for 30 min after becoming inactive
+      staleTime: 1000 * 60 * 15,      // OPTIMIZED: Increased to 15 min for better caching
+      gcTime: 1000 * 60 * 60,         // OPTIMIZED: Keep in cache for 60 min (was 30)
       refetchOnWindowFocus: false,    // Don't refetch on focus - rely on cache
       refetchOnReconnect: false,      // Don't refetch on reconnect - rely on cache
       refetchOnMount: false,          // Don't refetch on mount - use cached data
       retry: 1,                       // Retry failed requests once
+      // OPTIMIZED: Add network mode for better offline handling
+      networkMode: 'offlineFirst',    // Use cache first, even when online
     },
   },
 });
@@ -123,6 +126,7 @@ const App = () => (
 
                   {/* Snap Routes */}
                   <Route path="/snap/camera" element={<ProtectedRoute><SnapCamera /></ProtectedRoute>} />
+                  <Route path="/gallery/snap" element={<SnapGalleryPage />} />
 
                   {/* Blockchain Identity Routes */}
                   <Route path="/blockchain-identity" element={<ProtectedRoute><BlockchainIdentity /></ProtectedRoute>} />
