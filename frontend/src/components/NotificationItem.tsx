@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { Notification } from '@/types';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from '@/utils/date';
@@ -51,12 +52,12 @@ const NotificationIcon = ({ type }: { type: string }) => {
   }
 };
 
-export function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
-  const handleClick = () => {
+export const NotificationItem = memo(function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
+  const handleClick = useCallback(() => {
     if (!notification.is_read && onMarkAsRead) {
       onMarkAsRead(notification.id);
     }
-  };
+  }, [notification.is_read, notification.id, onMarkAsRead]);
 
   // Check if this is a snap notification
   const isSnapNotification = notification.redirect_url?.includes('/snaps/');
@@ -64,6 +65,8 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
   const notificationContent = (
     <div
       className={cn(
+        "flex gap-3 p-4 rounded-xl border transition-all duration-200 bg-background/60 shadow-sm",
+        !isSnapNotification && "cursor-pointer hover:bg-background/80",
         "flex gap-3 p-4 rounded-xl border transition-all duration-200 bg-background/60 shadow-sm",
         !isSnapNotification && "cursor-pointer hover:bg-background/80",
         notification.is_read
@@ -108,4 +111,4 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
       {notificationContent}
     </Link>
   );
-}
+});

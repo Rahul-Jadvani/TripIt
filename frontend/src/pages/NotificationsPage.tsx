@@ -6,10 +6,11 @@ import {
   useMarkAllNotificationsAsRead,
 } from '@/hooks/useNotifications';
 import { NotificationItem } from '@/components/NotificationItem';
+import { NotificationItemSkeletonList } from '@/components/NotificationItemSkeleton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, Check, Loader2 } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function NotificationsPage() {
@@ -92,9 +93,9 @@ export default function NotificationsPage() {
 
         <TabsContent value={filter} className="mt-6">
           {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <Card className="p-4">
+              <NotificationItemSkeletonList count={10} />
+            </Card>
           ) : error ? (
             <Card className="p-8 text-center">
               <p className="text-destructive">Failed to load notifications</p>

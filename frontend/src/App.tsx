@@ -2,13 +2,17 @@ import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { WagmiProvider } from 'wagmi';
-import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
-import '@rainbow-me/rainbowkit/styles.css';
-import { wagmiConfig } from './config/wagmi';
+import { WagmiProvider } from "wagmi";
+import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
+import "@rainbow-me/rainbowkit/styles.css";
+import { wagmiConfig } from "./config/wagmi";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { MainLayout } from "./layouts/MainLayout";
-import { ProtectedRoute, AdminRoute, ValidatorRoute } from "./components/ProtectedRoute";
+import {
+  ProtectedRoute,
+  AdminRoute,
+  ValidatorRoute,
+} from "./components/ProtectedRoute";
 import { PageScrollBackground } from "./components/PageScrollBackground";
 import { usePrefetch } from "./hooks/usePrefetch";
 import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
@@ -46,23 +50,31 @@ const CommunityDetailPage = lazy(() => import("./pages/CommunityDetailPage"));
 const CreateCommunityPage = lazy(() => import("./pages/CreateCommunityPage"));
 const EditCommunityPage = lazy(() => import("./pages/EditCommunityPage"));
 const SnapCamera = lazy(() => import("./pages/SnapCamera"));
+const SnapGalleryPage = lazy(() => import("./pages/SnapGalleryPage"));
 const TravelGroupsListPage = lazy(() => import("./pages/TravelGroupsListPage"));
-const TravelGroupDetailPage = lazy(() => import("./pages/TravelGroupDetailPage"));
-const CreateTravelGroupPage = lazy(() => import("./pages/CreateTravelGroupPage"));
+const TravelGroupDetailPage = lazy(
+  () => import("./pages/TravelGroupDetailPage")
+);
+const CreateTravelGroupPage = lazy(
+  () => import("./pages/CreateTravelGroupPage")
+);
 const BlockchainIdentity = lazy(() => import("./pages/BlockchainIdentity"));
 const VerifiedPosts = lazy(() => import("./pages/VerifiedPosts"));
 const RemixPage = lazy(() => import("./pages/RemixPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
+const Gallery = lazy(() => import("./pages/Gallery"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 10,      // Data fresh for 10 min (increased for better caching)
-      gcTime: 1000 * 60 * 30,         // Keep in cache for 30 min after becoming inactive
+      staleTime: 1000 * 60 * 15,      // OPTIMIZED: Increased to 15 min for better caching
+      gcTime: 1000 * 60 * 60,         // OPTIMIZED: Keep in cache for 60 min (was 30)
       refetchOnWindowFocus: false,    // Don't refetch on focus - rely on cache
       refetchOnReconnect: false,      // Don't refetch on reconnect - rely on cache
       refetchOnMount: false,          // Don't refetch on mount - use cached data
       retry: 1,                       // Retry failed requests once
+      // OPTIMIZED: Add network mode for better offline handling
+      networkMode: 'offlineFirst',    // Use cache first, even when online
     },
   },
 });
@@ -74,16 +86,15 @@ function PrefetchWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-
 const App = () => (
   <WagmiProvider config={wagmiConfig}>
     <QueryClientProvider client={queryClient}>
       <RainbowKitProvider
         theme={darkTheme({
-          accentColor: '#f66926',  // TripIt orange
-          accentColorForeground: 'white',
-          borderRadius: 'large',
-          fontStack: 'system',
+          accentColor: "#f66926", // TripIt orange
+          accentColorForeground: "white",
+          borderRadius: "large",
+          fontStack: "system",
         })}
       >
         <AuthProvider>
@@ -94,38 +105,115 @@ const App = () => (
               <Toaster />
               <BrowserRouter>
                 <NetworkGuard />
-                <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center"><CoffeeLoader message="Warming up modules…" /></div>}>
-                <ErrorBoundary>
-                <Routes>
-                    <Route element={<MainLayout />}>
-                  {/* Public Routes */}
-                  <Route path="/" element={<Feed />} />
-                  <Route path="/feed" element={<Feed />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/offline" element={<NetworkIssue />} />
-                  <Route path="/itinerary/:id" element={<ProjectDetail />} />
-                  <Route path="/project/:id" element={<ProjectDetail />} />
-                  <Route path="/u/:username" element={<UserProfile />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="/communities" element={<CommunitiesListPage />} />
-                  <Route path="/community/:slug" element={<CommunityDetailPage />} />
-                  <Route path="/community/create" element={<ProtectedRoute><CreateCommunityPage /></ProtectedRoute>} />
-                  <Route path="/community/:slug/edit" element={<ProtectedRoute><EditCommunityPage /></ProtectedRoute>} />
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-[40vh] items-center justify-center">
+                      <CoffeeLoader message="Warming up modules…" />
+                    </div>
+                  }
+                >
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route element={<MainLayout />}>
+                        {/* Public Routes */}
+                        <Route path="/" element={<Feed />} />
+                        <Route path="/feed" element={<Feed />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route
+                          path="/auth/callback"
+                          element={<AuthCallback />}
+                        />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/offline" element={<NetworkIssue />} />
+                        <Route
+                          path="/itinerary/:id"
+                          element={<ProjectDetail />}
+                        />
+                        <Route
+                          path="/project/:id"
+                          element={<ProjectDetail />}
+                        />
+                        <Route path="/u/:username" element={<UserProfile />} />
+                        <Route path="/search" element={<Search />} />
+                        <Route path="/gallery" element={<Gallery />} />
+                        <Route
+                          path="/gallery/:category"
+                          element={<Gallery />}
+                        />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/leaderboard" element={<Leaderboard />} />
+                        <Route
+                          path="/communities"
+                          element={<CommunitiesListPage />}
+                        />
+                        <Route
+                          path="/community/:slug"
+                          element={<CommunityDetailPage />}
+                        />
+                        <Route
+                          path="/community/create"
+                          element={
+                            <ProtectedRoute>
+                              <CreateCommunityPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/community/:slug/edit"
+                          element={
+                            <ProtectedRoute>
+                              <EditCommunityPage />
+                            </ProtectedRoute>
+                          }
+                        />
 
-                  {/* Travel Groups / Layerz Routes */}
-                  <Route path="/layerz" element={<TravelGroupsListPage />} />
-                  <Route path="/groups" element={<TravelGroupsListPage />} />
-                  <Route path="/layerz/:id" element={<TravelGroupDetailPage />} />
-                  <Route path="/groups/:id" element={<TravelGroupDetailPage />} />
-                  <Route path="/layerz/create" element={<ProtectedRoute><CreateTravelGroupPage /></ProtectedRoute>} />
-                  <Route path="/groups/create" element={<ProtectedRoute><CreateTravelGroupPage /></ProtectedRoute>} />
+                        {/* Travel Groups / Layerz Routes */}
+                        <Route
+                          path="/layerz"
+                          element={<TravelGroupsListPage />}
+                        />
+                        <Route
+                          path="/groups"
+                          element={<TravelGroupsListPage />}
+                        />
+                        <Route
+                          path="/layerz/:id"
+                          element={<TravelGroupDetailPage />}
+                        />
+                        <Route
+                          path="/groups/:id"
+                          element={<TravelGroupDetailPage />}
+                        />
+                        <Route
+                          path="/layerz/create"
+                          element={
+                            <ProtectedRoute>
+                              <CreateTravelGroupPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/groups/create"
+                          element={
+                            <ProtectedRoute>
+                              <CreateTravelGroupPage />
+                            </ProtectedRoute>
+                          }
+                        />
 
-                  {/* Snap Routes */}
-                  <Route path="/snap/camera" element={<ProtectedRoute><SnapCamera /></ProtectedRoute>} />
+                        {/* Snap Routes */}
+                        <Route
+                          path="/snap/camera"
+                          element={
+                            <ProtectedRoute>
+                              <SnapCamera />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/gallery/snap"
+                          element={<SnapGalleryPage />}
+                        />
 
                   {/* Remix Routes */}
                   <Route path="/remix" element={<ProtectedRoute><RemixPage /></ProtectedRoute>} />
@@ -133,37 +221,133 @@ const App = () => (
                   {/* Booking Routes */}
                   <Route path="/booking/:itineraryId" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
 
-                  {/* Blockchain Identity Routes */}
-                  <Route path="/blockchain-identity" element={<ProtectedRoute><BlockchainIdentity /></ProtectedRoute>} />
-                  <Route path="/identity" element={<ProtectedRoute><BlockchainIdentity /></ProtectedRoute>} />
-                  <Route path="/verified-posts" element={<ProtectedRoute><VerifiedPosts /></ProtectedRoute>} />
+                        {/* Blockchain Identity Routes */}
+                        <Route
+                          path="/blockchain-identity"
+                          element={
+                            <ProtectedRoute>
+                              <BlockchainIdentity />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/identity"
+                          element={
+                            <ProtectedRoute>
+                              <BlockchainIdentity />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/verified-posts"
+                          element={
+                            <ProtectedRoute>
+                              <VerifiedPosts />
+                            </ProtectedRoute>
+                          }
+                        />
 
-                  {/* Protected Routes */}
-                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                  <Route path="/my-projects" element={<ProtectedRoute><MyProjects /></ProtectedRoute>} />
-                  <Route path="/publish" element={<ProtectedRoute><Publish /></ProtectedRoute>} />
-                  <Route path="/itinerary/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
-                  <Route path="/project/:id/edit" element={<ProtectedRoute><EditProject /></ProtectedRoute>} />
-                  <Route path="/intros" element={<ProtectedRoute><Intros /></ProtectedRoute>} />
-                  <Route path="/messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
-                  <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+                        {/* Protected Routes */}
+                        <Route
+                          path="/dashboard"
+                          element={
+                            <ProtectedRoute>
+                              <Dashboard />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/profile"
+                          element={
+                            <ProtectedRoute>
+                              <Profile />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/settings"
+                          element={
+                            <ProtectedRoute>
+                              <Settings />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/my-projects"
+                          element={
+                            <ProtectedRoute>
+                              <MyProjects />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/publish"
+                          element={
+                            <ProtectedRoute>
+                              <Publish />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/itinerary/:id/edit"
+                          element={
+                            <ProtectedRoute>
+                              <EditProject />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/project/:id/edit"
+                          element={
+                            <ProtectedRoute>
+                              <EditProject />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/intros"
+                          element={
+                            <ProtectedRoute>
+                              <Intros />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/messages"
+                          element={
+                            <ProtectedRoute>
+                              <DirectMessages />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/notifications"
+                          element={
+                            <ProtectedRoute>
+                              <NotificationsPage />
+                            </ProtectedRoute>
+                          }
+                        />
 
                   {/* Admin Routes */}
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/admin/rescore" element={<AdminRoute><AdminRescore /></AdminRoute>} />
 
-                  {/* Validator Routes - redirect to dashboard */}
-                  <Route path="/validator" element={<ValidatorRoute><Dashboard /></ValidatorRoute>} />
+                        {/* Validator Routes - redirect to dashboard */}
+                        <Route
+                          path="/validator"
+                          element={
+                            <ValidatorRoute>
+                              <Dashboard />
+                            </ValidatorRoute>
+                          }
+                        />
 
-
-
-                  {/* 404 */}
-                  <Route path="*" element={<NotFound />} />
-                </Route>
-                  </Routes>
-                </ErrorBoundary>
+                        {/* 404 */}
+                        <Route path="*" element={<NotFound />} />
+                      </Route>
+                    </Routes>
+                  </ErrorBoundary>
                 </Suspense>
               </BrowserRouter>
             </TooltipProvider>
@@ -175,4 +359,3 @@ const App = () => (
 );
 
 export default App;
-

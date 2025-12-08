@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle, Wallet, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import api from '@/lib/api';
+import api from '@/services/api';
 import { toast } from 'sonner';
 
 interface WalletBindFlowProps {
@@ -54,7 +54,11 @@ export const WalletBindFlow = ({ onBindSuccess }: WalletBindFlowProps) => {
       const message = `Bind wallet ${address} to TripIt account ${user.email}`;
 
       // Request signature from user
-      const signature = await signMessageAsync({ message });
+      const signature = await signMessageAsync({
+  account: address as `0x${string}`,
+  message,
+});
+
 
       // Send to backend
       const response = await api.post('/identity/bind-wallet', {

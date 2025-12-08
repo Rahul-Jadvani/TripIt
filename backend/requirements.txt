@@ -7,7 +7,7 @@ Flask-Migrate==4.0.5
 Flask-Compress==1.20
 
 # Database
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.11
 SQLAlchemy==2.0.36
 
 # Validation & Serialization
