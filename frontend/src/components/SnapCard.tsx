@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { MapPin, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -8,7 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 
 const imageCache = new Map<string, string>();
 
-const LazyImage = ({
+const LazyImage = memo(({
   src,
   alt,
   className,
@@ -75,7 +75,7 @@ const LazyImage = ({
       {...props}
     />
   );
-};
+});
 
 // ------------------------------------------------
 // SNAP CARD COMPONENT
@@ -106,7 +106,7 @@ interface SnapCardProps {
   snap: Snap;
 }
 
-const SnapCard: React.FC<SnapCardProps> = ({ snap }) => {
+const SnapCard: React.FC<SnapCardProps> = memo(({ snap }) => {
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   const hasImage = !!snap.image_url;
@@ -183,6 +183,6 @@ const SnapCard: React.FC<SnapCardProps> = ({ snap }) => {
       )}
     </div>
   );
-};
+});
 
 export default SnapCard;

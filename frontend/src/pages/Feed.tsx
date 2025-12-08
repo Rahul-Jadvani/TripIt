@@ -5,7 +5,7 @@ import { useSnaps } from '@/hooks/useSnaps';
 import SnapCard from '@/components/SnapCard';
 import { TravelSnapsCarousel } from '@/components/TravelSnapsCarousel';
 
-// OPTIMIZED: Lazy image loading component for better performance
+// OPTIMIZED: Lazy image loading component with blur placeholder for better perceived performance
 function LazyImage({ src, alt, className, ...props }: { src: string; alt: string; className?: string; [key: string]: any }) {
   const [loaded, setLoaded] = useState(false);
   const [inView, setInView] = useState(false);
@@ -19,7 +19,7 @@ function LazyImage({ src, alt, className, ...props }: { src: string; alt: string
           observer.disconnect();
         }
       },
-      { threshold: 0.1, rootMargin: '50px' }
+      { threshold: 0.1, rootMargin: '100px' } // Increased preload distance
     );
 
     if (imgRef.current) {
@@ -30,15 +30,23 @@ function LazyImage({ src, alt, className, ...props }: { src: string; alt: string
   }, []);
 
   return (
-    <img
-      ref={imgRef}
-      src={inView ? src : undefined}
-      alt={alt}
-      className={className}
-      loading="lazy"
-      onLoad={() => setLoaded(true)}
-      {...props}
-    />
+    <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
+      {/* Blur placeholder background */}
+      {!loaded && inView && (
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 animate-pulse" />
+      )}
+      {inView && (
+        <img
+          src={src}
+          alt={alt}
+          className={`w-full h-full transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          style={{ objectFit: 'cover' }}
+          {...props}
+        />
+      )}
+    </div>
   );
 }
 // Lazy load heavy carousels (named exports -> map to default)

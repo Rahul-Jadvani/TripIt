@@ -306,7 +306,7 @@ export function TravelSnapsCarousel({ snaps, className = '' }: TravelSnapsCarous
             {duplicatedSnaps.map((snap, index) => (
               <div
                 key={`${snap.id}-${index}`}
-                className="flex-shrink-0 w-80 snap-center snap-always transition-transform duration-300 hover:scale-105"
+                className="flex-shrink-0 w-80 snap-center scroll-smooth transition-transform duration-300 hover:scale-105"
                 style={{
                   scrollSnapAlign: 'center',
                 }}

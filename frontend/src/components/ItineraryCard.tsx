@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Itinerary } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { ShareDialog } from '@/components/ShareDialog';
 import { VoteButtons } from '@/components/VoteButtons';
 
 // OPTIMIZED: Lazy image loading component for better performance
-function LazyImage({ src, alt, className, ...props }: { src: string; alt: string; className?: string; [key: string]: any }) {
+const LazyImage = memo(function LazyImage({ src, alt, className, ...props }: { src: string; alt: string; className?: string; [key: string]: any }) {
   const [loaded, setLoaded] = useState(false);
   const [inView, setInView] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -45,7 +45,7 @@ function LazyImage({ src, alt, className, ...props }: { src: string; alt: string
       {...props}
     />
   );
-}
+});
 
 interface ItineraryCardProps {
   project: Itinerary;
@@ -55,7 +55,7 @@ interface TravelCompanion {
   name: string;
 }
 
-export function ItineraryCard({ project }: ItineraryCardProps) {
+export const ItineraryCard = memo(function ItineraryCard({ project }: ItineraryCardProps) {
   const { user } = useAuth();
   const { data: isSaved, isLoading: checkingIfSaved } = useCheckIfSavedItinerary(project.id);
   const saveMutation = useSaveItinerary();
@@ -84,13 +84,13 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
     return () => clearInterval(interval);
   }, [images.length]);
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleShare = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setShareDialogOpen(true);
-  };
+  }, []);
 
-  const handleSave = async (e: React.MouseEvent) => {
+  const handleSave = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -110,28 +110,28 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
         onError: () => setSavedLocal(current),
       });
     }
-  };
+  }, [user, savedLocal, isSaved, unsaveMutation, saveMutation, project.id]);
 
-  const nextImage = (e: React.MouseEvent) => {
+  const nextImage = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
-  };
+  }, [images.length]);
 
-  const prevImage = (e: React.MouseEvent) => {
+  const prevImage = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
+  }, [images.length]);
 
-  const formatDuration = () => {
+  const formatDuration = useCallback(() => {
     if (project.duration_days) {
       return `${project.duration_days} ${project.duration_days === 1 ? 'day' : 'days'}`;
     }
     return 'N/A';
-  };
+  }, [project.duration_days]);
 
-  const formatBudget = () => {
+  const formatBudget = useCallback(() => {
     if (project.estimated_budget_min && project.estimated_budget_max) {
       return `$${project.estimated_budget_min} - $${project.estimated_budget_max}`;
     }
@@ -139,7 +139,7 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
       return `${project.budget_currency || '$'}${project.budget_amount}`;
     }
     return 'N/A';
-  };
+  }, [project.estimated_budget_min, project.estimated_budget_max, project.budget_amount, project.budget_currency]);
 
   const isSavedState = savedLocal ?? isSaved;
   const userVote = project.user_vote || project.userVote;
@@ -398,4 +398,4 @@ export function ItineraryCard({ project }: ItineraryCardProps) {
       />
     </div>
   );
-}
+});

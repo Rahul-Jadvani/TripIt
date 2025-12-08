@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { TravelGroup } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,7 @@ interface TravelGroupCardProps {
   averageSafetyScore?: number;
 }
 
-export function TravelGroupCard({ group, onClick, averageSafetyScore }: TravelGroupCardProps) {
+export const TravelGroupCard = memo(function TravelGroupCard({ group, onClick, averageSafetyScore }: TravelGroupCardProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -49,7 +50,7 @@ export function TravelGroupCard({ group, onClick, averageSafetyScore }: TravelGr
     },
   });
 
-  const handleJoinLeave = (e: React.MouseEvent) => {
+  const handleJoinLeave = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
 
     if (!user) {
@@ -62,9 +63,9 @@ export function TravelGroupCard({ group, onClick, averageSafetyScore }: TravelGr
     } else {
       joinMutation.mutate();
     }
-  };
+  }, [user, isMember, isPending, leaveMutation, joinMutation]);
 
-  const formatDateRange = () => {
+  const formatDateRange = useCallback(() => {
     try {
       const start = format(new Date(group.start_date), 'MMM d');
       const end = format(new Date(group.end_date), 'MMM d, yyyy');
@@ -72,9 +73,9 @@ export function TravelGroupCard({ group, onClick, averageSafetyScore }: TravelGr
     } catch {
       return 'Date TBD';
     }
-  };
+  }, [group.start_date, group.end_date]);
 
-  const getGroupTypeLabel = (type?: string) => {
+  const getGroupTypeLabel = useCallback((type?: string) => {
     const labels: Record<string, string> = {
       interest_based: 'Interest Based',
       safety_focused: 'Safety Focused',
@@ -82,7 +83,7 @@ export function TravelGroupCard({ group, onClick, averageSafetyScore }: TravelGr
       location_based: 'Location Based',
     };
     return type ? labels[type] || type : 'General';
-  };
+  }, []);
 
   return (
     <Card
@@ -214,4 +215,4 @@ export function TravelGroupCard({ group, onClick, averageSafetyScore }: TravelGr
       </div>
     </Card>
   );
-}
+});

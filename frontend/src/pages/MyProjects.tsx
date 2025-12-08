@@ -5,15 +5,7 @@ import { Plus, Edit, Trash2, Eye, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserItineraries, useDeleteItinerary } from '@/hooks/useProjects';
 import { ItineraryCard } from '@/components/ItineraryCard';
-
-// Simple skeleton component for loading states
-const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
-  <div className="grid grid-cols-1 gap-4">
-    {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
-    ))}
-  </div>
-);
+import { ItineraryCardSkeletonGrid } from '@/components/ItineraryCardSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -53,7 +45,7 @@ export default function MyProjects() {
 
           {/* Loading state */}
           {isLoading && (
-            <ProjectCardSkeletonGrid count={4} />
+            <ItineraryCardSkeletonGrid count={4} />
           )}
 
           {/* Error state */}

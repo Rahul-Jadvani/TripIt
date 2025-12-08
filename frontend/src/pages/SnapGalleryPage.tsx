@@ -1,13 +1,20 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import SnapCard from "@/components/SnapCard";
 import { useSnaps, Snap } from "@/hooks/useSnaps";
 import { CoffeeLoader } from "@/components/CoffeeLoader";
 
-export default function SnapGalleryPage() {
+const SnapGalleryPage = React.memo(() => {
   const { data: snapsData, isLoading, isError, error } = useSnaps(1, 100, {
     staleTime: Infinity,
     refetchOnWindowFocus: false,
-  }); // Fetch up to 100 snaps for the gallery
+  }); 
+
+  useEffect(() => {
+    
+    return () => {
+      
+    };
+  }, []);
 
   const snaps = useMemo(() => snapsData?.data || [], [snapsData]);
 
@@ -73,5 +80,7 @@ export default function SnapGalleryPage() {
       </div>
     </div>
   );
-}
+});
+
+export default SnapGalleryPage;
 

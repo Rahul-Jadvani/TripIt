@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { travelGroupsService } from '@/services/api';
 import { TravelGroupCard } from '@/components/TravelGroupCard';
+import { TravelGroupCardSkeletonGrid } from '@/components/TravelGroupCardSkeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Users, Plus, Search, Filter } from 'lucide-react';
-import { CoffeeLoader } from '@/components/CoffeeLoader';
 
 export default function TravelGroupsListPage() {
   const navigate = useNavigate();
@@ -76,9 +76,7 @@ export default function TravelGroupsListPage() {
 
         {/* Content */}
         {isLoading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <CoffeeLoader message="Loading layerz..." />
-          </div>
+          <TravelGroupCardSkeletonGrid count={9} />
         ) : error ? (
           <div className="text-center py-12">
             <p className="text-destructive">Failed to load travel layerz</p>

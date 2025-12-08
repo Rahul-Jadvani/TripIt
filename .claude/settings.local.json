@@ -54,7 +54,8 @@
       "Bash(npm install:*)",
       "Bash(timeout 3 bash:*)",
       "Bash(npx hardhat node)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(timeout 120 npm run build:*)"
     ],
     "deny": [],
     "ask": []

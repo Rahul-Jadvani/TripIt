@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ChainPost } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,7 +31,7 @@ interface CommunityPostCardProps {
   expandAll?: boolean; // when true, auto-expand nested replies
 }
 
-export function CommunityPostCard({
+export const CommunityPostCard = memo(function CommunityPostCard({
   post,
   communitySlug,
   isOwner = false,
@@ -61,19 +61,19 @@ export function CommunityPostCard({
 
   const isAuthor = user && post.author_id === user.id;
 
-  const handlePin = () => {
+  const handlePin = useCallback(() => {
     pinMutation.mutate(post.id);
-  };
+  }, [pinMutation, post.id]);
 
-  const handleLock = () => {
+  const handleLock = useCallback(() => {
     lockMutation.mutate(post.id);
-  };
+  }, [lockMutation, post.id]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (confirm('Are you sure you want to delete this post?')) {
       deleteMutation.mutate(post.id);
     }
-  };
+  }, [deleteMutation, post.id]);
 
   const mergedReplies = (post.replies && post.replies.length > 0) ? post.replies : (repliesPayload?.replies || []);
   const visibleReplies = showAllReplies ? mergedReplies : mergedReplies?.slice(0, 3);
@@ -284,4 +284,4 @@ export function CommunityPostCard({
       )}
     </Card>
   );
-}
+});
