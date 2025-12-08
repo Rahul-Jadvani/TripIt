@@ -1,17 +1,22 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { useSnaps } from '@/hooks/useSnaps';
-import SnapCard from '@/components/SnapCard';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useSnaps } from "@/hooks/useSnaps";
+import SnapCard from "@/components/SnapCard";
 // Lazy load heavy carousels (named exports -> map to default)
 const TopRatedCarousel = lazy(() =>
-  import('@/components/TopRatedCarousel').then((m) => ({ default: m.TopRatedCarousel }))
+  import("@/components/TopRatedCarousel").then((m) => ({
+    default: m.TopRatedCarousel,
+  }))
 );
 // Simple skeleton components for loading states
 const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+      <div
+        key={i}
+        className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
+      />
     ))}
   </div>
 );
@@ -19,27 +24,81 @@ const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
 const TopRatedCarouselSkeleton = () => (
   <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
 );
-import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield, Camera } from 'lucide-react';
-import { useItineraries, transformProject } from '@/hooks/useProjects';
-import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
-import { usePublicInvestors } from '@/hooks/useInvestors';
-import { useDashboardStats } from '@/hooks/useStats';
-import { useMostRequestedProjects, useRecentConnections, useFeaturedProjects, useRisingStars, useCategoryProjects } from '@/hooks/useFeed';
-import { useAuth } from '@/context/AuthContext';
-import { itinerariesService } from '@/services/api';
-import { Itinerary } from '@/types';
-import { FeedMiniThread } from '@/components/FeedMiniThread';
-import { FeedLeaderTagCard } from '@/components/FeedLeaderTagCard';
+import {
+  Flame,
+  Clock,
+  TrendingUp,
+  Zap,
+  Sparkles,
+  MessageCircle,
+  Shield,
+  Camera,
+} from "lucide-react";
+import { useItineraries, transformProject } from "@/hooks/useProjects";
+import { useBuildersLeaderboard } from "@/hooks/useLeaderboard";
+import { usePublicInvestors } from "@/hooks/useInvestors";
+import { useDashboardStats } from "@/hooks/useStats";
+import {
+  useMostRequestedProjects,
+  useRecentConnections,
+  useFeaturedProjects,
+  useRisingStars,
+  useCategoryProjects,
+} from "@/hooks/useFeed";
+import { useAuth } from "@/context/AuthContext";
+import { itinerariesService } from "@/services/api";
+import { Itinerary } from "@/types";
+
+interface Investor {
+  id: string;
+  user?: {
+    username?: string;
+    display_name?: string;
+  };
+  industries?: string[];
+  open_to_requests?: boolean;
+}
+
+interface Builder {
+  id?: string;
+  username: string;
+  projects: number;
+  score: number;
+}
+
+interface Connection {
+  id: string;
+  investor?: {
+    display_name?: string;
+    username?: string;
+  };
+  builder?: {
+    display_name?: string;
+    username?: string;
+  };
+  project?: {
+    id: string;
+    title?: string;
+  };
+}
+
+interface Snap {
+  id: string;
+  // Add other snap properties if needed
+}
+
+import { FeedMiniThread } from "@/components/FeedMiniThread";
+import { FeedLeaderTagCard } from "@/components/FeedLeaderTagCard";
 // import { FeedTopInvestorCard } from '@/components/FeedTopInvestorCard';
 // import { FeedTopInvestorsGrid } from '@/components/FeedTopInvestorsGrid';
-import FeedStatCards from '@/components/FeedStatCards';
+import FeedStatCards from "@/components/FeedStatCards";
 // import GlobeDemo from '@/components/ui/globe-demo';
 
 // Render children only when visible in viewport; shows placeholder until then
 function LazyOnVisible({
   children,
   placeholder,
-  rootMargin = '200px',
+  rootMargin = "200px",
 }: {
   children: React.ReactNode;
   placeholder: React.ReactNode;
@@ -77,9 +136,15 @@ export default function Feed() {
   const { data: snapsData, isLoading: snapsLoading } = useSnaps(1, 10);
 
   // PROGRESSIVE LOADING: Load trending & top-rated first (priority), newest loads immediately after
-  const { data: hotData, isLoading: hotLoading } = useItineraries('trending', 1);
-  const { data: topData, isLoading: topLoading } = useItineraries('top-rated', 1);
-  const { data: newData, isLoading: newLoading } = useItineraries('newest', 1);
+  const { data: hotData, isLoading: hotLoading } = useItineraries(
+    "trending",
+    1
+  );
+  const { data: topData, isLoading: topLoading } = useItineraries(
+    "top-rated",
+    1
+  );
+  const { data: newData, isLoading: newLoading } = useItineraries("newest", 1);
   const { data: topBuilders = [] } = useBuildersLeaderboard(8);
   const { data: buildersForCount = [] } = useBuildersLeaderboard(50);
   const { data: investors = [] } = usePublicInvestors();
@@ -92,19 +157,20 @@ export default function Feed() {
   const { data: risingStarsData } = useRisingStars(30);
 
   // Travel-specific sections - fetch multiple pages to get more itineraries
-  const { data: page2Data } = useItineraries('trending', 2);
-  const { data: page3Data } = useItineraries('trending', 3);
-  const { data: page4Data } = useItineraries('top-rated', 2);
-  const { data: page5Data } = useItineraries('newest', 2);
+  const { data: page2Data } = useItineraries("trending", 2);
+  const { data: page3Data } = useItineraries("trending", 3);
+  const { data: page4Data } = useItineraries("top-rated", 2);
+  const { data: page5Data } = useItineraries("newest", 2);
 
-  const investorsHref = user ? '/investor-directory' : '/investors';
+  const investorsHref = user ? "/investor-directory" : "/investors";
 
   // Normalize investors to an array defensively
-  const investorsList: any[] = Array.isArray(investors)
-    ? investors
-    : (investors && Array.isArray((investors as any).investors)
-        ? (investors as any).investors
-        : []);
+  const investorsList: Investor[] = Array.isArray(investors)
+    ? (investors as Investor[])
+    : investors &&
+      Array.isArray((investors as { investors?: Investor[] }).investors)
+    ? (investors as { investors?: Investor[] }).investors || []
+    : [];
 
   // Prefetch additional pages on-demand when user scrolls (lazy prefetch)
   // Pages 2-3 are already prefetched by usePrefetch hook in idle time, so we only prefetch deeper pages here
@@ -113,9 +179,9 @@ export default function Feed() {
     if (!hotLoading && !topLoading) {
       const prefetchDeepPages = async () => {
         // Prefetch page 3 only (page 2 handled by usePrefetch idle batch)
-        for (const sort of ['trending', 'top-rated', 'newest']) {
+        for (const sort of ["trending", "top-rated", "newest"]) {
           queryClient.prefetchQuery({
-            queryKey: ['itineraries', sort, 3],
+            queryKey: ["itineraries", sort, 3],
             queryFn: async () => {
               const response = await itinerariesService.getAll(sort, 3);
               return {
@@ -130,8 +196,8 @@ export default function Feed() {
 
       // Schedule this for idle time to avoid competing with critical prefetch
       const scheduleIdle = (cb: () => void) => {
-        const win: any = typeof window !== 'undefined' ? window : undefined;
-        if (win && typeof win.requestIdleCallback === 'function') {
+        const win = typeof window !== "undefined" ? window : undefined;
+        if (win && typeof win.requestIdleCallback === "function") {
           win.requestIdleCallback(cb, { timeout: 5000 });
         } else {
           setTimeout(cb, 2000); // Delay on older browsers
@@ -162,7 +228,7 @@ export default function Feed() {
 
     // Remove duplicates
     const uniqueMap = new Map();
-    allItineraries.forEach(item => {
+    allItineraries.forEach((item) => {
       if (item && item.id && !uniqueMap.has(item.id)) {
         uniqueMap.set(item.id, item);
       }
@@ -170,37 +236,40 @@ export default function Feed() {
     const unique = Array.from(uniqueMap.values());
 
     // Categorize by activity tags
-    const adventure = unique.filter((p: any) =>
+    const adventure = unique.filter((p: Itinerary) =>
       p.activity_tags?.some((tag: string) =>
-        ['Trekking', 'Hiking', 'Mountain', 'Climbing', 'Camping'].some(keyword =>
-          tag.includes(keyword)
+        ["Trekking", "Hiking", "Mountain", "Climbing", "Camping"].some(
+          (keyword) => tag.includes(keyword)
         )
       )
     );
 
-    const beach = unique.filter((p: any) =>
+    const beach = unique.filter((p: Itinerary) =>
       p.activity_tags?.some((tag: string) =>
-        ['Beach', 'Scuba', 'Snorkeling', 'Surfing', 'Water Sports'].some(keyword =>
-          tag.includes(keyword)
+        ["Beach", "Scuba", "Snorkeling", "Surfing", "Water Sports"].some(
+          (keyword) => tag.includes(keyword)
         )
       )
     );
 
-    const cultural = unique.filter((p: any) =>
+    const cultural = unique.filter((p: Itinerary) =>
       p.activity_tags?.some((tag: string) =>
-        ['Culture', 'Heritage', 'Temple', 'Museum', 'Festival'].some(keyword =>
-          tag.includes(keyword)
+        ["Culture", "Heritage", "Temple", "Museum", "Festival"].some(
+          (keyword) => tag.includes(keyword)
         )
       )
     );
 
-    const digitalNomad = unique.filter((p: any) =>
-      p.activity_tags?.some((tag: string) =>
-        tag.includes('Digital Nomad') || tag.includes('Remote Work')
+    const digitalNomad = unique.filter((p: Itinerary) =>
+      p.activity_tags?.some(
+        (tag: string) =>
+          tag.includes("Digital Nomad") || tag.includes("Remote Work")
       )
     );
 
-    const womenSafe = unique.filter((p: any) => p.women_safe_certified === true);
+    const womenSafe = unique.filter(
+      (p: Itinerary) => p.women_safe_certified === true
+    );
 
     return {
       hot: (hotData?.data || []).slice(0, 30),
@@ -215,7 +284,18 @@ export default function Feed() {
       womenSafe: womenSafe.slice(0, 30),
       mostRequested: (mostRequestedData?.data || []).slice(0, 30),
     };
-  }, [hotData, topData, newData, page2Data, page3Data, page4Data, page5Data, mostRequestedData, featuredData, risingStarsData]);
+  }, [
+    hotData,
+    topData,
+    newData,
+    page2Data,
+    page3Data,
+    page4Data,
+    page5Data,
+    mostRequestedData,
+    featuredData,
+    risingStarsData,
+  ]);
 
   // Merge all feed projects once to power stats + tag leader without duplicates
   const visibleFeedProjects = useMemo(() => {
@@ -239,7 +319,18 @@ export default function Feed() {
     addProjects(risingStarsData?.data);
     addProjects(mostRequestedData?.data);
     return Array.from(unique.values());
-  }, [hotData?.data, topData?.data, newData?.data, page2Data?.data, page3Data?.data, page4Data?.data, page5Data?.data, featuredData?.data, risingStarsData?.data, mostRequestedData?.data]);
+  }, [
+    hotData?.data,
+    topData?.data,
+    newData?.data,
+    page2Data?.data,
+    page3Data?.data,
+    page4Data?.data,
+    page5Data?.data,
+    featuredData?.data,
+    risingStarsData?.data,
+    mostRequestedData?.data,
+  ]);
 
   // Compute leading tag from activity_tags (travel-focused)
   const leader = useMemo(() => {
@@ -252,36 +343,45 @@ export default function Feed() {
 
     // Count activity tags from all itineraries
     for (const p of all) {
-      if (Array.isArray((p as any).activity_tags) && (p as any).activity_tags.length) {
-        for (const tag of (p as any).activity_tags as string[]) {
+      if (Array.isArray(p.activity_tags) && p.activity_tags.length) {
+        for (const tag of p.activity_tags) {
           push(tag);
         }
       }
     }
 
     // Find most common tag
-    let label = 'Travel';
+    let label = "Travel";
     let count = 0;
     for (const [k, v] of Object.entries(buckets)) {
-      if (v > count) { label = k; count = v; }
+      if (v > count) {
+        label = k;
+        count = v;
+      }
     }
 
     const total = Object.values(buckets).reduce((a, b) => a + b, 0) || 1;
     const percent = (count / total) * 100;
 
     // Map tag to icon category
-    const iconKey = label.toLowerCase().includes('trek') || label.toLowerCase().includes('mountain')
-      ? 'adventure'
-      : label.toLowerCase().includes('beach') || label.toLowerCase().includes('water')
-        ? 'beach'
-        : label.toLowerCase().includes('cultur') || label.toLowerCase().includes('herit')
-          ? 'cultural'
-          : label.toLowerCase().includes('nomad') || label.toLowerCase().includes('remote')
-            ? 'digital'
-            : label.toLowerCase().includes('photo')
-              ? 'photography'
-              : 'other';
+    const iconKey =
+      label.toLowerCase().includes("trek") ||
+      label.toLowerCase().includes("mountain")
+        ? "adventure"
+        : label.toLowerCase().includes("beach") ||
+          label.toLowerCase().includes("water")
+        ? "beach"
+        : label.toLowerCase().includes("cultur") ||
+          label.toLowerCase().includes("herit")
+        ? "cultural"
+        : label.toLowerCase().includes("nomad") ||
+          label.toLowerCase().includes("remote")
+        ? "digital"
+        : label.toLowerCase().includes("photo")
+        ? "photography"
+        : "other";
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { label, count, percent, icon: iconKey as any };
   }, [visibleFeedProjects]);
 
@@ -305,11 +405,17 @@ export default function Feed() {
                   Plan Your Perfect Adventure
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-2xl">
-                  Discover safety-verified itineraries from trusted travelers. Find your next journey, join fellow adventurers, and explore the world with confidence.
+                  Discover safety-verified itineraries from trusted travelers.
+                  Find your next journey, join fellow adventurers, and explore
+                  the world with confidence.
                 </p>
                 <div className="flex flex-wrap gap-3 mt-4">
-                  <button className="badge badge-primary text-xs font-bold px-3 py-1.5">Plan This Trip</button>
-                  <button className="badge badge-secondary text-xs font-bold px-3 py-1.5">Find Companions</button>
+                  <button className="badge badge-primary text-xs font-bold px-3 py-1.5">
+                    Plan This Trip
+                  </button>
+                  <button className="badge badge-secondary text-xs font-bold px-3 py-1.5">
+                    Find Companions
+                  </button>
                 </div>
               </div>
             </div>
@@ -323,7 +429,10 @@ export default function Feed() {
             <nav className="feed-quick-nav -mt-6 animate-pulse">
               <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
                 {Array.from({ length: 6 }).map((_, idx) => (
-                  <div key={idx} className="h-8 w-24 bg-secondary rounded-full flex-shrink-0"></div>
+                  <div
+                    key={idx}
+                    className="h-8 w-24 bg-secondary rounded-full flex-shrink-0"
+                  ></div>
                 ))}
               </div>
             </nav>
@@ -362,7 +471,10 @@ export default function Feed() {
             {/* Mini threads skeleton - first set */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
               {Array.from({ length: 2 }).map((_, idx) => (
-                <div key={idx} className="card-elevated p-5 h-[100px] space-y-2">
+                <div
+                  key={idx}
+                  className="card-elevated p-5 h-[100px] space-y-2"
+                >
                   <div className="h-5 w-40 bg-secondary rounded"></div>
                   <div className="h-4 w-full bg-secondary rounded"></div>
                   <div className="h-3 w-32 bg-secondary rounded"></div>
@@ -376,7 +488,10 @@ export default function Feed() {
             {/* Mini threads skeleton - second set */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
               {Array.from({ length: 2 }).map((_, idx) => (
-                <div key={idx} className="card-elevated p-5 h-[100px] space-y-2">
+                <div
+                  key={idx}
+                  className="card-elevated p-5 h-[100px] space-y-2"
+                >
                   <div className="h-5 w-40 bg-secondary rounded"></div>
                   <div className="h-4 w-full bg-secondary rounded"></div>
                   <div className="h-3 w-32 bg-secondary rounded"></div>
@@ -407,11 +522,40 @@ export default function Feed() {
             {/* Quick Section Nav - Travel Focused */}
             <nav aria-label="Quick sections" className="feed-quick-nav -mt-6">
               <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-                <a href="#top-rated" className="badge badge-dash badge-primary hover:opacity-90">Highest-Rated ({categorizedProjects.topScored.length})</a>
-                {categorizedProjects.featured.length > 0 && <a href="#women-safe" className="badge badge-dash badge-accent hover:opacity-90">Women-Safe ({categorizedProjects.featured.length})</a>}
-                <a href="#trending" className="badge badge-dash badge-secondary hover:opacity-90">Trending Destinations ({categorizedProjects.hot.length})</a>
-                {categorizedProjects.risingStars.length > 0 && <a href="#hidden-gems" className="badge badge-dash badge-secondary hover:opacity-90">Hidden Gems ({categorizedProjects.risingStars.length})</a>}
-                <a href="#new-launches" className="badge badge-dash badge-secondary hover:opacity-90">Latest Adventures ({categorizedProjects.newLaunches.length})</a>
+                <a
+                  href="#top-rated"
+                  className="badge badge-dash badge-primary hover:opacity-90"
+                >
+                  Highest-Rated ({categorizedProjects.topScored.length})
+                </a>
+                {categorizedProjects.featured.length > 0 && (
+                  <a
+                    href="#women-safe"
+                    className="badge badge-dash badge-accent hover:opacity-90"
+                  >
+                    Women-Safe ({categorizedProjects.featured.length})
+                  </a>
+                )}
+                <a
+                  href="#trending"
+                  className="badge badge-dash badge-secondary hover:opacity-90"
+                >
+                  Trending Destinations ({categorizedProjects.hot.length})
+                </a>
+                {categorizedProjects.risingStars.length > 0 && (
+                  <a
+                    href="#hidden-gems"
+                    className="badge badge-dash badge-secondary hover:opacity-90"
+                  >
+                    Hidden Gems ({categorizedProjects.risingStars.length})
+                  </a>
+                )}
+                <a
+                  href="#new-launches"
+                  className="badge badge-dash badge-secondary hover:opacity-90"
+                >
+                  Latest Adventures ({categorizedProjects.newLaunches.length})
+                </a>
               </div>
             </nav>
 
@@ -422,16 +566,22 @@ export default function Feed() {
                   <Camera className="h-6 w-6 text-orange-500" />
                   Travel Snaps
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">Live moments from travelers around the world</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Live moments from travelers around the world
+                </p>
               </div>
               {snapsLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-96 bg-gray-800 rounded-lg animate-pulse" />
+                    <div
+                      key={i}
+                      className="h-96 bg-gray-800 rounded-lg animate-pulse"
+                    />
                   ))}
                 </div>
               ) : snapsData?.data && snapsData.data.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {snapsData.data.slice(0, 6).map((snap: any) => (
                     <SnapCard key={snap.id} snap={snap} />
                   ))}
@@ -439,12 +589,14 @@ export default function Feed() {
               ) : (
                 <div className="card-elevated py-12 text-center p-8 rounded-2xl bg-gradient-to-br from-orange-500/5 to-orange-600/5 border-2 border-orange-500/20">
                   <Camera className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-                  <p className="text-xl font-bold text-foreground mb-2">No snaps yet</p>
+                  <p className="text-xl font-bold text-foreground mb-2">
+                    No snaps yet
+                  </p>
                   <p className="text-sm text-muted-foreground mb-4">
                     Be the first to share a moment from your travels!
                   </p>
                   <button
-                    onClick={() => navigate('/snap/camera')}
+                    onClick={() => navigate("/snap/camera")}
                     className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all"
                   >
                     Create First Snap
@@ -461,25 +613,32 @@ export default function Feed() {
                     <Sparkles className="h-6 w-6 text-primary" />
                     Highest-Rated Journeys
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Most trusted experiences from verified travelers</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Most trusted experiences from verified travelers
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={
-                  <div className="flex justify-center">
-                    <div className="w-full sm:w-[760px] h-[380px]">
-                      <TopRatedCarouselSkeleton />
-                    </div>
-                  </div>
-                }>
-                  <Suspense fallback={
+                <LazyOnVisible
+                  placeholder={
                     <div className="flex justify-center">
                       <div className="w-full sm:w-[760px] h-[380px]">
                         <TopRatedCarouselSkeleton />
                       </div>
                     </div>
-                  }>
+                  }
+                >
+                  <Suspense
+                    fallback={
+                      <div className="flex justify-center">
+                        <div className="w-full sm:w-[760px] h-[380px]">
+                          <TopRatedCarouselSkeleton />
+                        </div>
+                      </div>
+                    }
+                  >
                     <TopRatedCarousel
                       projects={categorizedProjects.topScored}
                       categoryName="top-rated"
+                      customNavigatePath="/gallery/top-rated"
                     />
                   </Suspense>
                 </LazyOnVisible>
@@ -490,7 +649,9 @@ export default function Feed() {
             <section className="mt-2">
               <FeedStatCards
                 projectsCount={visibleFeedProjects.length}
-                buildersCount={(buildersForCount?.length || topBuilders?.length || 0)}
+                buildersCount={
+                  buildersForCount?.length || topBuilders?.length || 0
+                }
               />
               <div className="relative mt-6">
                 <img
@@ -500,12 +661,15 @@ export default function Feed() {
                   loading="lazy"
                 />
                 <div className="flex justify-center">
-                  <FeedLeaderTagCard label={leader.label} count={leader.count} percent={leader.percent} icon={leader.icon} />
+                  <FeedLeaderTagCard
+                    label={leader.label}
+                    count={leader.count}
+                    percent={leader.percent}
+                    icon={leader.icon}
+                  />
                 </div>
               </div>
             </section>
-
-            
 
             {/* Mini-threads: quick bites between sections */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -535,11 +699,18 @@ export default function Feed() {
                     <TrendingUp className="h-6 w-6 text-accent" />
                     Trending Destinations
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Popular adventures gaining momentum this week</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Popular adventures gaining momentum this week
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.hot} categoryName="trending" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.hot}
+                      categoryName="trending"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -557,8 +728,13 @@ export default function Feed() {
               )}
               {investorsList[0] && investorsList[0].user?.username && (
                 <FeedMiniThread
-                  title={`${investorsList[0].user.display_name || investorsList[0].user.username}`}
-                  subtitle={(investorsList[0].industries || []).slice(0,2).join(', ')}
+                  title={`${
+                    investorsList[0].user.display_name ||
+                    investorsList[0].user.username
+                  }`}
+                  subtitle={(investorsList[0].industries || [])
+                    .slice(0, 2)
+                    .join(", ")}
                   href={`/u/${investorsList[0].user.username}`}
                   badge="Open Investor"
                 />
@@ -567,17 +743,27 @@ export default function Feed() {
 
             {/* Women-Safe Certified Carousel */}
             {categorizedProjects.womenSafe.length > 0 && (
-              <section id="women-safe-featured" className="carousel-cinema scroll-mt-24">
+              <section
+                id="women-safe-featured"
+                className="carousel-cinema scroll-mt-24"
+              >
                 <div className="mb-4">
                   <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
                     <Shield className="h-6 w-6 text-accent" />
                     Women-Safe Certified
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Itineraries verified as women-safe and well-documented</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Itineraries verified as women-safe and well-documented
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.womenSafe} categoryName="women-safe" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.womenSafe}
+                      categoryName="women-safe"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -585,17 +771,27 @@ export default function Feed() {
 
             {/* Hidden Gems Carousel - Off-the-beaten-path adventures */}
             {categorizedProjects.risingStars.length > 0 && (
-              <section id="hidden-gems" className="carousel-cinema scroll-mt-24">
+              <section
+                id="hidden-gems"
+                className="carousel-cinema scroll-mt-24"
+              >
                 <div className="mb-4">
                   <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
                     <Flame className="h-6 w-6 text-orange-500" />
                     Hidden Gems
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Discover lesser-known adventures with growing interest</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Discover lesser-known adventures with growing interest
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.risingStars} categoryName="rising-stars" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.risingStars}
+                      categoryName="rising-stars"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -603,17 +799,27 @@ export default function Feed() {
 
             {/* Latest Adventures Carousel */}
             {categorizedProjects.newLaunches.length > 0 && (
-              <section id="new-launches" className="carousel-cinema scroll-mt-24">
+              <section
+                id="new-launches"
+                className="carousel-cinema scroll-mt-24"
+              >
                 <div className="mb-4">
                   <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
                     <Clock className="h-6 w-6 text-primary" />
                     Latest Adventures
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Recently shared itineraries from the caravan</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Recently shared itineraries from the caravan
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.newLaunches} categoryName="newest" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.newLaunches}
+                      categoryName="newest"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -627,11 +833,18 @@ export default function Feed() {
                     <TrendingUp className="h-6 w-6 text-primary" />
                     Adventure & Trekking
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Epic mountain adventures and challenging treks</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Epic mountain adventures and challenging treks
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.adventure} categoryName="adventure" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.adventure}
+                      categoryName="adventure"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -645,11 +858,18 @@ export default function Feed() {
                     <Sparkles className="h-6 w-6 text-primary" />
                     Beach & Coastal
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Relaxing beach getaways and water adventures</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Relaxing beach getaways and water adventures
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.beach} categoryName="beach" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.beach}
+                      categoryName="beach"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -663,11 +883,18 @@ export default function Feed() {
                     <Zap className="h-6 w-6 text-primary" />
                     Cultural & Heritage
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Immersive cultural experiences and historical sites</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Immersive cultural experiences and historical sites
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.cultural} categoryName="cultural" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.cultural}
+                      categoryName="cultural"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -675,17 +902,27 @@ export default function Feed() {
 
             {/* Digital Nomad Destinations */}
             {categorizedProjects.digitalNomad.length > 0 && (
-              <section id="digital-nomad" className="carousel-cinema scroll-mt-24">
+              <section
+                id="digital-nomad"
+                className="carousel-cinema scroll-mt-24"
+              >
                 <div className="mb-4">
                   <h2 className="text-2xl font-bold flex items-center gap-2">
                     <Flame className="h-6 w-6 text-primary" />
                     Digital Nomad Hotspots
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Work + travel destinations for remote workers</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Work + travel destinations for remote workers
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.digitalNomad} categoryName="digital-nomad" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.digitalNomad}
+                      categoryName="digital-nomad"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -699,11 +936,18 @@ export default function Feed() {
                     <Shield className="h-6 w-6 text-primary" />
                     Women-Safe Certified
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Verified safe itineraries for women travelers</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Verified safe itineraries for women travelers
+                  </p>
                 </div>
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
                   <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                    <TopRatedCarousel projects={categorizedProjects.womenSafe} categoryName="women-safe" />
+                    <TopRatedCarousel
+                      projects={categorizedProjects.womenSafe}
+                      categoryName="women-safe"
+                    />
                   </Suspense>
                 </LazyOnVisible>
               </section>
@@ -712,19 +956,41 @@ export default function Feed() {
             {/* Another mini-thread */}
             {dashboard?.recentIntros?.length ? (
               <FeedMiniThread
-                title={`New intro: ${(dashboard.recentIntros[0].investor?.display_name || dashboard.recentIntros[0].investor?.username) ?? 'Investor'} → ${(dashboard.recentIntros[0].builder?.display_name || dashboard.recentIntros[0].builder?.username) ?? 'Builder'}`}
-                subtitle={dashboard.recentIntros[0].project?.title ? `on “${dashboard.recentIntros[0].project.title}”` : undefined}
-                href={dashboard.recentIntros[0].project?.id ? `/project/${dashboard.recentIntros[0].project.id}` : undefined}
+                title={`New intro: ${
+                  (dashboard.recentIntros[0].investor?.display_name ||
+                    dashboard.recentIntros[0].investor?.username) ??
+                  "Investor"
+                } → ${
+                  (dashboard.recentIntros[0].builder?.display_name ||
+                    dashboard.recentIntros[0].builder?.username) ??
+                  "Builder"
+                }`}
+                subtitle={
+                  dashboard.recentIntros[0].project?.title
+                    ? `on “${dashboard.recentIntros[0].project.title}”`
+                    : undefined
+                }
+                href={
+                  dashboard.recentIntros[0].project?.id
+                    ? `/project/${dashboard.recentIntros[0].project.id}`
+                    : undefined
+                }
                 badge="Connection"
               />
             ) : null}
 
             {/* Most Requested Intros Carousel */}
             {categorizedProjects.mostRequested.length > 0 && (
-              <section id="most-requested" className="carousel-cinema scroll-mt-24">
-                <LazyOnVisible placeholder={<ProjectCardSkeletonGrid count={5} />}>
-                  <Suspense fallback={<ProjectCardSkeletonGrid count={5} />}>
-                  </Suspense>
+              <section
+                id="most-requested"
+                className="carousel-cinema scroll-mt-24"
+              >
+                <LazyOnVisible
+                  placeholder={<ProjectCardSkeletonGrid count={5} />}
+                >
+                  <Suspense
+                    fallback={<ProjectCardSkeletonGrid count={5} />}
+                  ></Suspense>
                 </LazyOnVisible>
               </section>
             )}
@@ -739,38 +1005,69 @@ export default function Feed() {
                   <h3 className="text-xl font-black">Top Travel Creators</h3>
                 </div>
                 <div className="space-y-3">
-                  {topBuilders.slice(0,6).map((b: any, i: number) => (
-                    <a key={b.id || i} href={`/u/${b.username}`} className="flex items-center gap-3 hover:opacity-90">
-                      <div className="h-9 w-9 rounded-full bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black text-black">{i+1}</div>
+                  {topBuilders.slice(0, 6).map((b: Builder, i: number) => (
+                    <a
+                      key={b.id || i}
+                      href={`/u/${b.username}`}
+                      className="flex items-center gap-3 hover:opacity-90"
+                    >
+                      <div className="h-9 w-9 rounded-full bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black text-black">
+                        {i + 1}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-foreground truncate">{b.username}</p>
-                        <p className="text-xs text-muted-foreground truncate">{b.projects} itineraries • {b.score} score</p>
+                        <p className="font-bold text-foreground truncate">
+                          {b.username}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {b.projects} itineraries • {b.score} score
+                        </p>
                       </div>
                     </a>
                   ))}
                 </div>
               </div>
 
-              {/* Open Investors */
-              }
+              {/* Open Investors */}
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-black">Open Investors</h3>
-                  <a href={investorsHref} className="badge badge-dash badge-primary hover:opacity-90">All</a>
+                  <a
+                    href={investorsHref}
+                    className="badge badge-dash badge-primary hover:opacity-90"
+                  >
+                    All
+                  </a>
                 </div>
                 <div className="space-y-2">
-                  {investorsList.filter((i: any) => i.open_to_requests).slice(0,6).map((inv: any, idx: number) => (
-                    <a key={inv.id || idx} href={`/u/${inv.user?.username}`} className="flex items-center gap-3 hover:opacity-90">
-                      <div className="h-8 w-8 rounded-full bg-secondary border-2 border-black flex items-center justify-center text-xs font-black">{(inv.user?.username||'?')[0]?.toUpperCase() || '?'}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-foreground truncate">{inv.user?.display_name || inv.user?.username}</p>
-                        <p className="text-xs text-muted-foreground truncate">{(inv.industries||[]).slice(0,2).join(', ') || 'Investor'}</p>
-                      </div>
-                      <span className="badge badge-primary">Open</span>
-                    </a>
-                  ))}
-                  {investorsList.filter((i:any)=>i.open_to_requests).length===0 && (
-                    <p className="text-sm text-muted-foreground">No investors open to requests right now.</p>
+                  {investorsList
+                    .filter((i: Investor) => i.open_to_requests)
+                    .slice(0, 6)
+                    .map((inv: Investor, idx: number) => (
+                      <a
+                        key={inv.id || idx}
+                        href={`/u/${inv.user?.username}`}
+                        className="flex items-center gap-3 hover:opacity-90"
+                      >
+                        <div className="h-8 w-8 rounded-full bg-secondary border-2 border-black flex items-center justify-center text-xs font-black">
+                          {(inv.user?.username || "?")[0]?.toUpperCase() || "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-foreground truncate">
+                            {inv.user?.display_name || inv.user?.username}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {(inv.industries || []).slice(0, 2).join(", ") ||
+                              "Investor"}
+                          </p>
+                        </div>
+                        <span className="badge badge-primary">Open</span>
+                      </a>
+                    ))}
+                  {investorsList.filter((i: Investor) => i.open_to_requests)
+                    .length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No investors open to requests right now.
+                    </p>
                   )}
                 </div>
               </div>
@@ -782,32 +1079,59 @@ export default function Feed() {
                 </div>
                 <div className="space-y-3">
                   {recentConnectionsData?.data?.length ? (
-                    (recentConnectionsData.data as any[]).slice(0,6).map((conn: any) => (
-                      <a key={conn.id} href={`/project/${conn.project?.id}`} className="flex items-center gap-3 hover:opacity-90">
-                        <div className="h-8 w-8 rounded-[10px] bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black">↗</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate"><span className="font-bold">{conn.investor?.display_name || conn.investor?.username}</span> connected with <span className="font-bold">{conn.builder?.display_name || conn.builder?.username}</span></p>
-                          {conn.project?.title && (
-                            <p className="text-xs text-muted-foreground truncate">on "{conn.project.title}"</p>
-                          )}
-                        </div>
-                      </a>
-                    ))
+                    (recentConnectionsData.data as Connection[])
+                      .slice(0, 6)
+                      .map((conn: Connection) => (
+                        <a
+                          key={conn.id}
+                          href={`/project/${conn.project?.id}`}
+                          className="flex items-center gap-3 hover:opacity-90"
+                        >
+                          <div className="h-8 w-8 rounded-[10px] bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black">
+                            ↗
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground truncate">
+                              <span className="font-bold">
+                                {conn.investor?.display_name ||
+                                  conn.investor?.username}
+                              </span>{" "}
+                              connected with{" "}
+                              <span className="font-bold">
+                                {conn.builder?.display_name ||
+                                  conn.builder?.username}
+                              </span>
+                            </p>
+                            {conn.project?.title && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                on "{conn.project.title}"
+                              </p>
+                            )}
+                          </div>
+                        </a>
+                      ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">No recent connections yet.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No recent connections yet.
+                    </p>
                   )}
                 </div>
               </div>
             </section>
 
             {/* Empty State */}
-            {Object.values(categorizedProjects).every(cat => cat.length === 0) && (
+            {Object.values(categorizedProjects).every(
+              (cat) => cat.length === 0
+            ) && (
               <div className="card-elevated py-20 text-center p-8 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20">
                 <div className="space-y-4">
                   <div className="text-6xl">✈️</div>
-                  <p className="text-2xl font-black text-foreground">Ready for your next adventure?</p>
+                  <p className="text-2xl font-black text-foreground">
+                    Ready for your next adventure?
+                  </p>
                   <p className="text-base text-muted-foreground mb-6">
-                    No itineraries yet. Be the first to share your travel journey with our caravan!
+                    No itineraries yet. Be the first to share your travel
+                    journey with our caravan!
                   </p>
                   <button className="badge badge-primary text-sm font-bold px-6 py-2 hover:opacity-90">
                     Share Your Itinerary
@@ -824,7 +1148,7 @@ export default function Feed() {
       {/* Floating SNAP Button - Orange Theme */}
       {user && (
         <button
-          onClick={() => navigate('/snap/camera')}
+          onClick={() => navigate("/snap/camera")}
           className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-200 group border-2 border-white/20"
           title="Create a Snap"
         >
@@ -837,4 +1161,3 @@ export default function Feed() {
     </div>
   );
 }
-

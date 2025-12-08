@@ -1,25 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ChevronLeftIcon, ChevronRightIcon, ArrowRight } from 'lucide-react';
-import { Autoplay, Navigation } from 'swiper/modules';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/css/navigation';
-import 'swiper/css';
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ChevronLeftIcon, ChevronRightIcon, ArrowRight } from "lucide-react";
+import { Autoplay, Navigation } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css/navigation";
+import "swiper/css";
 
-import { Project } from '@/types';
-import { ItineraryCard } from '@/components/ItineraryCard';
+import { Itinerary } from "@/types";
+import { ItineraryCard } from "@/components/ItineraryCard";
 
 interface TopRatedCarouselProps {
-  projects: Project[];
+  projects: Itinerary[];
   categoryName?: string;
+  customNavigatePath?: string;
 }
 
 export function TopRatedCarousel({
   projects,
-  categoryName = 'top-rated',
+  categoryName = "top-rated",
+  customNavigatePath,
 }: TopRatedCarouselProps) {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -30,7 +32,8 @@ export function TopRatedCarousel({
 
     const today = new Date();
     const dayOfYear = Math.floor(
-      (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000
+      (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) /
+        86400000
     );
 
     const shuffled = [...projects];
@@ -96,14 +99,22 @@ export function TopRatedCarousel({
           </h2>
           <div className="hidden sm:flex ml-auto text-sm text-muted-foreground font-medium items-center gap-3">
             <span>
-              <span className="text-primary font-bold">{dailyRotatedProjects.length}</span>
+              <span className="text-primary font-bold">
+                {dailyRotatedProjects.length}
+              </span>
               &nbsp;projects
             </span>
             {categoryName && (
               <button
-                onClick={() => navigate(`/gallery/${categoryName}`)}
+                onClick={() =>
+                  navigate(customNavigatePath || `/gallery/${categoryName}`)
+                }
                 className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 font-medium"
-                title="View all projects in this category"
+                title={
+                  customNavigatePath
+                    ? "View your itineraries"
+                    : "View all projects in this category"
+                }
               >
                 <ArrowRight className="h-4 w-4" />
               </button>
@@ -137,8 +148,8 @@ export function TopRatedCarousel({
               setActiveIndex(swiper.realIndex);
             }}
             navigation={{
-              nextEl: '.top-rated-button-next',
-              prevEl: '.top-rated-button-prev',
+              nextEl: ".top-rated-button-next",
+              prevEl: ".top-rated-button-prev",
             }}
             className="carousel-top-rated"
             modules={[Autoplay, Navigation]}
@@ -151,9 +162,13 @@ export function TopRatedCarousel({
                   key={project.id}
                   className={`!w-full sm:!w-auto flex items-center justify-center`}
                 >
-                  <div className={`w-full sm:w-[480px] md:w-[520px] transition-all duration-300 ${
-                    !isActive ? 'opacity-60 scale-95' : 'opacity-100 scale-100'
-                  }`}>
+                  <div
+                    className={`w-full sm:w-[480px] md:w-[520px] transition-all duration-300 ${
+                      !isActive
+                        ? "opacity-60 scale-95"
+                        : "opacity-100 scale-100"
+                    }`}
+                  >
                     {/* Rank Badge */}
                     <div className="flex justify-end mb-2">
                       <div className="bg-primary text-black px-3 py-1 rounded-full text-sm font-bold shadow-lg">
