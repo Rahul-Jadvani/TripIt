@@ -59,6 +59,7 @@ export default function ProjectDetail() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [showProfileChecklist, setShowProfileChecklist] = useState(false);
   const [expandedScores, setExpandedScores] = useState<Record<string, boolean>>({});
+  const [showTooltips, setShowTooltips] = useState<Record<string, boolean>>({});
   const [showRouteMap, setShowRouteMap] = useState(false);
   const queryClient = useQueryClient();
 
@@ -688,15 +689,31 @@ export default function ProjectDetail() {
       setExpandedScores(prev => ({ ...prev, [scoreKey]: !prev[scoreKey] }));
     };
 
+    // Score component info tooltips
+    const scoreInfoTooltips: Record<string, string> = {
+      identity: "Measures traveler verification and credibility. Based on SBT verification, certifications, guide status, and profile completeness.",
+      travel_history: "Measures creator's platform activity based on content contributions. Calculated from: itineraries created, snaps posted, safety ratings given, and verified contributions. Normalized against top creators.",
+      community: "Measures community engagement and interaction quality. Calculated from: upvote ratio (most important), view count, comment count, and helpful votes. Normalized against top itineraries.",
+      safety: "Measures community safety ratings and traveler feedback. Based on average safety score (0-5 stars) from community ratings, with bonus for verified ratings (3+).",
+      quality: "Measures content richness and itinerary completeness. Based on description quality, extended trip details, photos, and route information."
+    };
+
+    // Helper function to toggle tooltip
+    const toggleTooltip = (tooltipKey: string) => {
+      setShowTooltips(prev => ({ ...prev, [tooltipKey]: !prev[tooltipKey] }));
+    };
+
     // Helper function to render a score component with explanation
     const renderScoreComponent = (
       key: string,
       label: string,
       score: number,
-      explanationKey?: string
+      explanationKey?: string,
+      infoTooltip?: string
     ) => {
       const explanation = explanationKey && project.score_explanations?.[explanationKey];
       const isExpanded = expandedScores[key];
+      const isTooltipShown = showTooltips[key];
 
       return (
         <div key={key} className="border border-border/30 rounded-lg overflow-hidden">
@@ -712,6 +729,28 @@ export default function ProjectDetail() {
                 }`}
               />
               <span className="text-sm text-muted-foreground">{label}</span>
+              {infoTooltip && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTooltip(key);
+                    }}
+                    onMouseEnter={() => setShowTooltips(prev => ({ ...prev, [key]: true }))}
+                    onMouseLeave={() => setShowTooltips(prev => ({ ...prev, [key]: false }))}
+                    className="p-0.5 hover:bg-accent/20 rounded transition-colors"
+                  >
+                    <Info className="h-3.5 w-3.5 text-primary/70" />
+                  </button>
+                  {isTooltipShown && (
+                    <div className="absolute left-0 top-6 z-50 w-64 p-3 bg-popover border-2 border-border rounded-lg shadow-lg text-xs text-popover-foreground leading-relaxed">
+                      {infoTooltip}
+                      <div className="absolute -top-1.5 left-4 w-3 h-3 bg-popover border-t-2 border-l-2 border-border transform rotate-45"></div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <span className="font-semibold text-foreground">{formatScore(score)}</span>
           </button>
@@ -771,31 +810,36 @@ export default function ProjectDetail() {
               'identity',
               'Identity Score',
               project.identity_score || 0,
-              'identity_score'
+              'identity_score',
+              scoreInfoTooltips.identity
             )}
             {renderScoreComponent(
               'travel_history',
               'Travel History',
               project.travel_history_score || 0,
-              'travel_history_score'
+              'travel_history_score',
+              scoreInfoTooltips.travel_history
             )}
             {renderScoreComponent(
               'community',
-              'Caravan Engagement',
+              'Community Score',
               project.community_score || 0,
-              'community_score'
+              'community_score',
+              scoreInfoTooltips.community
             )}
             {renderScoreComponent(
               'safety',
               'Safety Rating',
               project.safety_score_component || 0,
-              'safety_score_component'
+              'safety_score_component',
+              scoreInfoTooltips.safety
             )}
             {renderScoreComponent(
               'quality',
               'Content Quality',
               project.quality_score || 0,
-              'quality_score'
+              'quality_score',
+              scoreInfoTooltips.quality
             )}
           </div>
 

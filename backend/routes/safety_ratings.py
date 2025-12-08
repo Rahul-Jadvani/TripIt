@@ -121,6 +121,10 @@ def add_safety_rating(user_id):
         CacheService.invalidate_itinerary(itinerary_id)
         CacheService.invalidate_itinerary_feed()
 
+        # Trigger full scoring recalculation
+        from tasks.scoring_tasks import score_itinerary_task
+        score_itinerary_task.delay(itinerary_id)
+
         # Emit Socket.IO event
         try:
             from services.socket_service import SocketService
@@ -247,6 +251,10 @@ def update_safety_rating(user_id, rating_id):
         CacheService.invalidate_itinerary(rating.itinerary_id)
         CacheService.invalidate_itinerary_feed()
 
+        # Trigger full scoring recalculation
+        from tasks.scoring_tasks import score_itinerary_task
+        score_itinerary_task.delay(rating.itinerary_id)
+
         return success_response(
             rating.to_dict(),
             'Safety rating updated',
@@ -288,6 +296,10 @@ def delete_safety_rating(user_id, rating_id):
 
         CacheService.invalidate_itinerary(itinerary_id)
         CacheService.invalidate_itinerary_feed()
+
+        # Trigger full scoring recalculation
+        from tasks.scoring_tasks import score_itinerary_task
+        score_itinerary_task.delay(itinerary_id)
 
         return success_response(None, 'Safety rating deleted', 200)
 

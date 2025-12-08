@@ -493,6 +493,33 @@ def register_blueprints(app):
     from routes.admin_auth import admin_auth_bp
     app.register_blueprint(admin_auth_bp)
 
+    # Backward compatibility: Direct /admin/rescore route
+    @app.route('/admin/rescore', methods=['POST'])
+    def admin_rescore_direct():
+        """Direct admin rescore route for backward compatibility"""
+        from routes.admin import rescore_all_itineraries
+        from utils.decorators import admin_required
+        # Get the decorated function
+        decorated_func = admin_required(lambda user_id: rescore_all_itineraries(user_id))
+        # Extract user_id from session/token
+        from flask import request
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({'status': 'error', 'message': 'No authorization header'}), 401
+
+        try:
+            token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
+            from utils.jwt_utils import decode_token
+            payload = decode_token(token)
+            user_id = payload.get('user_id')
+            if not user_id:
+                return jsonify({'status': 'error', 'message': 'Invalid token'}), 401
+
+            # Call the rescore function
+            return rescore_all_itineraries(user_id)
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 401
+
     # Route to serve uploaded snap images (for AI analysis)
     @app.route('/uploads/snaps/<path:filename>')
     def serve_snap_image(filename):

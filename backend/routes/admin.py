@@ -1892,6 +1892,133 @@ def update_scoring_config(user_id):
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@admin_bp.route('/itineraries/<itinerary_id>/rescore', methods=['POST'])
+@admin_required
+def rescore_itinerary(user_id, itinerary_id):
+    """
+    Manually trigger rescoring for a specific itinerary
+
+    Args:
+        itinerary_id: Itinerary UUID
+
+    Returns:
+        Task queued confirmation
+    """
+    try:
+        from tasks.scoring_tasks import score_itinerary_task
+
+        itinerary = Itinerary.query.get(itinerary_id)
+        if not itinerary or itinerary.is_deleted:
+            return jsonify({'status': 'error', 'message': 'Itinerary not found'}), 404
+
+        # Queue scoring task
+        task = score_itinerary_task.delay(itinerary.id)
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Itinerary rescoring queued successfully',
+            'data': {
+                'itinerary_id': itinerary.id,
+                'task_id': task.id,
+                'scoring_status': 'queued'
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/itineraries/rescore/bulk', methods=['POST'])
+@admin_required
+def rescore_itineraries_bulk(user_id):
+    """
+    Bulk rescore itineraries with optional filtering
+
+    Request Body:
+        {
+            "filter": "all",  # all itineraries
+            "itinerary_ids": ["uuid1", "uuid2", ...],  # Optional: specific itineraries
+            "limit": 100,  # Optional: limit number to rescore
+            "force": true/false  # Optional: force rescore
+        }
+
+    Returns:
+        Count of itineraries queued for rescoring
+    """
+    try:
+        from tasks.scoring_tasks import score_itinerary_task
+
+        data = request.get_json() or {}
+        itinerary_ids = data.get('itinerary_ids', [])
+        limit = data.get('limit')
+        force = data.get('force', False)
+
+        # Build query
+        query = Itinerary.query.filter_by(is_deleted=False)
+
+        # Apply filters
+        if itinerary_ids:
+            # Specific itineraries
+            query = query.filter(Itinerary.id.in_(itinerary_ids))
+
+        # Apply limit if specified
+        if limit:
+            itineraries = query.limit(limit).all()
+        else:
+            itineraries = query.all()
+
+        if not itineraries:
+            return jsonify({
+                'status': 'success',
+                'message': 'No itineraries match the criteria',
+                'data': {
+                    'queued_count': 0
+                }
+            }), 200
+
+        # Queue all itineraries for rescoring
+        queued_count = 0
+        task_ids = []
+
+        for itinerary in itineraries:
+            # Queue task
+            task = score_itinerary_task.delay(itinerary.id)
+            task_ids.append(task.id)
+            queued_count += 1
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Successfully queued {queued_count} itineraries for rescoring',
+            'data': {
+                'queued_count': queued_count,
+                'task_ids': task_ids[:10],  # Return first 10 task IDs
+                'total_tasks': len(task_ids)
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@admin_bp.route('/rescore', methods=['POST'])
+@admin_required
+def rescore_all_itineraries(user_id):
+    """
+    Bulk rescore all itineraries in the system (legacy endpoint)
+
+    Request Body (optional):
+        {
+            "limit": 100,  # Optional: limit number of itineraries to rescore
+            "force": true/false  # Optional: force rescore even if already scored
+        }
+
+    Returns:
+        Count of itineraries queued for rescoring
+    """
+    # Redirect to bulk rescore
+    return rescore_itineraries_bulk(user_id)
+
+
 @admin_bp.route('/projects/<project_id>/rescore', methods=['POST'])
 @admin_required
 def rescore_project(user_id, project_id):

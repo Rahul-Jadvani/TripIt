@@ -247,15 +247,12 @@ def sync_votes_to_db(self):
                         update_project_community_score(content)
                         db.session.add(content)
                     elif content:
-                        # It's an Itinerary - update its community score if applicable
+                        # It's an Itinerary - trigger full scoring calculation
                         from models.itinerary import Itinerary
                         if isinstance(content, Itinerary):
-                            # Itineraries use proof_score components like projects
-                            # Update community score based on votes
-                            net_votes = (content.upvotes or 0) - (content.downvotes or 0)
-                            content.community_score = max(0, min(20, net_votes * 0.5))
-                            content.calculate_proof_score()
-                            db.session.add(content)
+                            # Queue full scoring task to recalculate all components
+                            from tasks.scoring_tasks import score_itinerary_task
+                            score_itinerary_task.delay(project_id)
 
                 # 4. Update Redis to match votes table truth
                 if result.rowcount > 0:

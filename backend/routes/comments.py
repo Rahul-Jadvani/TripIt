@@ -93,11 +93,25 @@ def create_comment(user_id):
         content.comment_count += 1
 
         # Recalculate community score immediately
-        from models.event_listeners import update_project_community_score
-        update_project_community_score(content)
+        from models.project import Project
+        from models.itinerary import Itinerary
+
+        if isinstance(content, Project):
+            from models.event_listeners import update_project_community_score
+            update_project_community_score(content)
+        elif isinstance(content, Itinerary):
+            # Queue full scoring task for itinerary
+            from tasks.scoring_tasks import score_itinerary_task
+            # Commit first so comment_count is persisted
+            db.session.add(comment)
+            db.session.commit()
+            score_itinerary_task.delay(content.id)
+            # Set flag to skip double commit below
+            content._skip_commit = True
 
         db.session.add(comment)
-        db.session.commit()
+        if not hasattr(content, '_skip_commit'):
+            db.session.commit()
 
         # CRITICAL: Ensure author is loaded after commit
         # This loads the relationship so to_dict() includes author info

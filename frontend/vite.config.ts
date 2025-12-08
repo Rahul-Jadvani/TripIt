@@ -22,6 +22,19 @@ export default defineConfig(({ mode }) => ({
           });
         },
       },
+      '/admin': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // Forward cookies
+            if (req.headers.cookie) {
+              proxyReq.setHeader('cookie', req.headers.cookie);
+            }
+          });
+        },
+      },
     },
   },
   plugins: [react()],

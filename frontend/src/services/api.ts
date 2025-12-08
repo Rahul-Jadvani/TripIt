@@ -413,6 +413,11 @@ export const adminService = {
     api.put('/admin/scoring/config', data),
   getScoringStats: () => api.get('/admin/scoring/stats'),
   rescoreProject: (projectId: string) => api.post(`/admin/projects/${projectId}/rescore`),
+  rescoreProjectsBulk: (data: { filter: string }) => api.post('/admin/projects/rescore/bulk', data),
+
+  // Itinerary Rescoring
+  rescoreItinerary: (itineraryId: string) => api.post(`/admin/itineraries/${itineraryId}/rescore`),
+  rescoreItinerariesBulk: (data?: { limit?: number; force?: boolean }) => api.post('/admin/itineraries/rescore/bulk', data || {}),
 };
 
 // Public Investors (non-admin convenience wrapper)

@@ -35,6 +35,7 @@ const Publish = lazy(() => import("./pages/Publish"));
 const EditProject = lazy(() => import("./pages/EditProject"));
 const Intros = lazy(() => import("./pages/Intros"));
 const Admin = lazy(() => import("./pages/Admin"));
+const AdminRescore = lazy(() => import("./pages/AdminRescore"));
 const DirectMessages = lazy(() => import("./pages/DirectMessages"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const NetworkIssue = lazy(() => import("./pages/NetworkIssue"));
@@ -151,6 +152,7 @@ const App = () => (
 
                   {/* Admin Routes */}
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                  <Route path="/admin/rescore" element={<AdminRoute><AdminRescore /></AdminRoute>} />
 
                   {/* Validator Routes - redirect to dashboard */}
                   <Route path="/validator" element={<ValidatorRoute><Dashboard /></ValidatorRoute>} />

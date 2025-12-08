@@ -5,6 +5,7 @@ from celery_app import celery
 from extensions import db
 from models.project import Project
 from models.user import User
+from models.traveler import Traveler
 from services.scoring.score_engine import ScoringEngine
 from models.itinerary import Itinerary
 from datetime import datetime, timedelta
@@ -190,37 +191,147 @@ def score_itinerary_task(self, itinerary_id):
         except Exception:
             pass  # Creator not available
 
-        # === 2. TRAVEL HISTORY SCORE (0-20) ===
-        # Based on creator's travel experience
+        # === 2. TRAVEL HISTORY SCORE (0-20) - Normalized against top creators ===
+        # Based on creator's actual content contributions
         travel_history_score = 0.0
+
+        # Initialize all variables with default values
+        max_itineraries = 1
+        max_snaps = 1
+        max_safety_ratings = 1
+        max_contributions = 1
+        user_itineraries = 0
+        user_snaps = 0
+        user_safety_ratings = 0
+        user_contributions = 0
+
         try:
             creator = itinerary.itinerary_creator
             if creator:
-                # Number of trips: up to 10 points (1 point per trip, max 10)
-                trips_count = getattr(creator, 'total_trips_count', 0) or 0
-                travel_history_score += min(10.0, trips_count * 1.0)
+                from models.snap import Snap
+                from models.safety_rating import SafetyRating
 
-                # Destinations visited: up to 5 points (0.5 points per destination)
-                destinations = getattr(creator, 'destinations_visited', 0) or 0
-                travel_history_score += min(5.0, destinations * 0.5)
+                # Get maximum values for normalization - use actual user counts
+                try:
+                    # Count itineraries per user, get the maximum
+                    from sqlalchemy import select
+                    itinerary_counts = db.session.query(
+                        Itinerary.created_by_traveler_id,
+                        func.count(Itinerary.id).label('count')
+                    ).filter(
+                        Itinerary.created_by_traveler_id != None,
+                        Itinerary.is_deleted == False
+                    ).group_by(
+                        Itinerary.created_by_traveler_id
+                    ).all()
 
-                # Total km traveled: up to 5 points (1 point per 1000km, max 5)
-                km_traveled = getattr(creator, 'total_km_traveled', 0.0) or 0.0
-                travel_history_score += min(5.0, (km_traveled / 1000.0))
-        except Exception:
-            pass
+                    if itinerary_counts:
+                        max_itineraries = max([count for _, count in itinerary_counts])
+                    else:
+                        max_itineraries = user_itineraries if user_itineraries > 0 else 1
+                except Exception as e:
+                    print(f"Max itineraries query error: {e}")
+                    max_itineraries = user_itineraries if user_itineraries > 0 else 1
 
-        # === 3. COMMUNITY SCORE (0-20) - Normalized against top performers ===
+                try:
+                    # Count snaps per user, get the maximum
+                    snap_counts = db.session.query(
+                        Snap.user_id,
+                        func.count(Snap.id).label('count')
+                    ).filter(
+                        Snap.user_id != None,
+                        Snap.is_deleted == False
+                    ).group_by(
+                        Snap.user_id
+                    ).all()
+
+                    if snap_counts:
+                        max_snaps = max([count for _, count in snap_counts])
+                    else:
+                        max_snaps = user_snaps if user_snaps > 0 else 1
+                except Exception as e:
+                    print(f"Max snaps query error: {e}")
+                    max_snaps = user_snaps if user_snaps > 0 else 1
+
+                try:
+                    # Count safety ratings per user, get the maximum
+                    rating_counts = db.session.query(
+                        SafetyRating.traveler_id,
+                        func.count(SafetyRating.id).label('count')
+                    ).filter(
+                        SafetyRating.traveler_id != None
+                    ).group_by(
+                        SafetyRating.traveler_id
+                    ).all()
+
+                    if rating_counts:
+                        max_safety_ratings = max([count for _, count in rating_counts])
+                    else:
+                        max_safety_ratings = user_safety_ratings if user_safety_ratings > 0 else 1
+                except Exception as e:
+                    print(f"Max safety ratings query error: {e}")
+                    max_safety_ratings = user_safety_ratings if user_safety_ratings > 0 else 1
+
+                try:
+                    # Max contributions verified
+                    max_contributions = db.session.query(
+                        func.max(Traveler.contributions_verified)
+                    ).scalar() or 0
+                    if max_contributions == 0:
+                        max_contributions = user_contributions if user_contributions > 0 else 1
+                except Exception as e:
+                    print(f"Max contributions query error: {e}")
+                    max_contributions = user_contributions if user_contributions > 0 else 1
+
+                # Count user's contributions
+                try:
+                    user_itineraries = Itinerary.query.filter_by(
+                        created_by_traveler_id=creator.id, is_deleted=False
+                    ).count()
+                except Exception:
+                    user_itineraries = 0
+
+                try:
+                    user_snaps = Snap.query.filter_by(
+                        user_id=creator.id, is_deleted=False
+                    ).count()
+                except Exception:
+                    user_snaps = 0
+
+                try:
+                    user_safety_ratings = creator.safety_ratings.count()
+                except Exception:
+                    user_safety_ratings = 0
+
+                user_contributions = getattr(creator, 'contributions_verified', 0) or 0
+
+                # Normalize and weight each component
+                itineraries_score = (user_itineraries / max_itineraries) * 8.0
+                snaps_score = (user_snaps / max_snaps) * 6.0
+                safety_ratings_score = (user_safety_ratings / max_safety_ratings) * 4.0
+                contributions_score = (user_contributions / max_contributions) * 2.0
+
+                travel_history_score = round(
+                    itineraries_score + snaps_score + safety_ratings_score + contributions_score,
+                    2
+                )
+        except Exception as e:
+            print(f"Travel history scoring error: {e}")
+            import traceback
+            traceback.print_exc()
+            travel_history_score = 0.0
+
+        # === 3. COMMUNITY SCORE (0-20) - Upvote ratio + Normalized engagement ===
         # Get maximum values from top itineraries for normalization
         try:
             from sqlalchemy import func
             max_values = db.session.query(
-                func.max(Itinerary.helpful_votes).label('max_votes'),
+                func.max(Itinerary.helpful_votes).label('max_helpful'),
                 func.max(Itinerary.view_count).label('max_views'),
                 func.max(Itinerary.comment_count).label('max_comments')
             ).filter(Itinerary.is_deleted == False).first()
 
-            max_helpful_votes = max(max_values.max_votes or 1, 1)  # Avoid division by zero
+            max_helpful_votes = max(max_values.max_helpful or 1, 1)
             max_view_count = max(max_values.max_views or 1, 1)
             max_comment_count = max(max_values.max_comments or 1, 1)
         except Exception:
@@ -229,13 +340,30 @@ def score_itinerary_task(self, itinerary_id):
             max_view_count = 1000
             max_comment_count = 50
 
-        # Normalize each component against the maximum (0-20 points)
-        # Each component gets equal weight
-        helpful_votes_normalized = ((itinerary.helpful_votes or 0) / max_helpful_votes) * 7.0
-        view_count_normalized = ((itinerary.view_count or 0) / max_view_count) * 7.0
-        comment_count_normalized = ((itinerary.comment_count or 0) / max_comment_count) * 6.0
+        # Calculate upvote ratio (8 points)
+        upvotes = itinerary.upvotes or 0
+        downvotes = itinerary.downvotes or 0
+        total_votes = upvotes + downvotes
 
-        community_score = round(helpful_votes_normalized + view_count_normalized + comment_count_normalized, 2)
+        if total_votes > 0:
+            upvote_ratio = upvotes / total_votes
+            upvote_score = upvote_ratio * 8.0
+        else:
+            # No votes yet, neutral score
+            upvote_score = 0.0
+
+        # Normalize engagement metrics
+        view_score = ((itinerary.view_count or 0) / max_view_count) * 6.0
+
+        # Use actual travel_intel count if comment_count is not set
+        actual_comment_count = itinerary.comment_count or 0
+        if actual_comment_count == 0 and hasattr(itinerary, 'travel_intel_list'):
+            actual_comment_count = itinerary.travel_intel_list.count()
+
+        comment_score = (actual_comment_count / max_comment_count) * 4.0
+        helpful_score = ((itinerary.helpful_votes or 0) / max_helpful_votes) * 2.0
+
+        community_score = round(upvote_score + view_score + comment_score + helpful_score, 2)
 
         # === 4. SAFETY SCORE COMPONENT (0-20) ===
         # From community safety ratings (0-5 scale)
@@ -249,37 +377,39 @@ def score_itinerary_task(self, itinerary_id):
         if itinerary.safety_ratings_count and itinerary.safety_ratings_count >= 3:
             safety_component = min(20.0, safety_component + 2.0)
 
-        # === 5. QUALITY SCORE (0-20) ===
+        # === 5. QUALITY SCORE (0-20) - More Lenient ===
         quality_score = 0.0
 
-        # Description quality: up to 5 points
+        # Description quality: up to 5 points (more lenient thresholds)
         description_len = len(itinerary.description or '')
-        if description_len > 500:
+        if description_len > 300:
             quality_score += 5.0
-        elif description_len > 200:
-            quality_score += 3.0
+        elif description_len > 150:
+            quality_score += 4.0
         elif description_len > 50:
-            quality_score += 1.0
+            quality_score += 3.0
+        elif description_len > 20:
+            quality_score += 1.5
 
-        # Extended details: 1 point each (max 7 points)
-        if itinerary.trip_highlights and len(itinerary.trip_highlights) > 50:
+        # Extended details: 1 point each (max 7 points, more lenient)
+        if itinerary.trip_highlights and len(itinerary.trip_highlights) > 20:
             quality_score += 1.0
-        if itinerary.trip_journey and len(itinerary.trip_journey) > 50:
+        if itinerary.trip_journey and len(itinerary.trip_journey) > 20:
             quality_score += 1.0
-        if itinerary.day_by_day_plan and len(itinerary.day_by_day_plan) > 50:
+        if itinerary.day_by_day_plan and len(itinerary.day_by_day_plan) > 20:
             quality_score += 1.0
-        if itinerary.hidden_gems and len(itinerary.hidden_gems) > 50:
+        if itinerary.hidden_gems and len(itinerary.hidden_gems) > 20:
             quality_score += 1.0
-        if itinerary.unique_highlights and len(itinerary.unique_highlights) > 50:
+        if itinerary.unique_highlights and len(itinerary.unique_highlights) > 20:
             quality_score += 1.0
-        if itinerary.safety_tips and len(itinerary.safety_tips) > 50:
+        if itinerary.safety_tips and len(itinerary.safety_tips) > 20:
             quality_score += 1.0
         if itinerary.best_season:
             quality_score += 1.0
 
-        # Photos: up to 5 points (1 point per photo, max 5)
+        # Photos: up to 5 points (more lenient - 1.5 points per photo, max 5)
         screenshots_count = len(itinerary.screenshots or [])
-        quality_score += min(5.0, screenshots_count * 1.0)
+        quality_score += min(5.0, screenshots_count * 1.5)
 
         # Route details: up to 3 points
         if itinerary.route_map_url or itinerary.route_gpx:
@@ -342,55 +472,67 @@ def score_itinerary_task(self, itinerary_id):
         history_reasons = []
         if hasattr(itinerary, 'itinerary_creator') and itinerary.itinerary_creator:
             creator = itinerary.itinerary_creator
-            trips = getattr(creator, 'total_trips_count', 0) or 0
-            destinations = getattr(creator, 'destinations_visited', 0) or 0
-            km = getattr(creator, 'total_km_traveled', 0.0) or 0.0
+            try:
+                from models.snap import Snap
 
-            if trips > 0:
-                trip_score = min(10.0, trips * 1.0)
-                history_reasons.append(f"✓ {trips} trips completed (+{trip_score:.1f}/10.0 pts)")
-            else:
-                history_reasons.append("✗ No recorded trips (0/10.0 pts)")
+                user_itineraries = Itinerary.query.filter_by(
+                    created_by_traveler_id=creator.id, is_deleted=False
+                ).count()
+                user_snaps = Snap.query.filter_by(
+                    user_id=creator.id, is_deleted=False
+                ).count()
+                user_safety_ratings = creator.safety_ratings.count()
+                user_contributions = getattr(creator, 'contributions_verified', 0) or 0
 
-            if destinations > 0:
-                dest_score = min(5.0, destinations * 0.5)
-                history_reasons.append(f"✓ {destinations} destinations visited (+{dest_score:.1f}/5.0 pts)")
-            else:
-                history_reasons.append("✗ No destinations recorded (0/5.0 pts)")
+                itineraries_score = (user_itineraries / (max_itineraries or 1)) * 8.0
+                snaps_score = (user_snaps / (max_snaps or 1)) * 6.0
+                safety_ratings_score = (user_safety_ratings / (max_safety_ratings or 1)) * 4.0
+                contributions_score = (user_contributions / (max_contributions or 1)) * 2.0
 
-            if km > 0:
-                km_score = min(5.0, km / 1000.0)
-                history_reasons.append(f"✓ {km:.0f}km traveled (+{km_score:.1f}/5.0 pts)")
-            else:
-                history_reasons.append("✗ No distance recorded (0/5.0 pts)")
+                history_reasons.append(f"Itineraries created: {user_itineraries} (normalized: +{itineraries_score:.2f}/8.0 pts)")
+                history_reasons.append(f"Snaps posted: {user_snaps} (normalized: +{snaps_score:.2f}/6.0 pts)")
+                history_reasons.append(f"Safety ratings given: {user_safety_ratings} (normalized: +{safety_ratings_score:.2f}/4.0 pts)")
+                history_reasons.append(f"Verified contributions: {user_contributions} (normalized: +{contributions_score:.2f}/2.0 pts)")
+                history_reasons.append(f"Scoring normalized against top creators in the platform")
+            except Exception as e:
+                history_reasons.append(f"Error calculating history: {str(e)}")
         else:
-            history_reasons.append("✗ No travel history data available")
+            history_reasons.append("✗ No creator data available")
 
         explanations['travel_history_score'] = {
             'score': travel_history_score,
             'max': 20.0,
             'percentage': round((travel_history_score / 20.0) * 100, 1),
-            'summary': f'Creator\'s travel experience and journey history',
+            'summary': f'Creator\'s content contributions and platform activity',
             'details': history_reasons
         }
 
         # Community Score Explanation
         community_reasons = []
+        upvotes_val = itinerary.upvotes or 0
+        downvotes_val = itinerary.downvotes or 0
         helpful = itinerary.helpful_votes or 0
         views = itinerary.view_count or 0
-        comments = itinerary.comment_count or 0
 
-        community_reasons.append(f"Helpful votes: {helpful} (normalized: +{helpful_votes_normalized:.2f}/7.0 pts)")
-        community_reasons.append(f"View count: {views} (normalized: +{view_count_normalized:.2f}/7.0 pts)")
-        community_reasons.append(f"Comments: {comments} (normalized: +{comment_count_normalized:.2f}/6.0 pts)")
-        community_reasons.append(f"Scoring normalized against top-performing itineraries")
-        community_reasons.append(f"Max values in database: {max_helpful_votes} votes, {max_view_count} views, {max_comment_count} comments")
+        # Upvote ratio explanation
+        total_votes_val = upvotes_val + downvotes_val
+        if total_votes_val > 0:
+            ratio_percent = round((upvotes_val / total_votes_val) * 100, 1)
+            community_reasons.append(f"Upvote ratio: {upvotes_val}/{total_votes_val} ({ratio_percent}%) → +{upvote_score:.2f}/8.0 pts")
+        else:
+            community_reasons.append(f"No votes yet: 0/0 → +0.00/8.0 pts")
+
+        community_reasons.append(f"View count: {views} (normalized: +{view_score:.2f}/6.0 pts)")
+        community_reasons.append(f"Comments: {actual_comment_count} (normalized: +{comment_score:.2f}/4.0 pts)")
+        community_reasons.append(f"Helpful votes: {helpful} (normalized: +{helpful_score:.2f}/2.0 pts)")
+        community_reasons.append(f"Engagement normalized against top-performing itineraries")
+        community_reasons.append(f"Max values: {max_view_count} views, {max_comment_count} comments, {max_helpful_votes} helpful")
 
         explanations['community_score'] = {
             'score': community_score,
             'max': 20.0,
             'percentage': round((community_score / 20.0) * 100, 1),
-            'summary': f'Community engagement and interaction metrics',
+            'summary': f'Community engagement: upvote ratio, views, comments, helpful votes',
             'details': community_reasons
         }
 
