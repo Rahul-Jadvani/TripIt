@@ -1,10 +1,20 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, memo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { useSnaps } from '@/hooks/useSnaps';
-import SnapCard from '@/components/SnapCard';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, memo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useSnaps } from "@/hooks/useSnaps";
 import { TravelSnapsCarousel } from '@/components/TravelSnapsCarousel';
-
+import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield, Camera } from 'lucide-react';
+import { useItineraries, transformProject } from '@/hooks/useProjects';
+import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
+import { usePublicInvestors } from '@/hooks/useInvestors';
+import { useDashboardStats } from '@/hooks/useStats';
+import { useMostRequestedProjects, useRecentConnections, useFeaturedProjects, useRisingStars, useCategoryProjects } from '@/hooks/useFeed';
+import { useAuth } from '@/context/AuthContext';
+import { itinerariesService, snapsService } from '@/services/api';
+import { Itinerary } from '@/types';
+import { FeedMiniThread } from '@/components/FeedMiniThread';
+import { FeedLeaderTagCard } from '@/components/FeedLeaderTagCard';
+import FeedStatCards from "@/components/FeedStatCards";
 // OPTIMIZED: Lazy image loading component with blur placeholder for better perceived performance
 function LazyImage({ src, alt, className, ...props }: { src: string; alt: string; className?: string; [key: string]: any }) {
   const [loaded, setLoaded] = useState(false);
@@ -51,8 +61,11 @@ function LazyImage({ src, alt, className, ...props }: { src: string; alt: string
 }
 // Lazy load heavy carousels (named exports -> map to default)
 const TopRatedCarousel = lazy(() =>
-  import('@/components/TopRatedCarousel').then((m) => ({ default: m.TopRatedCarousel }))
+  import("@/components/TopRatedCarousel").then((m) => ({
+    default: m.TopRatedCarousel,
+  }))
 );
+
 // Simple skeleton components for loading states
 const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -65,27 +78,50 @@ const ProjectCardSkeletonGrid = ({ count = 5 }: { count?: number }) => (
 const TopRatedCarouselSkeleton = () => (
   <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
 );
-import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield, Camera } from 'lucide-react';
-import { useItineraries, transformProject } from '@/hooks/useProjects';
-import { useBuildersLeaderboard } from '@/hooks/useLeaderboard';
-import { usePublicInvestors } from '@/hooks/useInvestors';
-import { useDashboardStats } from '@/hooks/useStats';
-import { useMostRequestedProjects, useRecentConnections, useFeaturedProjects, useRisingStars, useCategoryProjects } from '@/hooks/useFeed';
-import { useAuth } from '@/context/AuthContext';
-import { itinerariesService, snapsService } from '@/services/api';
-import { Itinerary } from '@/types';
-import { FeedMiniThread } from '@/components/FeedMiniThread';
-import { FeedLeaderTagCard } from '@/components/FeedLeaderTagCard';
-// import { FeedTopInvestorCard } from '@/components/FeedTopInvestorCard';
-// import { FeedTopInvestorsGrid } from '@/components/FeedTopInvestorsGrid';
-import FeedStatCards from '@/components/FeedStatCards';
-// import GlobeDemo from '@/components/ui/globe-demo';
+
+interface Investor {
+  id: string;
+  user?: {
+    username?: string;
+    display_name?: string;
+  };
+  industries?: string[];
+  open_to_requests?: boolean;
+}
+
+interface Builder {
+  id?: string;
+  username: string;
+  projects: number;
+  score: number;
+}
+
+interface Connection {
+  id: string;
+  investor?: {
+    display_name?: string;
+    username?: string;
+  };
+  builder?: {
+    display_name?: string;
+    username?: string;
+  };
+  project?: {
+    id: string;
+    title?: string;
+  };
+}
+
+interface Snap {
+  id: string;
+  // Add other snap properties if needed
+}
 
 // Render children only when visible in viewport; shows placeholder until then
 function LazyOnVisible({
   children,
   placeholder,
-  rootMargin = '200px',
+  rootMargin = "200px",
 }: {
   children: React.ReactNode;
   placeholder: React.ReactNode;
@@ -151,14 +187,15 @@ export default function Feed() {
      }
    }, [hotLoading]);
 
-  const investorsHref = user ? '/investor-directory' : '/investors';
+  const investorsHref = user ? "/investor-directory" : "/investors";
 
   // Normalize investors to an array defensively
-  const investorsList: any[] = Array.isArray(investors)
-    ? investors
-    : (investors && Array.isArray((investors as any).investors)
-        ? (investors as any).investors
-        : []);
+  const investorsList: Investor[] = Array.isArray(investors)
+    ? (investors as Investor[])
+    : investors &&
+      Array.isArray((investors as { investors?: Investor[] }).investors)
+    ? (investors as { investors?: Investor[] }).investors || []
+    : [];
 
   // Prefetch additional pages on-demand when user scrolls (lazy prefetch)
   // Only prefetch when secondary data is loaded to avoid competing with initial load
@@ -183,8 +220,8 @@ export default function Feed() {
 
       // Schedule this for idle time to avoid competing with secondary loading
       const scheduleIdle = (cb: () => void) => {
-        const win: any = typeof window !== 'undefined' ? window : undefined;
-        if (win && typeof win.requestIdleCallback === 'function') {
+        const win = typeof window !== "undefined" ? window : undefined;
+        if (win && typeof win.requestIdleCallback === "function") {
           win.requestIdleCallback(cb, { timeout: 5000 });
         } else {
           setTimeout(cb, 3000); // Longer delay for progressive loading
@@ -396,7 +433,10 @@ export default function Feed() {
             <nav className="feed-quick-nav -mt-6 animate-pulse">
               <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
                 {Array.from({ length: 6 }).map((_, idx) => (
-                  <div key={idx} className="h-8 w-24 bg-secondary rounded-full flex-shrink-0"></div>
+                  <div
+                    key={idx}
+                    className="h-8 w-24 bg-secondary rounded-full flex-shrink-0"
+                  ></div>
                 ))}
               </div>
             </nav>
@@ -435,7 +475,10 @@ export default function Feed() {
             {/* Mini threads skeleton - first set */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
               {Array.from({ length: 2 }).map((_, idx) => (
-                <div key={idx} className="card-elevated p-5 h-[100px] space-y-2">
+                <div
+                  key={idx}
+                  className="card-elevated p-5 h-[100px] space-y-2"
+                >
                   <div className="h-5 w-40 bg-secondary rounded"></div>
                   <div className="h-4 w-full bg-secondary rounded"></div>
                   <div className="h-3 w-32 bg-secondary rounded"></div>
@@ -449,7 +492,10 @@ export default function Feed() {
             {/* Mini threads skeleton - second set */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
               {Array.from({ length: 2 }).map((_, idx) => (
-                <div key={idx} className="card-elevated p-5 h-[100px] space-y-2">
+                <div
+                  key={idx}
+                  className="card-elevated p-5 h-[100px] space-y-2"
+                >
                   <div className="h-5 w-40 bg-secondary rounded"></div>
                   <div className="h-4 w-full bg-secondary rounded"></div>
                   <div className="h-3 w-32 bg-secondary rounded"></div>
@@ -554,6 +600,7 @@ export default function Feed() {
                     <TopRatedCarousel
                       projects={categorizedProjects.topScored}
                       categoryName="top-rated"
+                      customNavigatePath="/gallery/top-rated"
                     />
                   </Suspense>
                 </LazyOnVisible>
@@ -564,7 +611,9 @@ export default function Feed() {
             <section className="mt-2">
               <FeedStatCards
                 projectsCount={visibleFeedProjects.length}
-                buildersCount={(buildersForCount?.length || topBuilders?.length || 0)}
+                buildersCount={
+                  buildersForCount?.length || topBuilders?.length || 0
+                }
               />
               <div className="relative mt-6">
                 <img
@@ -574,12 +623,15 @@ export default function Feed() {
                   loading="lazy"
                 />
                 <div className="flex justify-center">
-                  <FeedLeaderTagCard label={leader.label} count={leader.count} percent={leader.percent} icon={leader.icon} />
+                  <FeedLeaderTagCard
+                    label={leader.label}
+                    count={leader.count}
+                    percent={leader.percent}
+                    icon={leader.icon}
+                  />
                 </div>
               </div>
             </section>
-
-            
 
             {/* OPTIMIZED: Mini-threads only show when secondary data is loaded */}
             {loadPhase !== 'initial' && (
@@ -633,8 +685,13 @@ export default function Feed() {
               )}
               {investorsList[0] && investorsList[0].user?.username && (
                 <FeedMiniThread
-                  title={`${investorsList[0].user.display_name || investorsList[0].user.username}`}
-                  subtitle={(investorsList[0].industries || []).slice(0,2).join(', ')}
+                  title={`${
+                    investorsList[0].user.display_name ||
+                    investorsList[0].user.username
+                  }`}
+                  subtitle={(investorsList[0].industries || [])
+                    .slice(0, 2)
+                    .join(", ")}
                   href={`/u/${investorsList[0].user.username}`}
                   badge="Open Investor"
                 />
@@ -788,9 +845,25 @@ export default function Feed() {
             {/* Another mini-thread */}
             {dashboard?.recentIntros?.length ? (
               <FeedMiniThread
-                title={`New intro: ${(dashboard.recentIntros[0].investor?.display_name || dashboard.recentIntros[0].investor?.username) ?? 'Investor'} → ${(dashboard.recentIntros[0].builder?.display_name || dashboard.recentIntros[0].builder?.username) ?? 'Builder'}`}
-                subtitle={dashboard.recentIntros[0].project?.title ? `on “${dashboard.recentIntros[0].project.title}”` : undefined}
-                href={dashboard.recentIntros[0].project?.id ? `/project/${dashboard.recentIntros[0].project.id}` : undefined}
+                title={`New intro: ${
+                  (dashboard.recentIntros[0].investor?.display_name ||
+                    dashboard.recentIntros[0].investor?.username) ??
+                  "Investor"
+                } → ${
+                  (dashboard.recentIntros[0].builder?.display_name ||
+                    dashboard.recentIntros[0].builder?.username) ??
+                  "Builder"
+                }`}
+                subtitle={
+                  dashboard.recentIntros[0].project?.title
+                    ? `on “${dashboard.recentIntros[0].project.title}”`
+                    : undefined
+                }
+                href={
+                  dashboard.recentIntros[0].project?.id
+                    ? `/project/${dashboard.recentIntros[0].project.id}`
+                    : undefined
+                }
                 badge="Connection"
               />
             ) : null}
@@ -816,9 +889,15 @@ export default function Feed() {
                   <h3 className="text-xl font-black">Top Travel Creators</h3>
                 </div>
                 <div className="space-y-3">
-                  {topBuilders.slice(0,6).map((b: any, i: number) => (
-                    <a key={b.id || i} href={`/u/${b.username}`} className="flex items-center gap-3 hover:opacity-90">
-                      <div className="h-9 w-9 rounded-full bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black text-black">{i+1}</div>
+                  {topBuilders.slice(0, 6).map((b: Builder, i: number) => (
+                    <a
+                      key={b.id || i}
+                      href={`/u/${b.username}`}
+                      className="flex items-center gap-3 hover:opacity-90"
+                    >
+                      <div className="h-9 w-9 rounded-full bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black text-black">
+                        {i + 1}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-foreground truncate">{b.username}</p>
                         <p className="text-xs text-muted-foreground truncate">{b.projects} itineraries • {b.score} score</p>
@@ -828,26 +907,47 @@ export default function Feed() {
                 </div>
               </div>
 
-              {/* Open Investors */
-              }
+              {/* Open Investors */}
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-black">Open Investors</h3>
-                  <a href={investorsHref} className="badge badge-dash badge-primary hover:opacity-90">All</a>
+                  <a
+                    href={investorsHref}
+                    className="badge badge-dash badge-primary hover:opacity-90"
+                  >
+                    All
+                  </a>
                 </div>
                 <div className="space-y-2">
-                  {investorsList.filter((i: any) => i.open_to_requests).slice(0,6).map((inv: any, idx: number) => (
-                    <a key={inv.id || idx} href={`/u/${inv.user?.username}`} className="flex items-center gap-3 hover:opacity-90">
-                      <div className="h-8 w-8 rounded-full bg-secondary border-2 border-black flex items-center justify-center text-xs font-black">{(inv.user?.username||'?')[0]?.toUpperCase() || '?'}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-foreground truncate">{inv.user?.display_name || inv.user?.username}</p>
-                        <p className="text-xs text-muted-foreground truncate">{(inv.industries||[]).slice(0,2).join(', ') || 'Investor'}</p>
-                      </div>
-                      <span className="badge badge-primary">Open</span>
-                    </a>
-                  ))}
-                  {investorsList.filter((i:any)=>i.open_to_requests).length===0 && (
-                    <p className="text-sm text-muted-foreground">No investors open to requests right now.</p>
+                  {investorsList
+                    .filter((i: Investor) => i.open_to_requests)
+                    .slice(0, 6)
+                    .map((inv: Investor, idx: number) => (
+                      <a
+                        key={inv.id || idx}
+                        href={`/u/${inv.user?.username}`}
+                        className="flex items-center gap-3 hover:opacity-90"
+                      >
+                        <div className="h-8 w-8 rounded-full bg-secondary border-2 border-black flex items-center justify-center text-xs font-black">
+                          {(inv.user?.username || "?")[0]?.toUpperCase() || "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-foreground truncate">
+                            {inv.user?.display_name || inv.user?.username}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {(inv.industries || []).slice(0, 2).join(", ") ||
+                              "Investor"}
+                          </p>
+                        </div>
+                        <span className="badge badge-primary">Open</span>
+                      </a>
+                    ))}
+                  {investorsList.filter((i: Investor) => i.open_to_requests)
+                    .length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No investors open to requests right now.
+                    </p>
                   )}
                 </div>
               </div>
@@ -859,19 +959,41 @@ export default function Feed() {
                 </div>
                 <div className="space-y-3">
                   {recentConnectionsData?.data?.length ? (
-                    (recentConnectionsData.data as any[]).slice(0,6).map((conn: any) => (
-                      <a key={conn.id} href={`/project/${conn.project?.id}`} className="flex items-center gap-3 hover:opacity-90">
-                        <div className="h-8 w-8 rounded-[10px] bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black">↗</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate"><span className="font-bold">{conn.investor?.display_name || conn.investor?.username}</span> connected with <span className="font-bold">{conn.builder?.display_name || conn.builder?.username}</span></p>
-                          {conn.project?.title && (
-                            <p className="text-xs text-muted-foreground truncate">on "{conn.project.title}"</p>
-                          )}
-                        </div>
-                      </a>
-                    ))
+                    (recentConnectionsData.data as Connection[])
+                      .slice(0, 6)
+                      .map((conn: Connection) => (
+                        <a
+                          key={conn.id}
+                          href={`/project/${conn.project?.id}`}
+                          className="flex items-center gap-3 hover:opacity-90"
+                        >
+                          <div className="h-8 w-8 rounded-[10px] bg-primary/20 border-2 border-black flex items-center justify-center text-xs font-black">
+                            ↗
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground truncate">
+                              <span className="font-bold">
+                                {conn.investor?.display_name ||
+                                  conn.investor?.username}
+                              </span>{" "}
+                              connected with{" "}
+                              <span className="font-bold">
+                                {conn.builder?.display_name ||
+                                  conn.builder?.username}
+                              </span>
+                            </p>
+                            {conn.project?.title && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                on "{conn.project.title}"
+                              </p>
+                            )}
+                          </div>
+                        </a>
+                      ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">No recent connections yet.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No recent connections yet.
+                    </p>
                   )}
                 </div>
               </div>

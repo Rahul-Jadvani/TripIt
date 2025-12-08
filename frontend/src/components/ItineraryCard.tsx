@@ -151,7 +151,7 @@ export const ItineraryCard = memo(function ItineraryCard({ project }: ItineraryC
         {/* Caption Section - Creator + Title */}
         <div className="p-4 pb-2">
           <div className="flex items-center gap-3">
-            <Link to={`/profile/${authorUsername}`} onClick={(e) => e.stopPropagation()}>
+            <Link to={`/u/${authorUsername}`} onClick={(e) => e.stopPropagation()}>
               <Avatar className="h-10 w-10 ring-2 ring-primary/20">
                 <AvatarImage
                   src={authorAvatar}
@@ -163,7 +163,7 @@ export const ItineraryCard = memo(function ItineraryCard({ project }: ItineraryC
               </Avatar>
             </Link>
             <div className="flex-1 min-w-0">
-              <Link to={`/profile/${authorUsername}`} onClick={(e) => e.stopPropagation()}>
+              <Link to={`/u/${authorUsername}`} onClick={(e) => e.stopPropagation()}>
                 <p className="text-sm font-bold text-foreground hover:text-primary transition-colors">
                   {authorUsername}
                 </p>

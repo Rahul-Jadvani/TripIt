@@ -25,6 +25,15 @@ export interface User {
   sbt_blockchain_hash?: string; // Transaction hash of SBT minting
   reputation_score?: number; // 0-100 reputation score
   trip_token_balance?: number; // TRIP token balance
+  // Blockchain Identity Fields (TripIt SBT)
+  profile_hash?: string; // SHA-256 hash of profile for SBT
+  wallet_bound_at?: string; // When wallet was bound (ISO date)
+  sbt_id?: string; // Soul-Bound Token ID
+  sbt_status?: string; // not_issued, issued, verified, suspended, revoked
+  sbt_verified_date?: string; // When SBT was verified (ISO date)
+  sbt_blockchain_hash?: string; // Transaction hash of SBT minting
+  reputation_score?: number; // 0-100 reputation score
+  trip_token_balance?: number; // TRIP token balance
   hasOxcert?: boolean;
   has_oxcert?: boolean; // Backend field
   oxcert_tx_hash?: string;
@@ -230,8 +239,8 @@ export interface Itinerary {
   id: string;
   uuid?: string;
   title: string;
-  description: string;
   tagline?: string;
+  description: string;
   // Travel Details
   destination: string;
   regions?: string[];
@@ -282,26 +291,26 @@ export interface Itinerary {
     };
   };
   // Engagement Metrics
-  upvotes?: number;
-  downvotes?: number;
-  comment_count?: number;
-  user_vote?: 'up' | 'down' | null;
-  userVote?: 'up' | 'down' | null;
   safety_ratings?: SafetyRating[];
   travel_intel?: TravelIntel[];
   helpful_count?: number;
   share_count?: number;
   view_count?: number;
+  upvotes?: number;
+  downvotes?: number;
+  comment_count?: number;
+  user_vote?: 'up' | 'down' | null;
+  userVote?: 'up' | 'down' | null;
   // Status
   is_published?: boolean;
   is_featured?: boolean;
   is_deleted?: boolean;
   // Relations
   traveler_id?: string;
-  user_id?: string;
   created_by_traveler_id?: string;
+  user_id?: string;
   creator?: Traveler;
-  author?: User;
+  author?: Traveler;
   // Timestamps
   created_at: string;
   updated_at: string;

@@ -54,7 +54,11 @@ export const WalletBindFlow = ({ onBindSuccess }: WalletBindFlowProps) => {
       const message = `Bind wallet ${address} to TripIt account ${user.email}`;
 
       // Request signature from user
-      const signature = await signMessageAsync({ message });
+      const signature = await signMessageAsync({
+  account: address as `0x${string}`,
+  message,
+});
+
 
       // Send to backend
       const response = await api.post('/identity/bind-wallet', {

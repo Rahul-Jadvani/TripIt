@@ -67,6 +67,8 @@ export const NotificationItem = memo(function NotificationItem({ notification, o
       className={cn(
         "flex gap-3 p-4 rounded-xl border transition-all duration-200 bg-background/60 shadow-sm",
         !isSnapNotification && "cursor-pointer hover:bg-background/80",
+        "flex gap-3 p-4 rounded-xl border transition-all duration-200 bg-background/60 shadow-sm",
+        !isSnapNotification && "cursor-pointer hover:bg-background/80",
         notification.is_read
           ? "border-border/50 hover:border-primary/40"
           : "border-primary/40 bg-primary/10 hover:bg-primary/15 shadow-[0_12px_35px_rgba(59,130,246,0.18)]"
