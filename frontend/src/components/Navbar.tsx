@@ -29,13 +29,12 @@ import {
   Send,
   Menu,
   MessageSquare,
-  Shield,
   Image,
-  Users,
-  MapPin,
-  AlertCircle,
   Sparkles,
-  Coins
+  CheckCircle,
+  FileText,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { TripBalance } from '@/components/TripBalance';
@@ -87,6 +86,9 @@ export const Navbar = memo(function Navbar() {
         break;
       case '/blockchain-identity':
         import('@/pages/BlockchainIdentity');
+        break;
+      case '/remix':
+        import('@/pages/RemixPage');
         break;
       default:
         break;
@@ -159,16 +161,6 @@ export const Navbar = memo(function Navbar() {
                       <Search className="h-4 w-4" />
                       <span>Search</span>
                     </Link>
-                    {user && (
-                      <Link
-                        to="/publish"
-                        onClick={handleMenuItemClick}
-                        className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Publish Itinerary</span>
-                      </Link>
-                    )}
                   </div>
 
                   <Separator />
@@ -178,14 +170,6 @@ export const Navbar = memo(function Navbar() {
                     <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Community
                     </p>
-                    <Link
-                      to="/layerz"
-                      onClick={handleMenuItemClick}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
-                    >
-                      <Users className="h-4 w-4" />
-                      <span>Travel Groups (Layerz)</span>
-                    </Link>
                     <Link
                       to="/communities"
                       onClick={handleMenuItemClick}
@@ -206,27 +190,24 @@ export const Navbar = memo(function Navbar() {
 
                   <Separator />
 
-                  {/* Safety & Features */}
+                  {/* Features */}
                   <div className="space-y-1">
                     <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Features
                     </p>
-                    <Link
-                      to="/women-guides"
-                      onClick={handleMenuItemClick}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
-                    >
-                      <Shield className="h-4 w-4" />
-                      <span>Women's Safety Guides</span>
-                    </Link>
-                    <Link
-                      to="/safety-ratings"
-                      onClick={handleMenuItemClick}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
-                    >
-                      <AlertCircle className="h-4 w-4" />
-                      <span>Safety Ratings</span>
-                    </Link>
+                    {user && (
+                      <Link
+                        to="/remix"
+                        onClick={handleMenuItemClick}
+                        onMouseEnter={() => prefetchRoute('/remix')}
+                        onFocus={() => prefetchRoute('/remix')}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors bg-primary/10 border-2 border-primary/30"
+                      >
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span className="text-primary font-semibold">AI Remix</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">New</Badge>
+                      </Link>
+                    )}
                     <Link
                       to="/snap/camera"
                       onClick={handleMenuItemClick}
@@ -234,14 +215,6 @@ export const Navbar = memo(function Navbar() {
                     >
                       <Image className="h-4 w-4" />
                       <span>Snaps (Stories)</span>
-                    </Link>
-                    <Link
-                      to="/travel-intel"
-                      onClick={handleMenuItemClick}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
-                    >
-                      <MapPin className="h-4 w-4" />
-                      <span>Travel Intel</span>
                     </Link>
                   </div>
 
@@ -274,6 +247,17 @@ export const Navbar = memo(function Navbar() {
           <div className="flex items-center gap-1 sm:gap-2 ml-auto">
             {user ? (
               <>
+                {/* Publish Button */}
+                <Link
+                  to="/publish"
+                  onMouseEnter={() => prefetchRoute('/publish')}
+                  onFocus={() => prefetchRoute('/publish')}
+                  className="btn-primary inline-flex gap-2 px-2 sm:px-3 py-2 text-xs"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Publish</span>
+                </Link>
+
                 {/* TRIP Balance */}
                 <TripBalance variant="navbar" />
 
@@ -361,9 +345,21 @@ export const Navbar = memo(function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link to={`/u/${user.username}`} className="cursor-pointer">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        <span>Public Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link to="/profile" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
+                        <span>Edit Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/my-projects" className="cursor-pointer">
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>My Itineraries</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -378,6 +374,22 @@ export const Navbar = memo(function Navbar() {
                         <span>Blockchain Identity</span>
                       </Link>
                     </DropdownMenuItem>
+                    {user.is_validator && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/validator" className="cursor-pointer">
+                          <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                          <span>Validator Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {user.is_admin && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="cursor-pointer">
+                          <ShieldCheck className="mr-2 h-4 w-4 text-red-500" />
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />

@@ -233,6 +233,9 @@ def create_itinerary(user_id):
             safety_tips=validated_data.get('safety_tips'),
             screenshots=validated_data.get('screenshots', []),
             categories=validated_data.get('categories', []),
+            # Remix attribution
+            is_remixed=validated_data.get('is_remixed', False),
+            remixed_from_ids=validated_data.get('remixed_from_ids', []),
         )
 
         # Add to database
@@ -937,4 +940,163 @@ def get_itinerary_caravans(user_id, itinerary_id):
 
         return success_response({'chains': chains}, 'Caravans retrieved successfully', 200)
     except Exception as e:
+        return error_response('Error', str(e), 500)
+
+
+@itineraries_bp.route('/remix', methods=['POST'])
+@jwt_required()
+def remix_itineraries():
+    """
+    AI Remix: Combine multiple itineraries into one new itinerary
+
+    Request Body:
+    {
+        "itinerary_ids": ["id1", "id2", "id3"],  // 1-5 itineraries to combine
+        "user_prompt": "I want a 7-day adventure with budget under $2000"
+    }
+
+    Returns:
+    {
+        "remix_itinerary": {...},  // Generated itinerary (as draft)
+        "source_itineraries": [...]  // Source itineraries used
+    }
+    """
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+
+        # Validate input
+        itinerary_ids = data.get('itinerary_ids', [])
+        user_prompt = data.get('user_prompt', '').strip()
+
+        if not itinerary_ids or not isinstance(itinerary_ids, list):
+            return error_response('Validation', 'Please select at least one itinerary', 400)
+
+        if len(itinerary_ids) > 5:
+            return error_response('Validation', 'Maximum 5 itineraries can be remixed at once', 400)
+
+        if not user_prompt:
+            return error_response('Validation', 'Please provide your requirements/preferences', 400)
+
+        if len(user_prompt) < 10:
+            return error_response('Validation', 'Please provide more detailed requirements (at least 10 characters)', 400)
+
+        # Fetch source itineraries
+        source_itineraries = Itinerary.query.filter(
+            Itinerary.id.in_(itinerary_ids),
+            Itinerary.is_deleted == False,
+            Itinerary.is_published == True
+        ).all()
+
+        if not source_itineraries:
+            return error_response('Not Found', 'No valid itineraries found to remix', 404)
+
+        if len(source_itineraries) != len(itinerary_ids):
+            return error_response('Validation', 'Some itineraries are not available', 400)
+
+        print(f"\n[Remix] User {user_id} remixing {len(source_itineraries)} itineraries")
+        print(f"[Remix] Source IDs: {itinerary_ids}")
+        print(f"[Remix] Prompt: {user_prompt[:100]}...")
+
+        # Prepare itinerary data for AI
+        itineraries_data = []
+        for itin in source_itineraries:
+            itin_dict = itin.to_dict(include_creator=True)
+
+            # Include daily plans
+            from models.day_plan import DayPlan
+            daily_plans = DayPlan.query.filter_by(
+                itinerary_id=itin.id
+            ).order_by(DayPlan.day_number).all()
+
+            itin_dict['daily_plans'] = [dp.to_dict() for dp in daily_plans]
+            itineraries_data.append(itin_dict)
+
+        # Call AI remix service
+        from services.ai_analyzer import AIAnalyzer
+        ai_analyzer = AIAnalyzer()
+
+        if not ai_analyzer.is_available():
+            return error_response('Service Unavailable', 'AI service is not available. Please try again later.', 503)
+
+        # Generate remix
+        print(f"[Remix] Calling AI to generate remix...")
+        remix_result = ai_analyzer.remix_itineraries(itineraries_data, user_prompt)
+
+        if not remix_result:
+            return error_response('Error', 'Failed to generate remix. Please try again.', 500)
+
+        # Create new itinerary from AI result (as DRAFT)
+        from models.day_plan import DayPlan
+
+        new_itinerary = Itinerary(
+            created_by_traveler_id=user_id,
+            title=remix_result.get('title', 'Remixed Itinerary'),
+            description=remix_result.get('description', ''),
+            destination=remix_result.get('destination', ''),
+            duration_days=remix_result.get('duration_days'),
+            budget_amount=remix_result.get('budget_amount'),
+            budget_currency=remix_result.get('budget_currency', 'INR'),
+            difficulty_level=remix_result.get('difficulty_level', 'moderate'),
+            activity_tags=remix_result.get('activity_tags', []),
+            best_season=remix_result.get('best_season'),
+            travel_style=remix_result.get('accommodation_type'),
+            is_published=False,  # Save as draft
+            is_remixed=True,  # Mark as remixed
+            remixed_from_ids=itinerary_ids  # Track sources
+        )
+
+        db.session.add(new_itinerary)
+        db.session.flush()  # Get ID before adding daily plans
+
+        # Add daily plans
+        daily_plans_data = remix_result.get('daily_plans', [])
+        for day_data in daily_plans_data:
+            day_plan = DayPlan(
+                itinerary_id=new_itinerary.id,
+                day_number=day_data.get('day_number', 1),
+                title=day_data.get('title', f"Day {day_data.get('day_number', 1)}"),
+                description=day_data.get('description', ''),
+                activities=day_data.get('activities', []),
+                start_point=day_data.get('start_point', ''),
+                end_point=day_data.get('end_point', ''),
+                distance_km=day_data.get('distance_km'),
+                estimated_duration_hours=day_data.get('estimated_duration_hours')
+            )
+            db.session.add(day_plan)
+
+        # Increment remix_count for source itineraries
+        for source_itin in source_itineraries:
+            source_itin.remix_count = (source_itin.remix_count or 0) + 1
+
+        db.session.commit()
+
+        print(f"[Remix] ✅ Created remix itinerary: {new_itinerary.id}")
+        print(f"[Remix] Title: {new_itinerary.title}")
+
+        # Return response with new itinerary (draft) and sources
+        remix_dict = new_itinerary.to_dict(include_creator=True)
+
+        # Add daily plans to response
+        daily_plans = DayPlan.query.filter_by(
+            itinerary_id=new_itinerary.id
+        ).order_by(DayPlan.day_number).all()
+        remix_dict['daily_plans'] = [dp.to_dict() for dp in daily_plans]
+
+        # Add extra AI-generated data
+        remix_dict['packing_list'] = remix_result.get('packing_list', [])
+        remix_dict['important_notes'] = remix_result.get('important_notes', [])
+        remix_dict['transport_modes'] = remix_result.get('transport_modes', [])
+
+        return success_response({
+            'remix_itinerary': remix_dict,
+            'source_itineraries': [itin.to_dict() for itin in source_itineraries],
+            'message': 'Itinerary remixed successfully! Review and publish when ready.'
+        }, 'Remix created successfully', 201)
+
+    except Exception as e:
+        print(f"[Remix] ❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
         return error_response('Error', str(e), 500)

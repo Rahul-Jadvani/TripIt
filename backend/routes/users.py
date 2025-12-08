@@ -230,7 +230,8 @@ def get_user_stats(user_id):
             # Count itineraries created by this traveler
             itinerary_count = Itinerary.query.filter_by(
                 created_by_traveler_id=user_id,
-                is_deleted=False
+                is_deleted=False,
+                is_published=True
             ).count()
 
             # Calculate total upvotes on itineraries
@@ -238,7 +239,8 @@ def get_user_stats(user_id):
                 func.coalesce(func.sum(Itinerary.upvotes), 0)
             ).filter(
                 Itinerary.created_by_traveler_id == user_id,
-                Itinerary.is_deleted == False
+                Itinerary.is_deleted == False,
+                Itinerary.is_published == True
             ).scalar() or 0
 
             # Count comments by this traveler
@@ -409,7 +411,7 @@ def get_user_itineraries(current_user_id, user_id):
 
         # OPTIMIZED: Eager load creator to avoid N+1
         from sqlalchemy.orm import joinedload
-        query = Itinerary.query.filter_by(created_by_traveler_id=user_id, is_deleted=False)
+        query = Itinerary.query.filter_by(created_by_traveler_id=user_id, is_deleted=False, is_published=True)
         query = query.options(joinedload(Itinerary.itinerary_creator))
         query = query.order_by(Itinerary.created_at.desc())
 

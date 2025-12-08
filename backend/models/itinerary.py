@@ -48,7 +48,7 @@ class Itinerary(db.Model):
     route_waypoints = db.Column(db.JSON, default=[])  # Array of GPS points: [{lat, lon, name, elevation}, ...]
     starting_point_gps = db.Column(db.String(50), nullable=True)  # "lat,lon"
     ending_point_gps = db.Column(db.String(50), nullable=True)
-    best_season = db.Column(db.String(100), nullable=True)  # Best time to visit
+    best_season = db.Column(db.String(500), nullable=True)  # Best time to visit (AI generates 200-300 chars)
 
     # Community Content
     day_plans_count = db.Column(db.Integer, default=0)
@@ -102,6 +102,11 @@ class Itinerary(db.Model):
     is_deleted = db.Column(db.Boolean, default=False, index=True)
     featured_at = db.Column(db.DateTime)
     featured_by = db.Column(db.String(36), nullable=True)
+
+    # Remix Attribution
+    is_remixed = db.Column(db.Boolean, default=False, index=True)  # Is this a remixed itinerary?
+    remixed_from_ids = db.Column(db.JSON, default=[])  # Array of source itinerary IDs
+    remix_count = db.Column(db.Integer, default=0)  # How many times this has been remixed by others
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -189,6 +194,10 @@ class Itinerary(db.Model):
             'user_id': self.created_by_traveler_id,  # Alias for compatibility
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            # Remix attribution
+            'is_remixed': self.is_remixed,
+            'remixed_from_ids': self.remixed_from_ids or [],
+            'remix_count': self.remix_count,
         }
 
         # Include creator info if requested
