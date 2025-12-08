@@ -12,44 +12,59 @@ booking_chat_bp = Blueprint('booking_chat', __name__, url_prefix='/api/booking')
 
 
 def extract_cities_from_itinerary(itinerary):
-    """Extract list of cities from itinerary for multi-city trip planning"""
+    """
+    Extract list of ACTUAL CITIES from itinerary for multi-city trip planning.
+    Filters out attractions, landmarks, and non-city locations.
+    """
     cities = []
 
-    # Primary destination
-    if itinerary.destination:
+    # Blacklist of common attraction/landmark keywords to filter out
+    attraction_keywords = [
+        'falls', 'waterfall', 'temple', 'fort', 'palace', 'chowk', 'bazaar',
+        'market', 'park', 'garden', 'museum', 'church', 'mosque', 'shrine',
+        'lake', 'beach', 'hill', 'mountain', 'peak', 'valley', 'trek', 'trail',
+        'restaurant', 'cafe', 'hotel', 'resort', 'mall', 'center', 'square',
+        'gate', 'arch', 'tower', 'monument', 'memorial', 'bridge', 'station'
+    ]
+
+    def is_likely_city(name):
+        """Check if name is likely a city, not an attraction"""
+        if not name or len(name) < 3:
+            return False
+        name_lower = name.lower()
+        # Filter out attractions
+        for keyword in attraction_keywords:
+            if keyword in name_lower:
+                return False
+        return True
+
+    # Primary destination (always include)
+    if itinerary.destination and is_likely_city(itinerary.destination):
         cities.append(itinerary.destination)
 
-    # Check regions array
-    if itinerary.regions and len(itinerary.regions) > 1:
-        # Regions contain multiple cities
+    # Check regions array (these are usually actual cities)
+    if itinerary.regions and isinstance(itinerary.regions, list):
         for region in itinerary.regions:
-            if region and region not in cities:
-                cities.append(region)
+            if region and is_likely_city(region):
+                # Clean up the region name (remove extra descriptors)
+                clean_region = region.split(',')[0].strip()  # Take first part before comma
+                clean_region = clean_region.split('&')[0].strip()  # Take first part before &
+                if clean_region and clean_region not in cities:
+                    cities.append(clean_region)
 
-    # Parse day_by_day_plan for city names (simple regex approach)
-    if itinerary.day_by_day_plan and len(cities) <= 1:
-        # Look for patterns like "Day X - City Name" or "in CityName"
-        day_plan_text = itinerary.day_by_day_plan.lower()
+    # Deduplicate and limit to 3 cities max for practical booking
+    unique_cities = []
+    for city in cities:
+        if city not in unique_cities:
+            unique_cities.append(city)
 
-        # Common city detection patterns
-        city_patterns = [
-            r'day \d+[:\-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',  # Day 1: Paris
-            r'in ([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',  # in Paris
-            r'to ([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',  # to Paris
-        ]
+    # For now, simplify: if we detect more than 1 city, only use up to 3 most important ones
+    # This prevents illogical routing
+    if len(unique_cities) > 3:
+        unique_cities = unique_cities[:3]
 
-        for pattern in city_patterns:
-            matches = re.findall(pattern, itinerary.day_by_day_plan)
-            for match in matches:
-                if match and match not in cities and len(match) > 2:
-                    cities.append(match)
-                    if len(cities) >= 5:  # Limit to 5 cities max
-                        break
-            if len(cities) >= 5:
-                break
-
-    # Return unique cities (limited to 5 for practical booking)
-    return cities[:5] if len(cities) > 1 else [itinerary.destination]
+    # If only one city or no cities, return single destination
+    return unique_cities if len(unique_cities) > 1 else [itinerary.destination]
 
 @booking_chat_bp.route('/start', methods=['POST'])
 @jwt_required()
@@ -73,11 +88,27 @@ def start_booking():
 
         print(f"[Booking] Found itinerary: {itinerary.title} - {itinerary.destination}")
 
-        # Detect cities for multi-city support
-        cities = extract_cities_from_itinerary(itinerary)
-        is_multi_city = len(cities) > 1
+        # Use LLM to intelligently detect cities for multi-city support
+        if perplexity_booking_service:
+            try:
+                # Build itinerary dict for LLM
+                itinerary_dict = {
+                    'title': itinerary.title,
+                    'destination': itinerary.destination,
+                    'description': itinerary.description or '',
+                    'day_by_day_plan': itinerary.day_by_day_plan or '',
+                    'regions': itinerary.regions or []
+                }
+                cities = perplexity_booking_service.extract_travel_route(itinerary_dict)
+                print(f"[Booking] LLM extracted cities: {cities}")
+            except Exception as e:
+                print(f"[Booking] LLM extraction failed, falling back to keyword-based: {e}")
+                cities = extract_cities_from_itinerary(itinerary)
+        else:
+            cities = extract_cities_from_itinerary(itinerary)
 
-        print(f"[Booking] Detected cities: {cities} (multi-city: {is_multi_city})")
+        is_multi_city = len(cities) > 1
+        print(f"[Booking] Final cities: {cities} (multi-city: {is_multi_city})")
 
         # Create new booking session
         session_token = secrets.token_urlsafe(32)
@@ -93,18 +124,25 @@ def start_booking():
         db.session.add(booking_session)
         db.session.commit()
 
-        # Return initial message
-        destination_text = itinerary.destination
+        # If multi-city, first ask for route confirmation
         if is_multi_city:
-            destination_text = f"{', '.join(cities[:-1])}, and {cities[-1]}"
-
-        message = {
-            'type': 'question',
-            'step': 'departure',
-            'message': f"🎯 Let's book your {'multi-city ' if is_multi_city else ''}trip to {destination_text}!\n\nWhere will you be traveling from?",
-            'input_type': 'text',
-            'placeholder': 'Enter your departure city (e.g., New York, NY)'
-        }
+            message = {
+                'type': 'question',
+                'step': 'confirm_cities',
+                'message': f"I've detected this as a multi-city trip!\n\nProposed route: {' → '.join(cities)}\n\nIs this route correct? You can modify it or proceed.",
+                'input_type': 'city_confirmation',
+                'detected_cities': cities,
+                'allow_edit': True
+            }
+        else:
+            # Single city - proceed directly
+            message = {
+                'type': 'question',
+                'step': 'departure',
+                'message': f"Let's book your trip to {itinerary.destination}!\n\nWhere will you be traveling from?",
+                'input_type': 'text',
+                'placeholder': 'Enter your departure city (e.g., New York, NY)'
+            }
 
         return jsonify({
             'session_token': session_token,
@@ -144,7 +182,34 @@ def send_message():
         itinerary = booking_session.itinerary
 
         # Process based on current step
-        if booking_session.current_step == 'initial':
+        if booking_session.current_step == 'confirm_cities':
+            # User confirmed/edited the city route
+            try:
+                cities_data = json.loads(user_input)
+                confirmed_cities = cities_data.get('cities', [])
+
+                # Update cities in session
+                booking_session.cities = confirmed_cities
+                booking_session.current_step = 'initial'
+                db.session.commit()
+
+                # Now ask for departure city
+                destination_text = ', '.join(confirmed_cities[:-1]) + f", and {confirmed_cities[-1]}"
+                return jsonify({
+                    'message': {
+                        'type': 'question',
+                        'step': 'departure',
+                        'message': f"✅ Great! Your route: {' → '.join(confirmed_cities)}\n\nWhere will you be traveling from?",
+                        'input_type': 'text',
+                        'placeholder': 'Enter your departure city (e.g., New York, NY)'
+                    },
+                    'session': booking_session.to_dict()
+                })
+            except Exception as e:
+                print(f"Error processing city confirmation: {e}")
+                return jsonify({'error': 'Invalid city confirmation data'}), 400
+
+        elif booking_session.current_step == 'initial':
             # Save departure city
             booking_session.departure_city = user_input
             booking_session.current_step = 'dates'
@@ -219,56 +284,169 @@ def send_message():
             # Save budget preference
             booking_session.budget_preference = user_input
             booking_session.current_step = 'searching_flights'
+
+            # Initialize flight segments for multi-city
+            cities = booking_session.cities or [itinerary.destination]
+            is_multi_city = len(cities) > 1
+
+            # Build flight segments: departure -> city1 -> city2 -> ... -> return to departure
+            flight_segments = []
+
+            # Outbound segments
+            current_from = booking_session.departure_city
+            for city in cities:
+                flight_segments.append({
+                    'from': current_from,
+                    'to': city,
+                    'type': 'outbound',
+                    'booked': False
+                })
+                current_from = city
+
+            # Return segment (from last city back to departure)
+            if booking_session.return_date:
+                flight_segments.append({
+                    'from': cities[-1],
+                    'to': booking_session.departure_city,
+                    'type': 'return',
+                    'booked': False
+                })
+
+            booking_session.flight_segments = flight_segments
+            booking_session.current_flight_segment = 0
             db.session.commit()
 
-            # Start searching for flights
+            # Start searching for first flight segment
+            first_segment = flight_segments[0]
+            segment_text = f"Searching for flights from {first_segment['from']} to {first_segment['to']}"
+            if is_multi_city:
+                segment_text += f" (Segment 1/{len(flight_segments)})"
+
             return jsonify({
                 'message': {
                     'type': 'loading',
                     'step': 'searching_flights',
-                    'message': f"✈️ Searching for flights from {booking_session.departure_city} to {itinerary.destination}...",
-                },
-                'session': booking_session.to_dict(),
-                'trigger_search': True  # Frontend should immediately call /search-flights
-            })
-
-        elif booking_session.current_step == 'select_flight':
-            # Save selected flight
-            selected_flight = json.loads(user_input)
-            if not booking_session.selected_flights:
-                booking_session.selected_flights = []
-            booking_session.selected_flights.append(selected_flight)
-
-            # Check if multi-city and need inter-city flights
-            cities = booking_session.cities or [itinerary.destination]
-            current_city_index = booking_session.current_destination_index
-
-            # For multi-city, after initial flight, check if we need flights between cities
-            # (This is a simplified approach - could be expanded later)
-
-            # Move to hotel search for current destination
-            booking_session.current_step = 'searching_hotels'
-            db.session.commit()
-
-            city_name = cities[0] if cities else itinerary.destination
-            if len(cities) > 1:
-                city_name = cities[current_city_index] if current_city_index < len(cities) else cities[0]
-
-            return jsonify({
-                'message': {
-                    'type': 'loading',
-                    'step': 'searching_hotels',
-                    'message': f"🏨 Great choice! Now searching for hotels in {city_name}...",
+                    'message': segment_text + "...",
                 },
                 'session': booking_session.to_dict(),
                 'trigger_search': True
             })
 
+        elif booking_session.current_step == 'select_flight':
+            # Save selected flight or handle skip
+            selected_flight = json.loads(user_input)
+            if not booking_session.selected_flights:
+                booking_session.selected_flights = []
+
+            # Check if user wants to skip this flight
+            is_skip = selected_flight.get('skip', False)
+
+            # Add segment information to the flight
+            flight_segments = booking_session.flight_segments or []
+            current_segment_index = booking_session.current_flight_segment
+
+            if current_segment_index < len(flight_segments):
+                segment = flight_segments[current_segment_index]
+
+                if is_skip:
+                    # Create a skipped flight entry
+                    selected_flight = {
+                        'skipped': True,
+                        'airline': 'N/A',
+                        'flight_number': 'SKIPPED',
+                        'departure_time': 'N/A',
+                        'arrival_time': 'N/A',
+                        'duration': 'N/A',
+                        'stops': 0,
+                        'price': 0,
+                        'booking_url': '#',
+                        'segment': {
+                            'from': segment['from'],
+                            'to': segment['to'],
+                            'type': segment['type'],
+                            'index': current_segment_index
+                        }
+                    }
+                else:
+                    selected_flight['segment'] = {
+                        'from': segment['from'],
+                        'to': segment['to'],
+                        'type': segment['type'],
+                        'index': current_segment_index
+                    }
+
+                # Mark segment as booked
+                flight_segments[current_segment_index]['booked'] = True
+
+            booking_session.selected_flights.append(selected_flight)
+
+            # Check if there are more flight segments to book
+            next_segment_index = current_segment_index + 1
+            if next_segment_index < len(flight_segments):
+                # More segments to book
+                booking_session.current_flight_segment = next_segment_index
+                booking_session.flight_segments = flight_segments
+                booking_session.current_step = 'searching_flights'
+                db.session.commit()
+
+                next_segment = flight_segments[next_segment_index]
+                segment_type = "Return" if next_segment['type'] == 'return' else "Connecting"
+                segment_text = f"{segment_type} flight: {next_segment['from']} → {next_segment['to']} (Segment {next_segment_index + 1}/{len(flight_segments)})"
+
+                return jsonify({
+                    'message': {
+                        'type': 'loading',
+                        'step': 'searching_flights',
+                        'message': segment_text + "...",
+                    },
+                    'session': booking_session.to_dict(),
+                    'trigger_search': True
+                })
+            else:
+                # All flight segments booked, move to hotel search
+                cities = booking_session.cities or [itinerary.destination]
+                city_name = cities[0]
+
+                booking_session.current_step = 'searching_hotels'
+                booking_session.current_destination_index = 0
+                db.session.commit()
+
+                return jsonify({
+                    'message': {
+                        'type': 'loading',
+                        'step': 'searching_hotels',
+                        'message': f"Great! All flights booked. Now searching for hotels in {city_name}...",
+                    },
+                    'session': booking_session.to_dict(),
+                    'trigger_search': True
+                })
+
         elif booking_session.current_step == 'select_hotel':
-            # Save selected hotel
+            # Save selected hotel or handle skip
             selected_hotel = json.loads(user_input)
             if not booking_session.selected_hotels:
                 booking_session.selected_hotels = []
+
+            # Check if user wants to skip this hotel
+            is_skip = selected_hotel.get('skip', False)
+            if is_skip:
+                cities = booking_session.cities or [itinerary.destination]
+                current_city_index = booking_session.current_destination_index
+                city_name = cities[current_city_index] if current_city_index < len(cities) else itinerary.destination
+
+                selected_hotel = {
+                    'skipped': True,
+                    'name': 'Hotel Skipped',
+                    'star_rating': 0,
+                    'address': city_name,
+                    'amenities': [],
+                    'price_per_night': 0,
+                    'total_price': 0,
+                    'rating': 0,
+                    'review_count': 0,
+                    'booking_url': '#'
+                }
+
             booking_session.selected_hotels.append(selected_hotel)
 
             # Check if multi-city and more cities to book
@@ -286,7 +464,7 @@ def send_message():
                     'message': {
                         'type': 'loading',
                         'step': 'searching_hotels',
-                        'message': f"🏨 Great choice! Now let's find a hotel in {next_city}...",
+                        'message': f"Great choice! Now let's find a hotel in {next_city}...",
                     },
                     'session': booking_session.to_dict(),
                     'trigger_search': True
@@ -300,7 +478,7 @@ def send_message():
                     'message': {
                         'type': 'loading',
                         'step': 'searching_activities',
-                        'message': f"🎯 Perfect! Let's find some activities and experiences...",
+                        'message': f"Perfect! Let's find some activities and experiences...",
                     },
                     'session': booking_session.to_dict(),
                     'trigger_search': True
@@ -318,7 +496,7 @@ def send_message():
                 'message': {
                     'type': 'summary',
                     'step': 'summary',
-                    'message': "🎉 Your booking plan is ready!",
+                    'message': "Your booking plan is ready!",
                 },
                 'session': booking_session.to_dict()
             })
@@ -354,18 +532,36 @@ def search_flights():
 
         itinerary = booking_session.itinerary
 
+        # Get current flight segment
+        flight_segments = booking_session.flight_segments or []
+        current_segment_index = booking_session.current_flight_segment
+
+        # Determine departure and destination for current segment
+        if flight_segments and current_segment_index < len(flight_segments):
+            current_segment = flight_segments[current_segment_index]
+            departure_city = current_segment['from']
+            destination_city = current_segment['to']
+            is_return = current_segment['type'] == 'return'
+        else:
+            # Fallback to single-city
+            departure_city = booking_session.departure_city
+            destination_city = itinerary.destination
+            is_return = False
+
+        # Use return date for return flights, departure date for outbound
+        flight_date = booking_session.return_date if is_return else booking_session.departure_date
+
         # If regenerating and cached options exist, modify search slightly
-        # (e.g., different times, different airlines preference)
         search_variation = ""
         if regenerate and booking_session.flight_options:
             search_variation = " Please show different options than previous search, focusing on alternative airlines and departure times."
 
         # Search flights using Perplexity
         flights = perplexity_booking_service.search_flights(
-            departure_city=booking_session.departure_city,
-            destination_city=itinerary.destination,
-            departure_date=booking_session.departure_date,
-            return_date=booking_session.return_date,
+            departure_city=departure_city,
+            destination_city=destination_city,
+            departure_date=flight_date,
+            return_date=None,  # One-way for each segment
             num_travelers=booking_session.num_travelers,
             budget_preference=booking_session.budget_preference
         )
@@ -375,13 +571,26 @@ def search_flights():
         booking_session.current_step = 'select_flight'
         db.session.commit()
 
+        # Build message with segment context
+        segment_label = ""
+        if flight_segments and current_segment_index < len(flight_segments):
+            segment_type = "Return" if is_return else "Outbound"
+            segment_label = f" ({segment_type} - Segment {current_segment_index + 1}/{len(flight_segments)})"
+
         return jsonify({
             'message': {
                 'type': 'choice',
                 'step': 'select_flight',
-                'message': f"Found {len(flights)} flight options! Choose your flight:",
+                'message': f"Found {len(flights)} flight options{segment_label}! Choose your flight:",
                 'input_type': 'flight_cards',
-                'options': flights
+                'options': flights,
+                'segment_info': {
+                    'from': departure_city,
+                    'to': destination_city,
+                    'type': 'return' if is_return else 'outbound',
+                    'index': current_segment_index,
+                    'total': len(flight_segments)
+                } if flight_segments else None
             },
             'session': booking_session.to_dict()
         })

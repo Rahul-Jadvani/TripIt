@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Sparkles, Clock, Star } from 'lucide-react';
+import { RefreshCw, Sparkles, Clock, Star, Loader2, Info, ExternalLink } from 'lucide-react';
 
 interface Activity {
   name: string;
@@ -10,6 +10,7 @@ interface Activity {
   rating: number;
   review_count: number;
   booking_url: string;
+  sources?: string[];
 }
 
 interface Props {
@@ -17,10 +18,12 @@ interface Props {
   onSelect: (activities: Activity[]) => void;
   multiSelect: boolean;
   onCustomize?: () => void;
+  isLoading?: boolean;
 }
 
-const ActivityCards: React.FC<Props> = ({ activities, onSelect, multiSelect, onCustomize }) => {
+const ActivityCards: React.FC<Props> = ({ activities, onSelect, multiSelect, onCustomize, isLoading = false }) => {
   const [selectedActivities, setSelectedActivities] = useState<Set<number>>(new Set());
+  const [showSources, setShowSources] = useState<number | null>(null);
 
   const handleToggleActivity = (index: number) => {
     const newSelected = new Set(selectedActivities);
@@ -41,30 +44,40 @@ const ActivityCards: React.FC<Props> = ({ activities, onSelect, multiSelect, onC
   };
 
   const getCategoryIcon = (category: string) => {
-    const icons: Record<string, string> = {
-      'tour': '🚌',
-      'experience': '✨',
-      'attraction': '🎯',
-      'food': '🍽️',
-      'adventure': '⛰️',
-      'culture': '🎭',
-      'nature': '🌿',
-      'entertainment': '🎪'
-    };
-    return icons[category.toLowerCase()] || '🎯';
+    return null;
   };
 
   if (activities.length === 0) {
     return (
       <div className="card-elevated p-8 text-center">
-        <div className="text-6xl mb-4">🎯</div>
         <p className="text-muted-foreground font-medium mb-4">No activities found.</p>
-        {onCustomize && (
-          <button onClick={onCustomize} className="btn-secondary">
-            <RefreshCw className="w-4 h-4 mr-2 inline" />
-            Try Different Options
+        <div className="flex gap-3 justify-center">
+          {onCustomize && (
+            <button
+              onClick={onCustomize}
+              disabled={isLoading}
+              className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Try Different Options
+                </>
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => onSelect([])}
+            className="btn-primary"
+          >
+            Skip Activities
           </button>
-        )}
+        </div>
       </div>
     );
   }
@@ -86,10 +99,15 @@ const ActivityCards: React.FC<Props> = ({ activities, onSelect, multiSelect, onC
         {onCustomize && (
           <button
             onClick={onCustomize}
-            className="btn-secondary flex items-center gap-2"
+            disabled={isLoading}
+            className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw className="w-4 h-4" />
-            Different Options
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            {isLoading ? 'Loading...' : 'Different Options'}
           </button>
         )}
       </div>
@@ -106,18 +124,13 @@ const ActivityCards: React.FC<Props> = ({ activities, onSelect, multiSelect, onC
           >
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">
-                    {getCategoryIcon(activity.category)}
+                <div className="mb-2">
+                  <h4 className="text-lg font-bold text-foreground mb-1">
+                    {activity.name}
+                  </h4>
+                  <span className="text-xs bg-secondary text-foreground px-2 py-1 rounded border border-black font-medium">
+                    {activity.category}
                   </span>
-                  <div>
-                    <h4 className="text-lg font-bold text-foreground">
-                      {activity.name}
-                    </h4>
-                    <span className="text-xs bg-secondary text-foreground px-2 py-1 rounded border border-black font-medium">
-                      {activity.category}
-                    </span>
-                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">
                   {activity.description}
@@ -141,6 +154,42 @@ const ActivityCards: React.FC<Props> = ({ activities, onSelect, multiSelect, onC
               </div>
             </div>
 
+            {/* Sources */}
+            {activity.sources && activity.sources.length > 0 && (
+              <div className="mb-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSources(showSources === index ? null : index);
+                  }}
+                  className="text-xs text-primary flex items-center gap-1 hover:text-primary/80 transition-colors font-medium"
+                >
+                  <Info className="w-3 h-3" />
+                  {showSources === index ? 'Hide' : 'View'} Verified Sources
+                </button>
+                {showSources === index && (
+                  <div className="mt-2 p-3 bg-secondary border-2 border-black rounded-[10px]">
+                    <div className="text-xs font-bold mb-2 text-foreground">Verified Sources:</div>
+                    <div className="space-y-1">
+                      {activity.sources.map((source, i) => (
+                        <a
+                          key={i}
+                          href={source}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-primary flex items-center gap-1 hover:text-primary/80 transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Source {i + 1}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex gap-2">
               <a
@@ -159,7 +208,7 @@ const ActivityCards: React.FC<Props> = ({ activities, onSelect, multiSelect, onC
                 }}
                 className="flex-1 btn-primary text-sm"
               >
-                {selectedActivities.has(index) ? '✓ Selected' : 'Select'}
+                {selectedActivities.has(index) ? 'Selected' : 'Select'}
               </button>
             </div>
           </div>

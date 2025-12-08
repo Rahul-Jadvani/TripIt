@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Plane, Clock, DollarSign } from 'lucide-react';
+import { RefreshCw, Plane, Clock, DollarSign, Loader2, ExternalLink, Info } from 'lucide-react';
 
 interface Flight {
   airline: string;
@@ -10,16 +10,34 @@ interface Flight {
   stops: number;
   price: number;
   booking_url: string;
+  sources?: string[];
+  segment?: {
+    from: string;
+    to: string;
+    type: string;
+    index: number;
+  };
+}
+
+interface SegmentInfo {
+  from: string;
+  to: string;
+  type: string;
+  index: number;
+  total: number;
 }
 
 interface Props {
   flights: Flight[];
   onSelect: (flight: Flight) => void;
   onCustomize?: () => void;
+  isLoading?: boolean;
+  segmentInfo?: SegmentInfo;
 }
 
-const FlightChoiceCards: React.FC<Props> = ({ flights, onSelect, onCustomize }) => {
+const FlightChoiceCards: React.FC<Props> = ({ flights, onSelect, onCustomize, isLoading = false, segmentInfo }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [showSources, setShowSources] = useState<number | null>(null);
 
   const handleSelect = (flight: Flight, index: number) => {
     setSelectedIndex(index);
@@ -31,20 +49,62 @@ const FlightChoiceCards: React.FC<Props> = ({ flights, onSelect, onCustomize }) 
   if (flights.length === 0) {
     return (
       <div className="card-elevated p-8 text-center">
-        <div className="text-6xl mb-4">✈️</div>
-        <p className="text-muted-foreground font-medium mb-4">No flights found. Let's try different dates.</p>
-        {onCustomize && (
-          <button onClick={onCustomize} className="btn-secondary">
-            <RefreshCw className="w-4 h-4 mr-2 inline" />
-            Try Different Options
+        <p className="text-muted-foreground font-medium mb-4">No flights found for this route.</p>
+        <div className="flex gap-3 justify-center">
+          {onCustomize && (
+            <button
+              onClick={onCustomize}
+              disabled={isLoading}
+              className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Try Different Options
+                </>
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => onSelect({ skip: true } as any)}
+            className="btn-primary"
+          >
+            Skip This Flight
           </button>
-        )}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Segment Info Header */}
+      {segmentInfo && (
+        <div className="bg-primary/10 border-2 border-primary rounded-[15px] p-3 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Plane className="w-5 h-5 text-primary" />
+              <span className="font-bold text-foreground">
+                {segmentInfo.from} → {segmentInfo.to}
+              </span>
+              {segmentInfo.type === 'return' && (
+                <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full font-bold">
+                  RETURN
+                </span>
+              )}
+            </div>
+            <span className="text-sm text-muted-foreground font-medium">
+              Segment {segmentInfo.index + 1}/{segmentInfo.total}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-2xl font-bold text-foreground">
           <Plane className="w-6 h-6 inline mr-2" />
@@ -53,10 +113,15 @@ const FlightChoiceCards: React.FC<Props> = ({ flights, onSelect, onCustomize }) 
         {onCustomize && (
           <button
             onClick={onCustomize}
-            className="btn-secondary flex items-center gap-2"
+            disabled={isLoading}
+            className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw className="w-4 h-4" />
-            Different Options
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            {isLoading ? 'Loading...' : 'Different Options'}
           </button>
         )}
       </div>
@@ -121,6 +186,42 @@ const FlightChoiceCards: React.FC<Props> = ({ flights, onSelect, onCustomize }) 
             </div>
           </div>
 
+          {/* Sources */}
+          {flight.sources && flight.sources.length > 0 && (
+            <div className="mb-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSources(showSources === index ? null : index);
+                }}
+                className="text-xs text-primary flex items-center gap-1 hover:text-primary/80 transition-colors font-medium"
+              >
+                <Info className="w-3 h-3" />
+                {showSources === index ? 'Hide' : 'View'} Verified Sources
+              </button>
+              {showSources === index && (
+                <div className="mt-2 p-3 bg-secondary border-2 border-black rounded-[10px]">
+                  <div className="text-xs font-bold mb-2 text-foreground">Verified Sources:</div>
+                  <div className="space-y-1">
+                    {flight.sources.map((source, i) => (
+                      <a
+                        key={i}
+                        href={source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-primary flex items-center gap-1 hover:text-primary/80 transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Source {i + 1}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2">
             <a
@@ -139,7 +240,7 @@ const FlightChoiceCards: React.FC<Props> = ({ flights, onSelect, onCustomize }) 
               }}
               className={`flex-1 ${selectedIndex === index ? 'btn-primary' : 'btn-primary'}`}
             >
-              {selectedIndex === index ? '✓ Selected' : 'Select Flight'}
+              {selectedIndex === index ? 'Selected' : 'Select Flight'}
             </button>
           </div>
         </div>

@@ -23,9 +23,10 @@ class BookingSession(db.Model):
     # Multi-city support
     cities = db.Column(db.JSON)  # List of cities to visit (for multi-city trips)
     current_destination_index = db.Column(db.Integer, default=0)
+    current_flight_segment = db.Column(db.Integer, default=0)  # Track which flight segment we're on
 
     # Selections (stored as JSON)
-    selected_flights = db.Column(db.JSON)  # List of selected flight objects
+    selected_flights = db.Column(db.JSON)  # List of selected flight objects (can be multiple segments)
     selected_hotels = db.Column(db.JSON)   # List of selected hotel objects
     selected_activities = db.Column(db.JSON)  # List of selected activity objects
 
@@ -33,6 +34,9 @@ class BookingSession(db.Model):
     flight_options = db.Column(db.JSON)
     hotel_options = db.Column(db.JSON)
     activity_options = db.Column(db.JSON)
+
+    # Flight segments for multi-city
+    flight_segments = db.Column(db.JSON)  # Store flight segment data: [{"from": "Delhi", "to": "Manali", "flights": [...]}]
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -55,12 +59,14 @@ class BookingSession(db.Model):
             'budget_preference': self.budget_preference,
             'cities': self.cities or [],
             'current_destination_index': self.current_destination_index,
+            'current_flight_segment': self.current_flight_segment,
             'selected_flights': self.selected_flights or [],
             'selected_hotels': self.selected_hotels or [],
             'selected_activities': self.selected_activities or [],
             'flight_options': self.flight_options or [],
             'hotel_options': self.hotel_options or [],
             'activity_options': self.activity_options or [],
+            'flight_segments': self.flight_segments or [],
             'completed': self.completed,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()

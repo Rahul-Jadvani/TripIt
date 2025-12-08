@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { RefreshCw, Hotel, Star, MapPin } from 'lucide-react';
+import { RefreshCw, Hotel, Star, MapPin, Loader2, Info, ExternalLink } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1Ijoic2hyYXZhbjQ1IiwiYSI6ImNtaXgxZ3gwajAxeG4zZnF1ZWJpODRpOGQifQ.YT9XlUwsK8dLRAF-BjC54A';
 
@@ -19,19 +19,22 @@ interface Hotel {
     lat: number;
     lng: number;
   };
+  sources?: string[];
 }
 
 interface Props {
   hotels: Hotel[];
   onSelect: (hotel: Hotel) => void;
   onCustomize?: () => void;
+  isLoading?: boolean;
 }
 
-const HotelMapView: React.FC<Props> = ({ hotels, onSelect, onCustomize }) => {
+const HotelMapView: React.FC<Props> = ({ hotels, onSelect, onCustomize, isLoading = false }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [showSources, setShowSources] = useState<number | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
 
   useEffect(() => {
@@ -120,14 +123,34 @@ const HotelMapView: React.FC<Props> = ({ hotels, onSelect, onCustomize }) => {
   if (hotels.length === 0) {
     return (
       <div className="card-elevated p-8 text-center">
-        <div className="text-6xl mb-4">🏨</div>
-        <p className="text-muted-foreground font-medium mb-4">No hotels found. Let's try different criteria.</p>
-        {onCustomize && (
-          <button onClick={onCustomize} className="btn-secondary">
-            <RefreshCw className="w-4 h-4 mr-2 inline" />
-            Try Different Options
+        <p className="text-muted-foreground font-medium mb-4">No hotels found for this location.</p>
+        <div className="flex gap-3 justify-center">
+          {onCustomize && (
+            <button
+              onClick={onCustomize}
+              disabled={isLoading}
+              className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Try Different Options
+                </>
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => onSelect({ skip: true } as any)}
+            className="btn-primary"
+          >
+            Skip This Hotel
           </button>
-        )}
+        </div>
       </div>
     );
   }
@@ -142,10 +165,15 @@ const HotelMapView: React.FC<Props> = ({ hotels, onSelect, onCustomize }) => {
         {onCustomize && (
           <button
             onClick={onCustomize}
-            className="btn-secondary flex items-center gap-2"
+            disabled={isLoading}
+            className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw className="w-4 h-4" />
-            Different Options
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            {isLoading ? 'Loading...' : 'Different Options'}
           </button>
         )}
       </div>
@@ -213,6 +241,42 @@ const HotelMapView: React.FC<Props> = ({ hotels, onSelect, onCustomize }) => {
               )}
             </div>
 
+            {/* Sources */}
+            {hotel.sources && hotel.sources.length > 0 && (
+              <div className="mb-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSources(showSources === index ? null : index);
+                  }}
+                  className="text-xs text-primary flex items-center gap-1 hover:text-primary/80 transition-colors font-medium"
+                >
+                  <Info className="w-3 h-3" />
+                  {showSources === index ? 'Hide' : 'View'} Verified Sources
+                </button>
+                {showSources === index && (
+                  <div className="mt-2 p-3 bg-secondary border-2 border-black rounded-[10px]">
+                    <div className="text-xs font-bold mb-2 text-foreground">Verified Sources:</div>
+                    <div className="space-y-1">
+                      {hotel.sources.map((source, i) => (
+                        <a
+                          key={i}
+                          href={source}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-primary flex items-center gap-1 hover:text-primary/80 transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Source {i + 1}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex gap-2">
               <a
@@ -231,7 +295,7 @@ const HotelMapView: React.FC<Props> = ({ hotels, onSelect, onCustomize }) => {
                 }}
                 className="flex-1 btn-primary text-sm"
               >
-                {selectedIndex === index ? '✓ Selected' : 'Select Hotel'}
+                {selectedIndex === index ? 'Selected' : 'Select Hotel'}
               </button>
             </div>
           </div>

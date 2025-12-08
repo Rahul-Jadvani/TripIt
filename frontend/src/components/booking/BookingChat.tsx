@@ -42,11 +42,33 @@ const BookingChat: React.FC<Props> = ({
   const [inputValue, setInputValue] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isUserScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const scrollToBottom = () => {
+    if (chatContainerRef.current && !isUserScrollingRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  };
+
+  // Detect user scrolling
+  const handleScroll = () => {
+    isUserScrollingRef.current = true;
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+    }, 1000);
+  };
+
+  // Only scroll when new messages arrive
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
+    if (chatHistory.length > 0) {
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [chatHistory.length]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +111,11 @@ const BookingChat: React.FC<Props> = ({
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-card">
+      <div
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-4 bg-card"
+      >
         {chatHistory.map((msg, index) => (
           <div
             key={index}
@@ -121,8 +147,6 @@ const BookingChat: React.FC<Props> = ({
             </div>
           </div>
         )}
-
-        <div ref={chatEndRef} />
       </div>
 
       {/* Input Area */}

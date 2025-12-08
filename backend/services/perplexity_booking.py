@@ -97,14 +97,20 @@ Only return the JSON array, nothing else."""
             response = self._make_request(messages)
             content = response['choices'][0]['message']['content']
 
+            # Capture citations/sources if available
+            citations = response.get('citations', [])
+
             # Extract JSON from response
             flights = self._extract_json(content)
 
-            # Convert prices from USD to INR
+            # Convert prices from USD to INR and add source citations
             if isinstance(flights, list):
                 for flight in flights:
                     if 'price' in flight and isinstance(flight['price'], (int, float)):
                         flight['price'] = round(flight['price'] * self.USD_TO_INR, 2)
+                    # Add source citations (for verification)
+                    if citations:
+                        flight['sources'] = citations[:2]  # Top 2 sources
 
             return flights if isinstance(flights, list) else []
 
@@ -173,16 +179,22 @@ Only return the JSON array."""
             response = self._make_request(messages)
             content = response['choices'][0]['message']['content']
 
+            # Capture citations/sources if available
+            citations = response.get('citations', [])
+
             # Extract JSON from response
             hotels = self._extract_json(content)
 
-            # Convert prices from USD to INR
+            # Convert prices from USD to INR and add source citations
             if isinstance(hotels, list):
                 for hotel in hotels:
                     if 'price_per_night' in hotel and isinstance(hotel['price_per_night'], (int, float)):
                         hotel['price_per_night'] = round(hotel['price_per_night'] * self.USD_TO_INR, 2)
                     if 'total_price' in hotel and isinstance(hotel['total_price'], (int, float)):
                         hotel['total_price'] = round(hotel['total_price'] * self.USD_TO_INR, 2)
+                    # Add source citations (for verification)
+                    if citations:
+                        hotel['sources'] = citations[:2]  # Top 2 sources
 
             return hotels if isinstance(hotels, list) else []
 
@@ -243,20 +255,88 @@ Only return the JSON array."""
             response = self._make_request(messages)
             content = response['choices'][0]['message']['content']
 
+            # Capture citations/sources if available
+            citations = response.get('citations', [])
+
             # Extract JSON from response
             activities = self._extract_json(content)
 
-            # Convert prices from USD to INR
+            # Convert prices from USD to INR and add source citations
             if isinstance(activities, list):
                 for activity in activities:
                     if 'price' in activity and isinstance(activity['price'], (int, float)):
                         activity['price'] = round(activity['price'] * self.USD_TO_INR, 2)
+                    # Add source citations (for verification)
+                    if citations:
+                        activity['sources'] = citations[:2]  # Top 2 sources
 
             return activities if isinstance(activities, list) else []
 
         except Exception as e:
             print(f"Error searching activities: {e}")
             return []
+
+    def extract_travel_route(self, itinerary_data: Dict[str, Any]) -> List[str]:
+        """
+        Use LLM to intelligently extract the travel route (cities) from an itinerary.
+        Returns a logical, ordered list of cities to visit.
+        """
+        # Build context from itinerary
+        title = itinerary_data.get('title', '')
+        destination = itinerary_data.get('destination', '')
+        description = itinerary_data.get('description', '')
+        day_plan = itinerary_data.get('day_by_day_plan', '')
+        regions = itinerary_data.get('regions', [])
+
+        prompt = f"""Analyze this travel itinerary and extract ONLY the actual cities that should be visited, in logical travel order.
+
+Itinerary Title: {title}
+Primary Destination: {destination}
+Description: {description[:300]}...
+Regions: {', '.join(regions) if regions else 'Not specified'}
+Day Plan: {day_plan[:500]}...
+
+IMPORTANT RULES:
+1. Extract ONLY actual cities, NOT attractions, landmarks, or tourist spots (e.g., exclude temples, falls, markets, monuments)
+2. Return cities in a LOGICAL travel order (no backtracking)
+3. Maximum 3 cities for practical booking
+4. If it's a single-city trip with day trips, return only that ONE city
+5. Format as a JSON array of city names only
+
+Examples:
+- "Delhi → Agra → Jaipur" becomes ["Delhi", "Agra", "Jaipur"]
+- "Manali with local attractions" becomes ["Manali"]
+- "Himachal tour: Shimla, Manali, Dharamshala" becomes ["Shimla", "Manali", "Dharamshala"]
+
+Return ONLY a JSON array like ["City1", "City2", "City3"] with NO explanation."""
+
+        messages = [
+            {"role": "system", "content": "You are a travel route analyzer. Return only JSON arrays with city names, nothing else."},
+            {"role": "user", "content": prompt}
+        ]
+
+        try:
+            response = self._make_request(messages)
+            content = response['choices'][0]['message']['content']
+
+            # Extract JSON array
+            cities = self._extract_json(content)
+
+            if isinstance(cities, list) and len(cities) > 0:
+                # Clean and validate cities
+                clean_cities = []
+                for city in cities[:3]:  # Max 3 cities
+                    if isinstance(city, str) and len(city) > 2:
+                        clean_cities.append(city.strip())
+
+                return clean_cities if clean_cities else [destination]
+            else:
+                return [destination]
+
+        except Exception as e:
+            print(f"Error extracting travel route with LLM: {e}")
+            # Fallback to primary destination
+            return [destination]
 
     def _extract_json(self, content: str) -> Any:
         """Extract JSON from Perplexity response"""

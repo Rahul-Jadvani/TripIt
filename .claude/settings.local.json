@@ -57,7 +57,8 @@
       "Bash(test:*)",
       "Bash(npx tsc --noEmit)",
       "Bash(timeout 2 python:*)",
-      "Bash(del add_cities_column.py)"
+      "Bash(del add_cities_column.py)",
+      "Bash(timeout 2 bash:*)"
     ],
     "deny": [],
     "ask": []

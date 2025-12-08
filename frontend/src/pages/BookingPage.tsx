@@ -5,6 +5,7 @@ import FlightChoiceCards from '../components/booking/FlightChoiceCards';
 import HotelMapView from '../components/booking/HotelMapView';
 import ActivityCards from '../components/booking/ActivityCards';
 import BookingSummary from '../components/booking/BookingSummary';
+import CityConfirmation from '../components/booking/CityConfirmation';
 import api from '@/services/api';
 
 interface BookingSession {
@@ -37,6 +38,15 @@ interface ChatMessage {
   placeholder?: string;
   min_date?: string;
   multi_select?: boolean;
+  detected_cities?: string[];
+  allow_edit?: boolean;
+  segment_info?: {
+    from: string;
+    to: string;
+    type: string;
+    index: number;
+    total: number;
+  };
 }
 
 const BookingPage: React.FC = () => {
@@ -49,6 +59,9 @@ const BookingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [isRegeneratingFlights, setIsRegeneratingFlights] = useState(false);
+  const [isRegeneratingHotels, setIsRegeneratingHotels] = useState(false);
+  const [isRegeneratingActivities, setIsRegeneratingActivities] = useState(false);
 
   useEffect(() => {
     startBookingSession();
@@ -85,13 +98,72 @@ const BookingPage: React.FC = () => {
     }
   };
 
+  const formatUserMessage = (userInput: string | any): string => {
+    if (typeof userInput === 'string') return userInput;
+
+    // Format date range
+    if (userInput.departure && !userInput.airline && !userInput.name) {
+      const departure = new Date(userInput.departure).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      if (userInput.return) {
+        const returnDate = new Date(userInput.return).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return `Travel dates: ${departure} - ${returnDate}`;
+      }
+      return `Travel date: ${departure}`;
+    }
+
+    // Format flight skip
+    if (userInput.skip === true) {
+      return 'Skipped this flight segment';
+    }
+
+    // Format flight selection
+    if (userInput.airline && userInput.flight_number) {
+      return `Selected flight: ${userInput.airline} ${userInput.flight_number} (${userInput.departure_time} - ${userInput.arrival_time})`;
+    }
+
+    // Format hotel selection
+    if (userInput.name && userInput.star_rating && userInput.name !== 'Hotel Skipped') {
+      return `Selected hotel: ${userInput.name} (${userInput.star_rating} stars)`;
+    }
+
+    // Format hotel skip
+    if (userInput.name === 'Hotel Skipped' || (userInput.skip && userInput.star_rating !== undefined)) {
+      return 'Skipped this hotel';
+    }
+
+    // Format activities selection
+    if (Array.isArray(userInput) && userInput.length > 0 && userInput[0].name) {
+      const activityNames = userInput.map(a => a.name).join(', ');
+      return `Selected activities: ${activityNames}`;
+    }
+
+    // Format cities confirmation
+    if (userInput.cities && Array.isArray(userInput.cities)) {
+      return `Confirmed route: ${userInput.cities.join(' → ')}`;
+    }
+
+    // Format simple objects (like numbers converted to objects)
+    if (typeof userInput === 'object' && Object.keys(userInput).length === 0) {
+      return '[Empty]';
+    }
+
+    // If it's a simple value wrapped in an object, extract it
+    const values = Object.values(userInput);
+    if (values.length === 1 && typeof values[0] === 'string') {
+      return values[0];
+    }
+
+    // Default: hide complex objects
+    return 'Selection confirmed';
+  };
+
   const handleSendMessage = async (userInput: string | any) => {
     if (!session) return;
 
     // Add user message to chat history
     const userMessage = {
       type: 'user',
-      message: typeof userInput === 'string' ? userInput : JSON.stringify(userInput),
+      message: formatUserMessage(userInput),
       timestamp: new Date()
     };
     setChatHistory(prev => [...prev, userMessage]);
@@ -182,6 +254,7 @@ const BookingPage: React.FC = () => {
   const handleCustomizeFlights = async () => {
     if (!session) return;
     try {
+      setIsRegeneratingFlights(true);
       const response = await api.post(
         '/booking/search-flights',
         { session_token: session.session_token, regenerate: true }
@@ -190,12 +263,15 @@ const BookingPage: React.FC = () => {
       setCurrentMessage(response.data.message);
     } catch (err: any) {
       console.error('Error regenerating flights:', err);
+    } finally {
+      setIsRegeneratingFlights(false);
     }
   };
 
   const handleCustomizeHotels = async () => {
     if (!session) return;
     try {
+      setIsRegeneratingHotels(true);
       const response = await api.post(
         '/booking/search-hotels',
         { session_token: session.session_token, regenerate: true }
@@ -204,12 +280,15 @@ const BookingPage: React.FC = () => {
       setCurrentMessage(response.data.message);
     } catch (err: any) {
       console.error('Error regenerating hotels:', err);
+    } finally {
+      setIsRegeneratingHotels(false);
     }
   };
 
   const handleCustomizeActivities = async () => {
     if (!session) return;
     try {
+      setIsRegeneratingActivities(true);
       const response = await api.post(
         '/booking/search-activities',
         { session_token: session.session_token, regenerate: true }
@@ -218,6 +297,8 @@ const BookingPage: React.FC = () => {
       setCurrentMessage(response.data.message);
     } catch (err: any) {
       console.error('Error regenerating activities:', err);
+    } finally {
+      setIsRegeneratingActivities(false);
     }
   };
 
@@ -236,7 +317,6 @@ const BookingPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="card-elevated p-8 max-w-md">
-          <div className="text-destructive text-5xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold text-foreground mb-2">Oops!</h2>
           <p className="text-muted-foreground mb-4">{error}</p>
           <button
@@ -262,7 +342,7 @@ const BookingPage: React.FC = () => {
             ← Back
           </button>
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            ✈️ Book Your Trip
+            Book Your Trip
           </h1>
           <p className="text-muted-foreground">
             Let's find the best options for your journey
@@ -287,7 +367,6 @@ const BookingPage: React.FC = () => {
                       }`}
                     >
                       {city}
-                      {index < session.current_destination_index && ' ✓'}
                     </div>
                     {index < session.cities.length - 1 && (
                       <span className="text-muted-foreground">→</span>
@@ -313,11 +392,22 @@ const BookingPage: React.FC = () => {
 
           {/* Dynamic Content Area */}
           <div>
+            {currentMessage?.input_type === 'city_confirmation' && (
+              <CityConfirmation
+                detectedCities={currentMessage.detected_cities || []}
+                onConfirm={(cities) => {
+                  handleSendMessage(JSON.stringify({ cities }));
+                }}
+              />
+            )}
+
             {currentMessage?.input_type === 'flight_cards' && (
               <FlightChoiceCards
                 flights={currentMessage.options || []}
                 onSelect={handleSelectFlight}
                 onCustomize={handleCustomizeFlights}
+                isLoading={isRegeneratingFlights}
+                segmentInfo={currentMessage.segment_info}
               />
             )}
 
@@ -326,6 +416,7 @@ const BookingPage: React.FC = () => {
                 hotels={currentMessage.options || []}
                 onSelect={handleSelectHotel}
                 onCustomize={handleCustomizeHotels}
+                isLoading={isRegeneratingHotels}
               />
             )}
 
@@ -335,6 +426,7 @@ const BookingPage: React.FC = () => {
                 onSelect={handleSelectActivities}
                 multiSelect={currentMessage.multi_select || false}
                 onCustomize={handleCustomizeActivities}
+                isLoading={isRegeneratingActivities}
               />
             )}
 
