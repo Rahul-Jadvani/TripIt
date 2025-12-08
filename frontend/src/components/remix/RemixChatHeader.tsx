@@ -1,11 +1,12 @@
 import { FC } from 'react';
-import { X, Save, Sparkles, Menu, PanelRightClose, PanelRight } from 'lucide-react';
+import { X, Save, Sparkles, Menu, PanelRightClose, PanelRight, Plane } from 'lucide-react';
 import { RemixChatSession } from '@/hooks/useRemixChat';
 
 interface RemixChatHeaderProps {
   session: RemixChatSession | null;
   onClose: () => void;
   onFinalize: () => void;
+  onBookTrip?: () => void;
   onToggleSidebar?: () => void;
   onTogglePreview?: () => void;
   isLoading?: boolean;
@@ -15,6 +16,7 @@ export const RemixChatHeader: FC<RemixChatHeaderProps> = ({
   session,
   onClose,
   onFinalize,
+  onBookTrip,
   onToggleSidebar,
   onTogglePreview,
   isLoading
@@ -53,6 +55,17 @@ export const RemixChatHeader: FC<RemixChatHeaderProps> = ({
             title="Toggle Preview"
           >
             <PanelRight className="w-5 h-5" />
+          </button>
+        )}
+
+        {session && onBookTrip && (
+          <button
+            onClick={onBookTrip}
+            disabled={isLoading || !session.current_draft_id}
+            className="btn-primary bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white flex items-center gap-2 disabled:opacity-50 shadow-lg"
+          >
+            <Plane className="w-4 h-4" />
+            Bring to Life
           </button>
         )}
 

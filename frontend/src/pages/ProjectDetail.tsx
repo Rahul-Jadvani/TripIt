@@ -993,6 +993,17 @@ export default function ProjectDetail() {
                     contentType={project.destination ? "itinerary" : "project"}
                   />
                 )}
+                {/* Book This Trip Button - Available to all users */}
+                {project.destination && (
+                  <Link
+                    to={`/booking/${project.id}`}
+                    className="btn-primary bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white h-10 px-4 text-sm flex items-center gap-1.5 font-semibold shadow-lg"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Make It Happen
+                  </Link>
+                )}
+
                 {user?.id === (project.authorId || project.user_id) && (
                   <>
                     <Link to={`/project/${project.id}/edit`} className="btn-primary h-10 px-4 text-sm flex items-center gap-1.5">

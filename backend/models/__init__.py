@@ -46,6 +46,7 @@ from .guide_review import GuideReview
 from .women_safety_resource import WomenSafetyResource
 from .remix_chat_session import RemixChatSession
 from .remix_chat_message import RemixChatMessage
+from .booking_session import BookingSession
 
 __all__ = [
     # Legacy Zer0 Models
@@ -100,5 +101,7 @@ __all__ = [
     'travel_group_itineraries',
     # Remix Chat Models
     'RemixChatSession',
-    'RemixChatMessage'
+    'RemixChatMessage',
+    # Booking Models
+    'BookingSession'
 ]

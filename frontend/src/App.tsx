@@ -51,6 +51,7 @@ const CreateTravelGroupPage = lazy(() => import("./pages/CreateTravelGroupPage")
 const BlockchainIdentity = lazy(() => import("./pages/BlockchainIdentity"));
 const VerifiedPosts = lazy(() => import("./pages/VerifiedPosts"));
 const RemixPage = lazy(() => import("./pages/RemixPage"));
+const BookingPage = lazy(() => import("./pages/BookingPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -127,6 +128,9 @@ const App = () => (
 
                   {/* Remix Routes */}
                   <Route path="/remix" element={<ProtectedRoute><RemixPage /></ProtectedRoute>} />
+
+                  {/* Booking Routes */}
+                  <Route path="/booking/:itineraryId" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
 
                   {/* Blockchain Identity Routes */}
                   <Route path="/blockchain-identity" element={<ProtectedRoute><BlockchainIdentity /></ProtectedRoute>} />

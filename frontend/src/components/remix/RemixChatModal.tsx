@@ -12,6 +12,7 @@ interface RemixChatModalProps {
   onClose: () => void;
   selectedItineraryIds: string[];
   onFinalize?: (data: any) => void;
+  onBookTrip?: (itineraryId: number) => void;
   chat: any; // Chat instance from parent
 }
 
@@ -20,6 +21,7 @@ export const RemixChatModal: FC<RemixChatModalProps> = ({
   onClose,
   selectedItineraryIds,
   onFinalize,
+  onBookTrip,
   chat
 }) => {
   const [initialMessage, setInitialMessage] = useState('');
@@ -65,6 +67,21 @@ export const RemixChatModal: FC<RemixChatModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Failed to finalize:', error);
+    }
+  };
+
+  const handleBookTrip = async () => {
+    try {
+      // Save the itinerary first if not already saved
+      const data = await chat.finalizeSession();
+
+      // Navigate to booking page with the itinerary ID
+      if (data?.itinerary?.id) {
+        onBookTrip?.(data.itinerary.id);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Failed to book trip:', error);
     }
   };
 
@@ -167,6 +184,7 @@ export const RemixChatModal: FC<RemixChatModalProps> = ({
               session={chat.activeSession}
               onClose={handleCloseModal}
               onFinalize={handleFinalize}
+              onBookTrip={handleBookTrip}
               onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
               onTogglePreview={() => setPreviewOpen(!previewOpen)}
               isLoading={chat.isLoading}

@@ -56,7 +56,8 @@
       "Bash(npx hardhat node)",
       "Bash(test:*)",
       "Bash(npx tsc --noEmit)",
-      "Bash(timeout 2 python:*)"
+      "Bash(timeout 2 python:*)",
+      "Bash(del add_cities_column.py)"
     ],
     "deny": [],
     "ask": []

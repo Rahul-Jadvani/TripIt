@@ -147,6 +147,11 @@ export default function RemixPage() {
     });
   };
 
+  const handleBookTrip = (itineraryId: number) => {
+    // Navigate to booking page with the itinerary ID
+    navigate(`/booking/${itineraryId}`);
+  };
+
   return (
     <div className="min-h-screen bg-background pt-16 pb-12 flex">
       {/* Sidebar Toggle (Mobile) */}
@@ -382,6 +387,7 @@ export default function RemixPage() {
           onClose={handleCloseModal}
           selectedItineraryIds={selectedIds}
           onFinalize={handleFinalize}
+          onBookTrip={handleBookTrip}
           chat={chat}
         />
       </div>

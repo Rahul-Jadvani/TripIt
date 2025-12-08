@@ -438,6 +438,7 @@ def register_blueprints(app):
     from routes.posts import posts_bp
     from routes.remix_chat import remix_chat_bp
     from routes.route_map import route_map_bp
+    from routes.booking_chat import booking_chat_bp
 
     # PERFORMANCE: Ultra-fast optimized routes
     from routes.prefetch import prefetch_bp
@@ -482,6 +483,7 @@ def register_blueprints(app):
     app.register_blueprint(posts_bp, url_prefix='/api')
     app.register_blueprint(remix_chat_bp, url_prefix='/api/remix')
     app.register_blueprint(route_map_bp, url_prefix='/api/route-map')
+    app.register_blueprint(booking_chat_bp, url_prefix='/api/booking')
 
     # PERFORMANCE: Ultra-fast optimized endpoints
     app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')
