@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { publishProjectSchema, PublishProjectInput } from '@/lib/schemas';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { X, AlertTriangle, Loader2, Users, Info, Check, FileText, Shield, CheckCircle, Rocket, Lightbulb, Target, BookOpen, Search, Sparkles, ChevronLeft, ChevronRight, Calendar, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PublishLoader, PublishSuccess } from '@/components/PublishLoader';
 import { toast } from 'sonner';
@@ -24,7 +24,11 @@ import { communityApi } from '@/services/communityApi';
 
 export default function Publish() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, refreshUser } = useAuth();
+
+  // Get prefill data from location state (from remix chat)
+  const { prefillData, isRemix, sourceItineraries, chatSessionId } = location.state || {};
   // Multistep state
   const [currentStep, setCurrentStep] = useState<number>(1);
   const stepDefs: { index: number; label: string; anchors: string[] }[] = [
@@ -141,6 +145,54 @@ export default function Publish() {
     },
   });
   const descLength = watch('description', '').length;
+
+  // Prefill form when coming from AI Remix Chat
+  useEffect(() => {
+    if (prefillData) {
+      console.log('[Publish] Prefilling form with remix data:', prefillData);
+
+      // Reset form with all available prefill data
+      const formValues: Partial<PublishProjectInput> = {};
+
+      if (prefillData.title) formValues.title = prefillData.title;
+      if (prefillData.tagline) formValues.tagline = prefillData.tagline;
+      if (prefillData.description) formValues.description = prefillData.description;
+      if (prefillData.destination) formValues.destination = prefillData.destination;
+      if (prefillData.duration_days) formValues.duration_days = Number(prefillData.duration_days) || undefined;
+
+      // Ensure budget is a valid number
+      const budget = Number(prefillData.budget_amount);
+      if (budget && !isNaN(budget) && budget > 0) {
+        formValues.estimated_budget = budget;
+      }
+
+      if (prefillData.day_by_day_plan) formValues.hackathonName = prefillData.day_by_day_plan;
+      if (prefillData.demo_url) formValues.demoUrl = prefillData.demo_url;
+      if (prefillData.route_map_url) formValues.githubUrl = prefillData.route_map_url;
+
+      reset(formValues);
+
+      // Set activity tags (Safety & Gear)
+      if (prefillData.activity_tags && Array.isArray(prefillData.activity_tags)) {
+        setTechStack(prefillData.activity_tags);
+      }
+
+      // Set categories
+      if (prefillData.categories && Array.isArray(prefillData.categories)) {
+        setCategories(prefillData.categories);
+      }
+
+      // Set extended story fields
+      if (prefillData.trip_highlights) setProjectStory(prefillData.trip_highlights);
+      if (prefillData.trip_journey) setInspiration(prefillData.trip_journey);
+      if (prefillData.hidden_gems) setMarketComparison(prefillData.hidden_gems);
+      if (prefillData.unique_highlights) setNoveltyFactor(prefillData.unique_highlights);
+      if (prefillData.safety_tips) setSafetyTips(prefillData.safety_tips);
+
+      console.log('[Publish] Form prefilled successfully from AI Remix');
+      toast.success('Form prefilled with AI-generated itinerary!');
+    }
+  }, [prefillData, reset]);
 
   // Guarded next for per-step validation
   const handleNext = async () => {
@@ -391,9 +443,25 @@ export default function Publish() {
         payload.categories = categories;
       }
 
+      // Add AI Remix metadata if this is a remixed itinerary
+      if (isRemix) {
+        payload.is_remixed = true;
+        if (sourceItineraries && sourceItineraries.length > 0) {
+          payload.remixed_from_ids = sourceItineraries.map((s: any) => s.id);
+        }
+        if (chatSessionId) {
+          payload.remix_chat_session_id = chatSessionId;
+        }
+      }
+
       if (import.meta.env.DEV) {
         console.log('=== SUBMITTING ITINERARY ===');
         console.log('Map Link from form:', data.githubUrl);
+        console.log('Is Remix:', isRemix);
+        if (isRemix) {
+          console.log('Source Itineraries:', sourceItineraries?.map((s: any) => s.id));
+          console.log('Chat Session ID:', chatSessionId);
+        }
         console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
         console.log('========================');
       }
@@ -1312,6 +1380,65 @@ Day 3: Return journey via Kunzum Pass, visit local monastery...
                   )}
                 </div>
               </div>
+              )}
+
+              {/* AI Remix Attribution Section */}
+              {currentStep === 4 && isRemix && sourceItineraries && sourceItineraries.length > 0 && (
+                <div id="inspirationsSection" className="card-elevated p-8 bg-gradient-to-br from-primary/5 to-accent/10">
+                  <h2 className="text-2xl font-black mb-6 text-foreground border-b-4 border-primary pb-3 flex items-center gap-2">
+                    <Sparkles className="h-6 w-6" />
+                    AI Remix Attribution
+                  </h2>
+
+                  {/* Generated with TripIt Badge */}
+                  <div className="mb-6">
+                    <div className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full font-bold border-2 border-black shadow-brutal">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Generated with TripIt AI</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-3">
+                      This itinerary was created using TripIt's AI Remix feature. It combines elements from the following source itineraries:
+                    </p>
+                  </div>
+
+                  {/* Source Itineraries */}
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground mb-4">
+                      Inspired by these amazing trips:
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {sourceItineraries.map((source: any) => (
+                        <a
+                          key={source.id}
+                          href={`/itinerary/${source.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="card-interactive p-4 hover:border-primary block bg-card border-2 border-black rounded-[15px] transition-smooth hover:shadow-brutal"
+                        >
+                          <h4 className="font-bold text-foreground mb-1 text-base">{source.title}</h4>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            by {source.creator?.username || source.creator?.display_name || 'Anonymous'}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-primary">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {source.destination}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {source.duration_days} days
+                            </span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mt-6 p-3 bg-secondary/30 rounded-lg border border-border">
+                    <strong>Attribution:</strong> Credit will be automatically given to the original creators when you publish this itinerary.
+                    Your published itinerary will display the "Generated with TripIt AI" badge and link back to these source trips.
+                  </p>
+                </div>
               )}
 
               {currentStep === 4 && (

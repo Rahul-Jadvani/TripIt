@@ -91,6 +91,11 @@ class ItineraryCreateSchema(Schema):
     screenshots = fields.List(fields.Str())
     categories = fields.List(fields.Str())
 
+    # Remix attribution
+    is_remixed = fields.Bool()
+    remixed_from_ids = fields.List(fields.Str())
+    remix_chat_session_id = fields.Str()  # Reference only, not stored in itinerary
+
     class Meta:
         fields = (
             'title', 'tagline', 'description', 'destination', 'regions', 'start_date', 'end_date',
@@ -99,7 +104,7 @@ class ItineraryCreateSchema(Schema):
             'route_waypoints', 'route_map_url', 'demo_url', 'starting_point_gps', 'ending_point_gps',
             'best_season', 'women_safe_certified', 'trip_highlights', 'trip_journey',
             'day_by_day_plan', 'safety_tips', 'hidden_gems', 'unique_highlights',
-            'screenshots', 'categories'
+            'screenshots', 'categories', 'is_remixed', 'remixed_from_ids', 'remix_chat_session_id'
         )
 
 

@@ -459,6 +459,344 @@ Provide MAXIMUM 2 alerts. Focus on most critical information for this specific l
 """
         return prompt
 
+    def remix_itineraries(self, itineraries_data: List[Dict], user_prompt: str) -> Optional[Dict]:
+        """
+        Remix multiple itineraries into one new itinerary using AI
+
+        Args:
+            itineraries_data: List of itinerary dictionaries to combine
+            user_prompt: User's custom requirements and preferences
+
+        Returns:
+            Dictionary with remixed itinerary data or None if error
+        """
+        if not self.is_available():
+            print("[AIAnalyzer] OpenAI not configured, cannot remix")
+            return None
+
+        if not itineraries_data or len(itineraries_data) < 1:
+            print("[AIAnalyzer] Need at least 1 itinerary to remix")
+            return None
+
+        try:
+            # Build comprehensive remix prompt
+            prompt = self._build_remix_prompt(itineraries_data, user_prompt)
+
+            print(f"[AIAnalyzer] 🎨 Remixing {len(itineraries_data)} itineraries...")
+            print(f"[AIAnalyzer] 💬 User prompt: {user_prompt[:100]}...")
+
+            # Use gpt-4o-mini for cost efficiency (per user's request)
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert AI travel planner that creates amazing itineraries by intelligently combining multiple travel plans. You understand budgets, logistics, activities, and create cohesive day-by-day plans."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                max_tokens=4000,
+                temperature=0.7,  # Creative but coherent
+                response_format={"type": "json_object"}
+            )
+
+            # Parse AI response
+            content = response.choices[0].message.content
+            result = json.loads(content)
+
+            print(f"[AIAnalyzer] ✅ Successfully remixed: {result.get('title')}")
+            return result
+
+        except Exception as e:
+            print(f"[AIAnalyzer] ❌ Error remixing: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _build_remix_prompt(self, itineraries_data: List[Dict], user_prompt: str) -> str:
+        """Build detailed prompt for AI remix"""
+
+        # Summarize each source itinerary
+        itinerary_summaries = []
+        for i, itin in enumerate(itineraries_data, 1):
+            summary = f"""
+**Source Itinerary {i}: "{itin.get('title', 'Untitled')}"**
+- ID: {itin.get('id')}
+- Destination: {itin.get('destination', 'Unknown')}
+- Duration: {itin.get('duration_days', 'N/A')} days
+- Budget: {itin.get('budget_amount', 'N/A')} {itin.get('budget_currency', 'INR')}
+- Difficulty: {itin.get('difficulty_level', 'moderate')}
+- Activities: {', '.join(itin.get('activity_tags', []))}
+- Best Season: {itin.get('best_season', 'Any time')}
+- Description: {itin.get('description', 'No description')[:200]}...
+"""
+            # Add daily plans summary
+            daily_plans = itin.get('daily_plans', [])
+            if daily_plans:
+                summary += f"\n  Daily Plans ({len(daily_plans)} days):\n"
+                for day in daily_plans[:3]:  # First 3 days as sample
+                    summary += f"  - Day {day.get('day_number')}: {day.get('title')} - {day.get('description', '')[:80]}...\n"
+
+            itinerary_summaries.append(summary)
+
+        prompt = f"""
+You are remixing {len(itineraries_data)} travel itineraries into ONE amazing new itinerary.
+
+**SOURCE ITINERARIES:**
+{''.join(itinerary_summaries)}
+
+**USER'S REQUIREMENTS:**
+{user_prompt}
+
+**YOUR TASK:**
+1. Analyze all source itineraries and extract the best elements
+2. Apply user's requirements (duration, budget, activities, etc.)
+3. Combine destinations in a logical geographic flow
+4. Create detailed day-by-day plans
+5. Generate a cohesive, realistic itinerary
+
+**IMPORTANT RULES:**
+- If user specifies duration, use that exactly
+- If user specifies budget, stay within it (add 10-15% buffer)
+- Combine similar activities to avoid repetition
+- Ensure daily plans are realistic (travel time, rest, etc.)
+- Create a compelling title that captures the essence
+- Write engaging description (200-400 words)
+- Include detailed daily plans with activities and costs
+
+**OUTPUT FORMAT (STRICT JSON):**
+{{
+  "title": "Exciting title for remixed itinerary",
+  "destination": "Main destination or route",
+  "description": "200-400 word engaging description",
+  "duration_days": <number>,
+  "budget_amount": <total budget number>,
+  "budget_currency": "INR" or "USD",
+  "difficulty_level": "easy" | "moderate" | "challenging" | "extreme",
+  "activity_tags": ["tag1", "tag2", "tag3"],
+  "best_season": "Best time to do this trip",
+  "accommodation_type": "hotels" | "hostels" | "camping" | "homestays" | "mixed",
+  "transport_modes": ["flight", "car", "train", "trekking"],
+  "daily_plans": [
+    {{
+      "day_number": 1,
+      "title": "Day 1 title",
+      "description": "Detailed 150-300 word plan for the day",
+      "activities": ["activity1", "activity2"],
+      "start_point": "Starting location",
+      "end_point": "Ending location",
+      "distance_km": <distance in km>,
+      "estimated_duration_hours": <hours>
+    }}
+  ],
+  "packing_list": ["item1", "item2"],
+  "important_notes": ["note1", "note2"],
+  "remixed_from_ids": [{', '.join([f'"{itin.get("id")}"' for itin in itineraries_data if itin.get("id")])}]
+}}
+
+Return ONLY valid JSON. Make this itinerary exciting and practical!
+"""
+        return prompt
+
+    def start_remix_chat(self, itineraries_data: List[Dict], initial_message: str) -> Optional[Dict]:
+        """
+        Start a chat-based remix conversation
+
+        Args:
+            itineraries_data: List of source itinerary dictionaries
+            initial_message: User's initial message/requirements
+
+        Returns:
+            Dict with AI greeting message and initial draft
+        """
+        if not self.is_available():
+            print("[AIAnalyzer] OpenAI not configured")
+            return None
+
+        try:
+            # Build system prompt with itinerary context
+            system_prompt = self._build_chat_system_prompt(itineraries_data)
+
+            print(f"[AIAnalyzer] 🎨 Starting remix chat with {len(itineraries_data)} itineraries...")
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": initial_message}
+                ],
+                max_tokens=3000,
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+
+            content = response.choices[0].message.content
+            result = json.loads(content)
+
+            print(f"[AIAnalyzer] ✅ Chat started successfully")
+            return result
+
+        except Exception as e:
+            print(f"[AIAnalyzer] ❌ Error starting chat: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def continue_remix_chat(self, itineraries_data: List[Dict], chat_history: List[Dict],
+                           user_message: str, current_draft: Optional[Dict]) -> Optional[Dict]:
+        """
+        Continue an existing remix chat conversation
+
+        Args:
+            itineraries_data: Source itineraries
+            chat_history: Previous conversation messages
+            user_message: User's latest message
+            current_draft: Current itinerary draft state
+
+        Returns:
+            Dict with AI response and updated draft
+        """
+        if not self.is_available():
+            return None
+
+        try:
+            # Build system prompt
+            system_prompt = self._build_chat_system_prompt(itineraries_data, current_draft)
+
+            # Build messages array
+            messages = [{"role": "system", "content": system_prompt}]
+
+            # Add chat history (last 10 messages for context)
+            for msg in chat_history[-10:]:
+                messages.append({
+                    "role": msg['role'],
+                    "content": msg['content']
+                })
+
+            # Add new user message
+            messages.append({"role": "user", "content": user_message})
+
+            print(f"[AIAnalyzer] 💬 Continuing chat (history: {len(chat_history)} msgs)...")
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=3000,
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+
+            content = response.choices[0].message.content
+            result = json.loads(content)
+
+            print(f"[AIAnalyzer] ✅ Chat response generated")
+            return result
+
+        except Exception as e:
+            print(f"[AIAnalyzer] ❌ Error continuing chat: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _build_chat_system_prompt(self, itineraries_data: List[Dict],
+                                  current_draft: Optional[Dict] = None) -> str:
+        """Build system prompt for chat-based remix"""
+
+        # Summarize source itineraries
+        itinerary_summaries = []
+        for i, itin in enumerate(itineraries_data, 1):
+            summary = f"""
+**Source Itinerary {i}: "{itin.get('title', 'Untitled')}"**
+- Destination: {itin.get('destination', 'Unknown')}
+- Duration: {itin.get('duration_days', 'N/A')} days
+- Budget: {itin.get('budget_amount', 'N/A')} {itin.get('budget_currency', 'USD')}
+- Activities: {', '.join(itin.get('activity_tags', [])[:5])}
+- Highlights: {itin.get('trip_highlights', 'N/A')[:200]}
+"""
+            # Add sample daily plans
+            daily_plans = itin.get('daily_plans', [])
+            if daily_plans:
+                summary += f"  First 2 days:\n"
+                for day in daily_plans[:2]:
+                    summary += f"  - Day {day.get('day_number')}: {day.get('title', '')}\n"
+
+            itinerary_summaries.append(summary)
+
+        # Current draft context
+        draft_context = ""
+        if current_draft:
+            draft_context = f"""
+
+**CURRENT DRAFT STATE:**
+- Title: {current_draft.get('title', 'Untitled')}
+- Destination: {current_draft.get('destination', 'TBD')}
+- Duration: {current_draft.get('duration_days', 'TBD')} days
+- Budget: {current_draft.get('budget_amount', 'TBD')} {current_draft.get('budget_currency', 'USD')}
+- Activities: {', '.join(current_draft.get('activity_tags', []))}
+- Description: {current_draft.get('description', '')[:200]}
+
+The user may want to modify this draft. Update the relevant fields based on their feedback.
+"""
+
+        prompt = f"""You are TripIt AI, an expert travel planning assistant helping users create perfect itineraries through conversation.
+
+**SOURCE ITINERARIES YOU'RE WORKING WITH:**
+{''.join(itinerary_summaries)}
+{draft_context}
+
+**YOUR ROLE:**
+- Help users iteratively refine their dream trip
+- Be conversational, friendly, and enthusiastic
+- Make helpful suggestions based on the source itineraries
+- Ask clarifying questions when needed
+- Update the itinerary draft with each message
+- Be practical about budgets, durations, and logistics
+
+**RESPONSE FORMAT (STRICT JSON):**
+{{
+  "message": "Your conversational response to the user (2-4 sentences, friendly tone)",
+  "draft_itinerary": {{
+    "title": "Trip title",
+    "destination": "Main destination",
+    "description": "300-500 word engaging description covering what makes this trip special, what travelers will experience, and who it's perfect for",
+    "duration_days": <number>,
+    "budget_amount": <number - MUST be a valid number, never null or 0>,
+    "budget_currency": "USD" | "INR",
+    "difficulty_level": "easy" | "moderate" | "challenging" | "extreme",
+    "activity_tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+    "categories": ["Adventure", "Cultural", "Beach", "Family"],
+    "best_season": "Best time to visit (2-3 sentences with reasons)",
+    "trip_highlights": "200-300 word detailed paragraph about key highlights, unique experiences, must-see attractions, and what makes this trip unforgettable",
+    "trip_journey": "200-300 word detailed narrative about the journey flow, how destinations connect, travel modes, and the overall experience arc",
+    "hidden_gems": "150-250 word paragraph about lesser-known spots, local experiences, and off-the-beaten-path recommendations",
+    "unique_highlights": "150-250 word paragraph about what makes this trip unique compared to typical tours - special access, unusual routes, authentic experiences",
+    "day_by_day_plan": "Comprehensive day-by-day breakdown. Format: **Day 1 (Location Name):** Description with 100-150 words describing activities, timings, meals, and travel. Start each day with 'Day X (City/Location):' for route mapping.",
+    "safety_tips": "150-200 word detailed safety information including health precautions, local customs, emergency contacts, and travel advisories",
+    "packing_list": ["item1", "item2", "item3", "item4", "item5"],
+    "important_notes": ["note1", "note2", "note3"]
+  }}
+}}
+
+**CRITICAL REQUIREMENTS:**
+- ALWAYS set budget_amount to a valid number (never 0, null, or NaN)
+- Calculate realistic budget based on duration and activities
+- Make ALL text fields detailed and informative (200-500 words)
+- Include 5-7 activity tags covering all trip aspects
+- Write engaging, detailed descriptions that help travelers visualize the experience
+- Keep your conversational message brief (2-4 sentences)
+- Update ALL fields in draft_itinerary with each response
+- If user asks for changes, apply them to the draft
+- Be realistic about costs and logistics
+- Always return valid JSON
+
+Return ONLY valid JSON. No additional text outside the JSON structure.
+"""
+
+        return prompt
+
     def test_connection(self) -> Dict:
         """Test AI service connection"""
         if not self.is_available():

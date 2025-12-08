@@ -141,6 +141,10 @@ export function transformProject(backendProject: any) {
     score_explanations: backendProject.score_explanations || {},
     onchain_score: backendProject.onchain_score || 0,
     onchainScore: backendProject.onchain_score || 0,
+    // AI Remix fields
+    is_remixed: backendProject.is_remixed || false,
+    remixed_from_ids: backendProject.remixed_from_ids || [],
+    remix_count: backendProject.remix_count || 0,
     // AI Scoring fields
     scoring_status: backendProject.scoring_status,
     scoringStatus: backendProject.scoring_status,

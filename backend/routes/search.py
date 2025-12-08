@@ -39,6 +39,7 @@ def search(user_id):
         search_pattern = f'%{query}%'
         itinerary_query = Itinerary.query.options(joinedload(Itinerary.itinerary_creator)).filter(
             Itinerary.is_deleted == False,
+            Itinerary.is_published == True,
             or_(
                 Itinerary.title.ilike(search_pattern),
                 Itinerary.description.ilike(search_pattern),

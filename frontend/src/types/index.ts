@@ -25,15 +25,6 @@ export interface User {
   sbt_blockchain_hash?: string; // Transaction hash of SBT minting
   reputation_score?: number; // 0-100 reputation score
   trip_token_balance?: number; // TRIP token balance
-  // Blockchain Identity Fields (TripIt SBT)
-  profile_hash?: string; // SHA-256 hash of profile for SBT
-  wallet_bound_at?: string; // When wallet was bound (ISO date)
-  sbt_id?: string; // Soul-Bound Token ID
-  sbt_status?: string; // not_issued, issued, verified, suspended, revoked
-  sbt_verified_date?: string; // When SBT was verified (ISO date)
-  sbt_blockchain_hash?: string; // Transaction hash of SBT minting
-  reputation_score?: number; // 0-100 reputation score
-  trip_token_balance?: number; // TRIP token balance
   hasOxcert?: boolean;
   has_oxcert?: boolean; // Backend field
   oxcert_tx_hash?: string;

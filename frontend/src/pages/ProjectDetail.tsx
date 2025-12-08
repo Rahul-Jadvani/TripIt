@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, FileText, Edit, Trophy, Link2, Layers, Info, X, MapPin, DollarSign, Sun, Map, ChevronDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Github, ExternalLink, Award, Calendar, Code, Loader2, AlertCircle, Shield, Image as ImageIcon, Users, Share2, Bookmark, Eye, Tag, Lightbulb, TrendingUp, FileText, Edit, Trophy, Link2, Layers, Info, X, MapPin, DollarSign, Sun, Map, ChevronDown, Navigation, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
 import { SafetyRatingWidget } from '@/components/SafetyRatingWidget';
@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatScore, getProjectScore } from '@/utils/score';
 import { useItineraryCaravans } from '@/hooks/useItineraryCaravans';
+import { RouteMapModal } from '@/components/RouteMapModal';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -26,11 +27,39 @@ export default function ProjectDetail() {
   const { data, isLoading, error } = useProjectById(id || '');
   const { data: isSaved, isLoading: checkingIfSaved } = useCheckIfSavedItinerary(id || '');
   const { data: caravans } = useItineraryCaravans(id);
+
+  // Fetch source itineraries if this is a remixed itinerary
+  const { data: sourceItineraries } = useQuery({
+    queryKey: ['sourceItineraries', data?.data?.remixed_from_ids],
+    queryFn: async () => {
+      const ids = data?.data?.remixed_from_ids || [];
+      console.log('[ProjectDetail] Fetching source itineraries for IDs:', ids);
+      if (ids.length === 0) return [];
+
+      // Fetch each source itinerary
+      const results = await Promise.all(
+        ids.map(async (sourceId: string) => {
+          try {
+            const response = await axios.get(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/itineraries/${sourceId}`
+            );
+            return response.data.data;
+          } catch {
+            return null;
+          }
+        })
+      );
+      console.log('[ProjectDetail] Fetched source itineraries:', results.filter(Boolean));
+      return results.filter(Boolean);
+    },
+    enabled: !!(data?.data?.is_remixed && data?.data?.remixed_from_ids?.length > 0)
+  });
   const saveMutation = useSaveItinerary();
   const unsaveMutation = useUnsaveItinerary();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [showProfileChecklist, setShowProfileChecklist] = useState(false);
   const [expandedScores, setExpandedScores] = useState<Record<string, boolean>>({});
+  const [showRouteMap, setShowRouteMap] = useState(false);
   const queryClient = useQueryClient();
 
   // Track which projects have been viewed to prevent duplicate API calls
@@ -223,10 +252,19 @@ export default function ProjectDetail() {
     ),
     project.day_by_day_plan && (
       <div key="dayplan" className="card-elevated p-6">
-        <h2 className="text-lg font-black mb-3 text-foreground flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-primary" />
-          Day-by-Day Itinerary
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-black text-foreground flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary" />
+            Day-by-Day Itinerary
+          </h2>
+          <button
+            onClick={() => setShowRouteMap(true)}
+            className="btn-secondary flex items-center gap-2 text-sm"
+          >
+            <Navigation className="h-4 w-4" />
+            View Route Map
+          </button>
+        </div>
         <div className="prose prose-invert max-w-none whitespace-pre-wrap text-foreground leading-relaxed text-sm">
           {project.day_by_day_plan}
         </div>
@@ -405,6 +443,73 @@ export default function ProjectDetail() {
   };
 
   // Chains card removed - layerz feature deprecated in TripIt
+
+  const renderAIAttributionSection = () => {
+    console.log('[ProjectDetail] AI Attribution check:', {
+      is_remixed: project?.is_remixed,
+      remixed_from_ids: project?.remixed_from_ids,
+      sourceItineraries: sourceItineraries
+    });
+    if (!project?.is_remixed || !sourceItineraries || sourceItineraries.length === 0) return null;
+
+    return (
+      <div className="card-elevated p-6 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-purple-500/30">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full font-bold shadow-lg">
+            <Sparkles className="w-4 h-4" />
+            <span>Generated with TripIt AI</span>
+          </div>
+        </div>
+
+        <p className="text-sm text-muted-foreground mb-4">
+          This itinerary was created using TripIt's AI Remix feature, combining elements from the following source trips:
+        </p>
+
+        <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+          <Lightbulb className="h-4 w-4 text-primary" />
+          Inspired by:
+        </h3>
+
+        <div className="grid grid-cols-1 gap-3">
+          {sourceItineraries.map((source: any) => (
+            <Link
+              key={source.id}
+              to={`/project/${source.id}`}
+              className="flex items-start gap-3 p-3 bg-card/80 rounded-lg border-2 border-border hover:border-purple-500/50 transition-colors group"
+            >
+              {source.screenshots?.[0] && (
+                <img
+                  src={source.screenshots[0]}
+                  alt={source.title}
+                  className="w-16 h-16 object-cover rounded-lg border border-border flex-shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-foreground mb-1 text-sm group-hover:text-purple-400 transition-colors truncate">
+                  {source.title}
+                </h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  by {source.creator?.username || source.author?.username || 'Anonymous'}
+                </p>
+                <div className="flex items-center gap-3 text-xs text-primary">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {source.destination}
+                  </span>
+                  {source.duration_days && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {source.duration_days} days
+                    </span>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const renderCaravansCard = () => {
     if (!caravans || caravans.length === 0) return null;
@@ -798,9 +903,15 @@ export default function ProjectDetail() {
             {/* Title & Score Row */}
             <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   {project.isFeatured && (
                     <span className="badge-primary text-xs px-2 py-1">⭐ Featured</span>
+                  )}
+                  {project.is_remixed && (
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-400 border border-purple-500/30 font-medium">
+                      <Sparkles className="h-3 w-3" />
+                      Generated with TripIt AI
+                    </span>
                   )}
                 </div>
                 <h1 className="text-3xl lg:text-4xl font-black text-foreground mb-2 break-words">
@@ -882,6 +993,17 @@ export default function ProjectDetail() {
                     contentType={project.destination ? "itinerary" : "project"}
                   />
                 )}
+                {/* Book This Trip Button - Available to all users */}
+                {project.destination && (
+                  <Link
+                    to={`/booking/${project.id}`}
+                    className="btn-primary bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white h-10 px-4 text-sm flex items-center gap-1.5 font-semibold shadow-lg"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Make It Happen
+                  </Link>
+                )}
+
                 {user?.id === (project.authorId || project.user_id) && (
                   <>
                     <Link to={`/project/${project.id}/edit`} className="btn-primary h-10 px-4 text-sm flex items-center gap-1.5">
@@ -967,6 +1089,7 @@ export default function ProjectDetail() {
 
             <div className="space-y-6">
               {renderCreatorCard()}
+              {renderAIAttributionSection()}
               {renderScoringBreakdownCard()}
               {renderTeamCard()}
               {renderCategoriesCard()}
@@ -985,6 +1108,15 @@ export default function ProjectDetail() {
         url={`${window.location.origin}/project/${id}`}
         title={project.title}
         description={project.tagline}
+      />
+
+      {/* Route Map Modal */}
+      <RouteMapModal
+        isOpen={showRouteMap}
+        onClose={() => setShowRouteMap(false)}
+        dayByDayPlan={project.day_by_day_plan || ''}
+        destination={project.destination}
+        title={`${project.title} - Route Map`}
       />
     </div>
   );
