@@ -1,9 +1,12 @@
 """
 Snap Model - Instagram Stories-like feature for TripIt
 """
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from extensions import db
+
+# IST timezone (UTC+5:30)
+IST = timezone(timedelta(hours=5, minutes=30))
 
 
 class Snap(db.Model):
@@ -38,16 +41,26 @@ class Snap(db.Model):
     is_published = db.Column(db.Boolean, default=True, index=True)
     is_deleted = db.Column(db.Boolean, default=False, index=True)
 
-    # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Timestamps - explicitly use UTC
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     expires_at = db.Column(db.DateTime, nullable=True)  # Optional: For stories that expire after 24hrs
 
     # Relationships
     creator = db.relationship('Traveler', backref='snaps', lazy=True)
 
     def to_dict(self, include_creator=False):
-        """Convert to dictionary"""
+        """Convert to dictionary with proper UTC timestamps"""
+        # Convert naive UTC datetime to ISO string with 'Z' suffix (indicating UTC)
+        def to_utc_iso(dt):
+            if not dt:
+                return None
+            # If datetime is naive (no timezone), treat it as UTC and add 'Z' suffix
+            if dt.tzinfo is None:
+                return dt.isoformat() + 'Z'
+            # If it has timezone info, convert to UTC and add 'Z'
+            return dt.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+
         data = {
             'id': self.id,
             'user_id': self.user_id,
@@ -65,9 +78,9 @@ class Snap(db.Model):
             'like_count': self.like_count,
             'comment_count': self.comment_count,
             'is_published': self.is_published,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'created_at': to_utc_iso(self.created_at),
+            'updated_at': to_utc_iso(self.updated_at),
+            'expires_at': to_utc_iso(self.expires_at),
         }
 
         # Include creator info if requested

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, X, Send, Loader2, MapPin, RotateCcw } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { toast } from 'sonner';
 
@@ -17,6 +18,7 @@ const SnapCamera: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -174,6 +176,9 @@ const SnapCamera: React.FC = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
+
+      // Invalidate snaps cache to fetch fresh data with correct timestamps
+      queryClient.invalidateQueries({ queryKey: ['snaps'] });
 
       toast.success('Snap published!');
       navigate('/feed');

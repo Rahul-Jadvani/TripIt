@@ -8,7 +8,7 @@ function transformProject(backendProject: any) {
     rank: backendProject.rank,
     title: backendProject.title,
     tagline: backendProject.tagline || '',
-    score: backendProject.upvotes || 0,
+    score: Math.round(backendProject.proof_score || 0), // Use proof_score instead of upvotes
     author: backendProject.creator ? {
       id: backendProject.creator.id,
       username: backendProject.creator.username,
@@ -91,7 +91,7 @@ export function useFeaturedLeaderboard(limit: number = 30) {
         rank: idx + 1,
         title: p.title,
         tagline: p.tagline || '',
-        score: p.upvotes ?? p.score ?? 0,
+        score: Math.round(p.proof_score ?? p.score ?? 0), // Use proof_score
         author: p.creator
           ? { id: p.creator.id, username: p.creator.username, avatar: p.creator.avatar_url }
           : { id: p.user_id, username: 'Unknown', avatar: '' },

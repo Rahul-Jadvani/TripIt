@@ -134,7 +134,7 @@ export default function Leaderboard() {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <div className="text-3xl font-black text-primary">{item.score}</div>
-                          <div className="text-xs font-bold text-muted-foreground">votes</div>
+                          <div className="text-xs font-bold text-muted-foreground">proof score</div>
                         </div>
                       </div>
                     </div>
