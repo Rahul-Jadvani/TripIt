@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(for dir in values-*/)",
+      "Bash(do if [ -f \"$dirstrings.xml\" ])",
+      "Bash(then sed -i 's/TripIt-Chat/Tripit-SOS-System/g' \"$dirstrings.xml\")",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(for dir in values*/)",
+      "Bash(then sed -i 's/TripIt-SOS-System/TripIt-SOS/g' \"$dirstrings.xml\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

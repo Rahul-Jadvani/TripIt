@@ -1,0 +1,3 @@
+"""
+TripIt API test suite
+"""

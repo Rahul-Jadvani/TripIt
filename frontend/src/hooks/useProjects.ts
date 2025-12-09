@@ -1,0 +1,410 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { projectsService, itinerariesService } from '@/services/api';
+import { toast } from 'sonner';
+
+// Transform backend project data to frontend format
+export function transformProject(backendProject: any) {
+  // Debug logging for score fields
+  if (backendProject.title?.includes('TESTTEST')) {
+    console.log('[transformProject] Raw backend data:', {
+      proof_score: backendProject.proof_score,
+      identity_score: backendProject.identity_score,
+      travel_history_score: backendProject.travel_history_score,
+      community_score: backendProject.community_score,
+      safety_score_component: backendProject.safety_score_component,
+      quality_score: backendProject.quality_score,
+    });
+  }
+
+  // Map itinerary fields to project fields for compatibility
+  const techStack = backendProject.tech_stack || backendProject.activity_tags || [];
+  const teamMembers = backendProject.team_members || backendProject.travel_companions || [];
+  const demoUrl = backendProject.demo_url || backendProject.route_map_url || '';
+  const githubUrl = backendProject.github_url || backendProject.route_map_url || '';
+  const cachedUserVote = (() => {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem(`userVote:${backendProject.id}`);
+    return raw === 'up' || raw === 'down' ? raw : null;
+  })();
+
+  const transformed = {
+    id: backendProject.id,
+    title: backendProject.title,
+    tagline: backendProject.tagline || backendProject.destination || '',
+    description: backendProject.description,
+    projectStory: backendProject.project_story,
+    project_story: backendProject.project_story,
+    inspiration: backendProject.inspiration,
+    pitchDeckUrl: backendProject.pitch_deck_url,
+    pitch_deck_url: backendProject.pitch_deck_url,
+    marketComparison: backendProject.market_comparison,
+    market_comparison: backendProject.market_comparison,
+    noveltyFactor: backendProject.novelty_factor,
+    novelty_factor: backendProject.novelty_factor,
+    // Extended itinerary fields (new trip detail fields)
+    tripHighlights: backendProject.trip_highlights,
+    trip_highlights: backendProject.trip_highlights,
+    tripJourney: backendProject.trip_journey,
+    trip_journey: backendProject.trip_journey,
+    dayByDayPlan: backendProject.day_by_day_plan,
+    day_by_day_plan: backendProject.day_by_day_plan,
+    safetyIntelligence: backendProject.safety_intelligence,
+    safety_intelligence: backendProject.safety_intelligence,
+    hiddenGems: backendProject.hidden_gems,
+    hidden_gems: backendProject.hidden_gems,
+    uniqueHighlights: backendProject.unique_highlights,
+    unique_highlights: backendProject.unique_highlights,
+    safetyTips: backendProject.safety_tips,
+    safety_tips: backendProject.safety_tips,
+    // Itinerary-specific fields
+    destination: backendProject.destination,
+    duration_days: backendProject.duration_days,
+    budget_amount: backendProject.budget_amount,
+    budget_currency: backendProject.budget_currency,
+    route_map_url: backendProject.route_map_url,
+    demo_url: backendProject.demo_url,
+    best_season: backendProject.best_season,
+    travel_style: backendProject.travel_style,
+    categories: (backendProject.categories || []).map((c: any) => {
+      if (!c) return '';
+      if (typeof c === 'string') return c;
+      if (typeof c === 'object') return c.name || c.title || c.label || JSON.stringify(c);
+      return String(c);
+    }),
+    demoUrl,
+    githubUrl,
+    hackathonName: backendProject.hackathon_name || '',
+    hackathonDate: backendProject.hackathon_date || '',
+    hackathons: backendProject.hackathons || [],
+    techStack: (techStack || []).map((t: any) => {
+      if (!t) return '';
+      if (typeof t === 'string') return t;
+      if (typeof t === 'object') return t.name || t.label || JSON.stringify(t);
+      return String(t);
+    }),
+    teamMembers: teamMembers,
+    team_members: teamMembers,
+    screenshots: backendProject.screenshots || [],
+    authorId: backendProject.user_id,
+    author: backendProject.creator ? {
+      id: backendProject.creator.id,
+      username: backendProject.creator.username,
+      email: backendProject.creator.email || '',
+      displayName: backendProject.creator.display_name,
+      avatar: backendProject.creator.avatar_url,
+      bio: backendProject.creator.bio,
+      isVerified: backendProject.creator.email_verified || false,
+      email_verified: backendProject.creator.email_verified || false,
+      isAdmin: backendProject.creator.is_admin || false,
+      walletAddress: backendProject.creator.wallet_address,
+      wallet_address: backendProject.creator.wallet_address,
+      full_wallet_address: backendProject.creator.full_wallet_address,
+      github_connected: backendProject.creator.github_connected || false,
+      github_username: backendProject.creator.github_username || '',
+      has_oxcert: backendProject.creator.has_oxcert || false,
+      hasOxcert: backendProject.creator.has_oxcert || false,
+      oxcert_tx_hash: backendProject.creator.oxcert_tx_hash,
+      oxcert_token_id: backendProject.creator.oxcert_token_id,
+      oxcert_metadata: backendProject.creator.oxcert_metadata,
+      createdAt: backendProject.creator.created_at,
+      updatedAt: backendProject.creator.updated_at || backendProject.creator.created_at,
+    } : {
+      id: backendProject.user_id,
+      username: 'Unknown',
+      email: '',
+      isVerified: false,
+      email_verified: false,
+      isAdmin: false,
+      github_connected: false,
+      github_username: '',
+      has_oxcert: false,
+      createdAt: '',
+      updatedAt: '',
+    },
+    proofScore: {
+      total: backendProject.proof_score || 0,
+      verification: backendProject.verification_score || 0,
+      community: backendProject.community_score || 0,
+      onchain: backendProject.onchain_score || 0,
+      validation: backendProject.validation_score || 0,
+      quality: backendProject.quality_score || 0,
+    },
+    // New itinerary scoring breakdown fields
+    proof_score: backendProject.proof_score ?? 0,
+    identity_score: backendProject.identity_score ?? 0,
+    travel_history_score: backendProject.travel_history_score ?? 0,
+    community_score: backendProject.community_score ?? 0,
+    safety_score_component: backendProject.safety_score_component ?? 0,
+    quality_score: backendProject.quality_score ?? 0,
+    safety_score: backendProject.safety_score ?? 0,
+    safety_ratings_count: backendProject.safety_ratings_count ?? 0,
+    score_explanations: backendProject.score_explanations || {},
+    onchain_score: backendProject.onchain_score || 0,
+    onchainScore: backendProject.onchain_score || 0,
+    // AI Remix fields
+    is_remixed: backendProject.is_remixed || false,
+    remixed_from_ids: backendProject.remixed_from_ids || [],
+    remix_count: backendProject.remix_count || 0,
+    // AI Scoring fields
+    scoring_status: backendProject.scoring_status,
+    scoringStatus: backendProject.scoring_status,
+    score_breakdown: backendProject.score_breakdown,
+    scoreBreakdown: backendProject.score_breakdown,
+    scoring_retry_count: backendProject.scoring_retry_count || 0,
+    scoringRetryCount: backendProject.scoring_retry_count || 0,
+    last_scored_at: backendProject.last_scored_at,
+    lastScoredAt: backendProject.last_scored_at,
+    scoring_error: backendProject.scoring_error,
+    scoringError: backendProject.scoring_error,
+    badges: (backendProject.badges || []).map((b: any) => {
+      if (!b) return { type: '' };
+      if (typeof b === 'string') return { type: b };
+      if (typeof b === 'object') {
+        const derivedType =
+          b.type ||
+          b.badge_type ||
+          b.badgeType ||
+          b.name ||
+          b.label ||
+          b.value ||
+          b.code ||
+          '';
+        return { ...b, type: derivedType };
+      }
+      return { type: String(b) };
+    }),
+    // Voting fields - fall back to safety/helpful counts when legacy vote fields are missing
+    upvotes: backendProject.upvotes ?? backendProject.safety_ratings_count ?? backendProject.helpful_votes ?? 0,
+    downvotes: backendProject.downvotes ?? 0,
+    voteCount:
+      (backendProject.upvotes ?? backendProject.safety_ratings_count ?? backendProject.helpful_votes ?? 0) -
+      (backendProject.downvotes ?? 0),
+    commentCount: backendProject.comment_count || 0,
+    viewCount: backendProject.view_count || 0,
+    userVote: backendProject.user_vote ?? cachedUserVote ?? null,
+    user_vote: backendProject.user_vote ?? cachedUserVote ?? null,
+    isFeatured: backendProject.is_featured || false,
+    chains: backendProject.chains || [],
+    chainCount: backendProject.chain_count || 0,
+    // Investor matching fields
+    matchScore: backendProject.match_score || null,
+    match_score: backendProject.match_score || null,
+    matchBreakdown: backendProject.match_breakdown || null,
+    match_breakdown: backendProject.match_breakdown || null,
+    createdAt: backendProject.created_at,
+    updatedAt: backendProject.updated_at,
+  };
+
+  // Debug logging for transformed data
+  if (backendProject.title?.includes('TESTTEST')) {
+    console.log('[transformProject] Transformed data:', {
+      proof_score: transformed.proof_score,
+      identity_score: transformed.identity_score,
+      travel_history_score: transformed.travel_history_score,
+      community_score: transformed.community_score,
+      safety_score_component: transformed.safety_score_component,
+      quality_score: transformed.quality_score,
+    });
+  }
+
+  return transformed;
+}
+
+export function useProjects(sort: string = 'hot', page: number = 1, includeDetailed: boolean = false) {
+  return useQuery({
+    queryKey: ['projects', sort, page, includeDetailed],
+    queryFn: async () => {
+      const response = await projectsService.getAll(sort, page, includeDetailed);
+
+      // Transform the projects data
+      return {
+        ...response.data,
+        data: response.data.data?.map(transformProject) || [],
+      };
+    },
+    // Smart caching: Balance freshness with performance
+    staleTime: 1000 * 60 * 10, // 10 min - backend Redis cache is 1 hour, this is safe
+    gcTime: 1000 * 60 * 30,    // 30 min - keeps in memory for instant navigation
+
+    // Efficient refetch strategy - rely on backend cache + materialized views
+    refetchInterval: false,         // NO polling - backend Celery refreshes cache
+    refetchOnWindowFocus: false,    // Don't refetch on tab switch - backend cache handles freshness
+    refetchOnReconnect: false,      // Don't refetch on reconnect - data is cached
+    refetchOnMount: false,          // Don't refetch on mount - use cached data
+
+    // Keep old data visible during background refetch (NO loading spinners!)
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useProjectById(id: string) {
+  return useQuery({
+    queryKey: ['project', id],
+    queryFn: async () => {
+      // Use itineraries API instead of projects
+      const response = await itinerariesService.getById(id);
+
+      console.log('[useProjectById] Raw API response:', response.data);
+      console.log('[useProjectById] Raw data:', response.data.data);
+
+      // Transform the single project data
+      const transformed = response.data.data ? transformProject(response.data.data) : null;
+      console.log('[useProjectById] Transformed data:', transformed);
+
+      return {
+        ...response.data,
+        data: transformed,
+      };
+    },
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5, // Keep fresh for 5 minutes
+    gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
+
+    // Only refetch on mount if data is stale
+    refetchOnMount: true,
+    // Conditional polling for AI scoring only
+    refetchInterval: (query) => {
+      const project = query.state.data?.data;
+      const scoringStatus = project?.scoring_status || project?.scoringStatus;
+
+      // Fast polling (5s) when AI is analyzing the project
+      if (scoringStatus === 'pending' || scoringStatus === 'processing' || scoringStatus === 'retrying') {
+        return 5000; // 5 seconds
+      }
+
+      // No polling otherwise (rely on optimistic updates for votes)
+      return false;
+    },
+    refetchOnWindowFocus: 'stale',
+    refetchOnReconnect: 'stale',
+  });
+}
+
+export function useUserProjects(userId: string) {
+  return useQuery({
+    queryKey: ['user-projects', userId],
+    queryFn: async () => {
+      const response = await projectsService.getByUser(userId);
+
+      // Transform the projects data
+      return {
+        ...response.data,
+        data: response.data.data?.map(transformProject) || [],
+      };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
+
+    // Efficient refetch for user projects - polling for frequent updates
+    refetchInterval: 1000 * 60 * 3, // Poll every 3 minutes (reduced from 2)
+    refetchOnWindowFocus: 'stale',
+    refetchOnReconnect: 'stale',
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useUserTaggedProjects(userId: string) {
+  return useQuery({
+    queryKey: ['user-tagged-projects', userId],
+    queryFn: async () => {
+      const response = await projectsService.getTaggedProjects(userId);
+
+      // Transform the projects data
+      return {
+        ...response.data,
+        data: response.data.data?.map(transformProject) || [],
+      };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes
+
+    // Efficient refetch for tagged projects - polling for frequent updates
+    refetchInterval: 1000 * 60 * 3, // Poll every 3 minutes (reduced from 2)
+    refetchOnWindowFocus: 'stale',
+    refetchOnReconnect: 'stale',
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: any) => {
+      console.log('Creating project with data:', data);
+      return projectsService.create(data);
+    },
+    onSuccess: (response) => {
+      console.log('Project created successfully:', response);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['user-projects'] });
+      toast.success('Project published successfully!');
+    },
+    onError: (error: any) => {
+      console.error('Project creation error:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to publish project';
+      toast.error(errorMessage);
+    },
+  });
+}
+
+export function useUpdateProject(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: any) => projectsService.update(projectId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Project updated successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to update project');
+    },
+  });
+}
+
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => projectsService.delete(projectId),
+    onSuccess: (_data, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['user-projects'] });
+      toast.success('Project deleted successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to delete project');
+    },
+  });
+}
+
+export function useRescoreProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => {
+      return projectsService.rescoreProject(projectId);
+    },
+    onSuccess: (_data, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('AI scoring has been queued. Your project will be re-analyzed in ~30-60 seconds.');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to rescore project';
+      toast.error(errorMessage);
+    },
+  });
+}
+
+// Aliases for terminology migration (Zer0 → TripIt)
+export const useItineraries = useProjects;
+export const useUserItineraries = useUserProjects;
+export const useDeleteItinerary = useDeleteProject;

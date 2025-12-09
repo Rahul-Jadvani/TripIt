@@ -1,0 +1,75 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(python -c:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nPhase 7: Comprehensive API Testing Infrastructure\n\nCreated complete test suite with 500+ test cases covering:\n- Itineraries (CRUD, filtering, ratings, views)\n- Travel Groups (membership, filtering, itineraries)\n- Safety Ratings (verification, community features)\n- Women''s Safety (guides, bookings, resources, settings)\n\nNew files:\n- tests/conftest.py: Flask test app + fixtures (340 lines)\n- tests/test_itineraries.py: 45+ itinerary endpoint tests\n- tests/test_travel_groups.py: 40+ travel group tests\n- tests/test_safety_ratings.py: 45+ safety rating tests\n- tests/test_women_safety.py: 55+ women''s safety tests\n- tests/__init__.py: Test package marker\n- pytest.ini: Pytest configuration\n- TESTING_REPORT.md: Comprehensive testing documentation\n\nUpdated:\n- config.py: Fixed TestingConfig for SQLite testing\n\nInfrastructure includes:\n- JWT authentication helpers\n- Database fixtures with auto-cleanup\n- Sample data generators\n- 8+ test fixtures for all major models\n- Try/except graceful handling of optional dependencies\n\nNext: Phase 8 - Deployment Preparation\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(tee:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run:*)",
+      "Bash(git checkout:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(frontend/src/components/AddProjectToChainDialog.tsx )",
+      "Bash(frontend/src/components/ChainBadge.tsx )",
+      "Bash(frontend/src/components/ChainCard.tsx )",
+      "Bash(frontend/src/components/ChainCardSkeleton.tsx )",
+      "Bash(frontend/src/components/ChainFilters.tsx )",
+      "Bash(frontend/src/components/ChainForm.tsx )",
+      "Bash(frontend/src/components/ChainHeader.tsx )",
+      "Bash(frontend/src/components/ChainHeaderSkeleton.tsx )",
+      "Bash(frontend/src/components/ChainPostCard.tsx )",
+      "Bash(frontend/src/components/ChainPostList.tsx )",
+      "Bash(frontend/src/components/ChainSelector.tsx)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(pkill:*)",
+      "Bash(redis-cli:*)",
+      "Bash(ls:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout 3 echo:*)",
+      "Bash(timeout 5 bash -c \"while ! curl -s http://localhost:5000/health > /dev/null; do sleep 0.5; done; echo ''Backend ready''; curl -s http://localhost:5000/api/trending/leading-tag | python -m json.tool\")",
+      "Bash(timeout 10 bash:*)",
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq backend*\")",
+      "Bash(timeout /t:*)",
+      "Bash(taskkill:*)",
+      "Bash(for pid in 13920 20812 28300 25680)",
+      "Bash(do taskkill //F //PID $pid)",
+      "Bash(done)",
+      "Bash(for pid in dd87b2 d9b7ae cf5d80 5a0d0c 9179c4 22cd67 3434b4 58d2dd e65a0e c49824 6f7555 ca9e19 9cdae0 d870e5 d085ee 380ab4 695a82 37a4d3 b99f44 a69c34)",
+      "Bash(do pkill -f \"bash_$pid\")",
+      "Bash(timeout 5 bash:*)",
+      "Bash(del /S /Q \"C:\\Users\\JARVIS\\Desktop\\TripIt\\backend\\routes\\__pycache__\")",
+      "Bash(tasklist:*)",
+      "Bash(dir:*)",
+      "Bash(timeout 5 echo:*)",
+      "Bash(npm install:*)",
+      "Bash(timeout 3 bash:*)",
+      "Bash(npx hardhat node)",
+<<<<<<< HEAD
+<<<<<<< HEAD
+      "Bash(test:*)",
+      "Bash(timeout 120 npm run build:*)"
+=======
+      "Bash(test:*)"
+>>>>>>> ae62e76a1aba5402a4fdb0410b2cf738b9a9aaf7
+=======
+      "Bash(test:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(timeout 2 python:*)",
+      "Bash(del add_cities_column.py)",
+      "Bash(timeout 2 bash:*)"
+>>>>>>> c2dde8c94b0914aac3a23f9f74bc332e6a400d80
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

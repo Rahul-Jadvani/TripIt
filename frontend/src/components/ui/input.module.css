@@ -1,0 +1,69 @@
+.input {
+  width: 100%;
+  height: 60px;
+  padding: 12px;
+  font-size: 18px;
+  font-family: "Courier New", monospace;
+  color: #000;
+  background-color: #fff;
+  border: 4px solid #000;
+  border-radius: 0;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 8px 8px 0 #000;
+}
+
+.input::placeholder {
+  color: #888;
+}
+
+.input:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: 12px 12px 0 #000;
+}
+
+.input:focus {
+  background-color: #010101;
+  color: #fff;
+  border-color: #d6d9dd;
+}
+
+.input:focus::placeholder {
+  color: #fff;
+}
+
+.input:not(:placeholder-shown) {
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.inputContainer {
+  position: relative;
+  width: 100%;
+}
+
+/* Disable animations for file inputs */
+.input[type="file"] {
+  animation: none !important;
+}
+
+.input[type="file"]::placeholder {
+  color: transparent;
+}
+
+/* Disable animations for date inputs */
+.input[type="date"] {
+  animation: none !important;
+}
+
+/* Disable animations for hidden inputs */
+.input[type="hidden"] {
+  animation: none !important;
+}
+
+/* Disable glitch animation for disabled inputs */
+.input:disabled {
+  animation: none !important;
+  opacity: 0.6;
+  cursor: not-allowed;
+}

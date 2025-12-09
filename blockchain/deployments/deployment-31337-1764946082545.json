@@ -1,0 +1,17 @@
+{
+  "network": "localhost",
+  "chainId": "31337",
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "timestamp": "2025-12-05T14:48:02.544Z",
+  "contracts": {
+    "TravelSBT": {
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "deploymentTx": "0x66568360b566c9d87936702a81bbc18874a42c8ca2c18f9f7ef5480ebe855da1"
+    },
+    "SafetyRegistry": {
+      "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "deploymentTx": "0x15a9eed6bde0c2670d6cf2e65da48a4de717c39615a49ff8da2a58319b922702"
+    }
+  },
+  "backendSigner": "Not set"
+}

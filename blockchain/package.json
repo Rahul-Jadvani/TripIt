@@ -1,0 +1,38 @@
+{
+  "name": "tripit-blockchain",
+  "version": "1.0.0",
+  "description": "Smart contracts for TripIt blockchain identity and SBT system",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:coverage": "hardhat coverage",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network baseMainnet",
+    "verify:sepolia": "hardhat verify --network baseSepolia",
+    "verify:mainnet": "hardhat verify --network baseMainnet",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "keywords": [
+    "blockchain",
+    "hardhat",
+    "solidity",
+    "base",
+    "sbt",
+    "soulbound-token",
+    "tripit"
+  ],
+  "author": "TripIt Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@types/node": "^20.10.0",
+    "hardhat": "^2.19.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6",
+    "dotenv": "^16.3.1"
+  }
+}

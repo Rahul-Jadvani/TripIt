@@ -1,0 +1,32 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    /* ------------------------------
+       PARTIAL STRICT MODE
+       ------------------------------ */
+
+    /* Turn on general strict mode */
+    "strict": true,
+
+    /* But relax the two strict rules that cause most migration errors */
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+
+    /* Helpful but not blocking */
+    "noUnusedParameters": false,
+    "noUnusedLocals": false,
+
+    /* Usually safe to keep */
+    "skipLibCheck": true,
+    "allowJs": true
+  }
+}

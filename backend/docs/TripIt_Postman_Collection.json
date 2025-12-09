@@ -1,0 +1,832 @@
+{
+  "info": {
+    "name": "TripIt Backend API - Complete Collection",
+    "description": "Complete API collection for TripIt backend covering all 60+ travel endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "itinerary_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "rating_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "group_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Authentication",
+      "item": [
+        {
+          "name": "Register New User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"traveler@example.com\",\n  \"password\": \"TripIt2024!\",\n  \"username\": \"traveler123\",\n  \"full_name\": \"Jane Traveler\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.access_token) {",
+                  "    pm.environment.set('access_token', response.data.access_token);",
+                  "    pm.environment.set('refresh_token', response.data.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"traveler@example.com\",\n  \"password\": \"TripIt2024!\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/me"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{refresh_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/refresh"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/logout"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Itineraries",
+      "item": [
+        {
+          "name": "List Itineraries (Trending)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/itineraries?page=1&per_page=20&sort=trending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "itineraries"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "per_page", "value": "20"},
+                {"key": "sort", "value": "trending"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Itineraries (Filter by Destination)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/itineraries?destination=Tokyo&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "itineraries"],
+              "query": [
+                {"key": "destination", "value": "Tokyo"},
+                {"key": "page", "value": "1"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Itineraries (Women Safe Only)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/itineraries?women_safe=true&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "itineraries"],
+              "query": [
+                {"key": "women_safe", "value": "true"},
+                {"key": "page", "value": "1"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Itineraries (Filter by Activity)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/itineraries?activity=hiking&activity=nature",
+              "host": ["{{base_url}}"],
+              "path": ["api", "itineraries"],
+              "query": [
+                {"key": "activity", "value": "hiking"},
+                {"key": "activity", "value": "nature"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Itinerary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/itineraries/{{itinerary_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Itinerary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) {",
+                  "    pm.environment.set('itinerary_id', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/itineraries",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"5-Day Tokyo Adventure\",\n  \"destination\": \"Tokyo, Japan\",\n  \"duration_days\": 5,\n  \"budget_range\": \"medium\",\n  \"activity_tags\": [\"cultural\", \"food\", \"temples\"],\n  \"description\": \"Experience the best of Tokyo - from ancient temples to modern tech, incredible food, and vibrant nightlife.\",\n  \"has_gps_coordinates\": true,\n  \"difficulty\": \"easy\",\n  \"women_safe_verified\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Itinerary",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/itineraries/{{itinerary_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated 5-Day Tokyo Adventure\",\n  \"description\": \"Updated description with more details\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Itinerary",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/itineraries/{{itinerary_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Track Itinerary View",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/itineraries/{{itinerary_id}}/view"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Featured Itineraries",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/itineraries/featured"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Itinerary Leaderboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/itineraries/leaderboard?timeframe=month",
+              "host": ["{{base_url}}"],
+              "path": ["api", "itineraries", "leaderboard"],
+              "query": [
+                {"key": "timeframe", "value": "month"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rising Star Itineraries",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/itineraries/rising-stars"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Safety Ratings",
+      "item": [
+        {
+          "name": "Add Safety Rating",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) {",
+                  "    pm.environment.set('rating_id', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/safety-ratings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itinerary_id\": \"{{itinerary_id}}\",\n  \"overall_safety_score\": 4,\n  \"rating_type\": \"overall\",\n  \"detailed_feedback\": \"Very safe destination. Felt comfortable walking around even at night.\",\n  \"accommodation_safety\": 5,\n  \"route_safety\": 4,\n  \"local_area_safety\": 4,\n  \"transportation_safety\": 5\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ratings for Itinerary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/safety-ratings/{{itinerary_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Rating",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/safety-ratings/{{rating_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Safety Rating",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/safety-ratings/{{rating_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"overall_safety_score\": 5,\n  \"detailed_feedback\": \"Updated: Extremely safe!\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Safety Rating",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/safety-ratings/{{rating_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User's Ratings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/safety-ratings/user/ratings"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Rating Helpful",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/safety-ratings/{{rating_id}}/helpful"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Rating Unhelpful",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/safety-ratings/{{rating_id}}/unhelpful"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Travel Intel",
+      "item": [
+        {
+          "name": "Get Travel Intel for Itinerary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/travel-intel?itinerary_id={{itinerary_id}}&sort=newest",
+              "host": ["{{base_url}}"],
+              "path": ["api", "travel-intel"],
+              "query": [
+                {"key": "itinerary_id", "value": "{{itinerary_id}}"},
+                {"key": "sort", "value": "newest"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Travel Intel (Tip)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/travel-intel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itinerary_id\": \"{{itinerary_id}}\",\n  \"intel_type\": \"tip\",\n  \"content\": \"Best time to visit is spring (March-May) for cherry blossoms. Book hotels 3 months in advance.\",\n  \"location_reference\": \"Tokyo\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Travel Intel (Warning)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/travel-intel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itinerary_id\": \"{{itinerary_id}}\",\n  \"intel_type\": \"warning\",\n  \"content\": \"Avoid Shibuya on weekends - extremely crowded. Consider visiting on weekdays.\",\n  \"location_reference\": \"Shibuya, Tokyo\",\n  \"priority\": \"high\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Intel by Type",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/travel-intel?itinerary_id={{itinerary_id}}&type=tip",
+              "host": ["{{base_url}}"],
+              "path": ["api", "travel-intel"],
+              "query": [
+                {"key": "itinerary_id", "value": "{{itinerary_id}}"},
+                {"key": "type", "value": "tip"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Intel Helpful",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/travel-intel/{{intel_id}}/helpful"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Travel Groups",
+      "item": [
+        {
+          "name": "List Travel Groups",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/travel-groups?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "travel-groups"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "per_page", "value": "20"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Travel Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.data && response.data.id) {",
+                  "    pm.environment.set('group_id', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/travel-groups",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tokyo Explorers June 2024\",\n  \"destination\": \"Tokyo, Japan\",\n  \"travel_dates_start\": \"2024-06-01\",\n  \"travel_dates_end\": \"2024-06-10\",\n  \"max_members\": 8,\n  \"description\": \"Small group exploring Tokyo together. Focus on food, culture, and local experiences.\",\n  \"interests\": [\"food\", \"culture\", \"photography\"],\n  \"trip_type\": \"leisure\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Details",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/travel-groups/{{group_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Join Travel Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/travel-groups/{{group_id}}/join"
+          },
+          "response": []
+        },
+        {
+          "name": "Leave Travel Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/travel-groups/{{group_id}}/leave"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/travel-groups/{{group_id}}/members"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Matching Groups",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/travel-groups/matching?destination=Tokyo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "travel-groups", "matching"],
+              "query": [
+                {"key": "destination", "value": "Tokyo"}
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Women Safety",
+      "item": [
+        {
+          "name": "List Women Travel Guides",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/women-safety/guides?destination=Tokyo&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "women-safety", "guides"],
+              "query": [
+                {"key": "destination", "value": "Tokyo"},
+                {"key": "page", "value": "1"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guide Details",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/women-safety/guides/{{guide_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Book Travel Guide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/women-safety/guides/{{guide_id}}/book",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_date\": \"2024-06-05\",\n  \"duration_hours\": 4,\n  \"special_requests\": \"Interested in food and local culture\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Guide Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/women-safety/guides/{{guide_id}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"review_text\": \"Excellent guide! Very knowledgeable and made me feel safe throughout.\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Safety Resources",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/women-safety/resources?destination=Tokyo&type=emergency",
+              "host": ["{{base_url}}"],
+              "path": ["api", "women-safety", "resources"],
+              "query": [
+                {"key": "destination", "value": "Tokyo"},
+                {"key": "type", "value": "emergency"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Safety Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/women-safety/settings"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Safety Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/women-safety/settings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"share_location\": true,\n  \"emergency_contacts\": [\"+1234567890\"],\n  \"safety_check_in_frequency\": \"daily\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "99 - Health Check",
+      "item": [
+        {
+          "name": "Basic Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
