@@ -17,9 +17,7 @@ export function useNotificationCounts() {
   const { data: messagesData = { unread_count: 0 } } = useQuery({
     queryKey: ['messages', 'count'],
     queryFn: async () => {
-      const backendUrl = typeof window !== 'undefined'
-        ? (window.location.hostname.includes('localhost') ? 'http://localhost:5000' : 'https://backend.zer0.pro')
-        : 'http://localhost:5000';
+      const backendUrl = 'https://tripit-xgvr.onrender.com';
 
       const response = await fetch(`${backendUrl}/api/messages/unread-count`, {
         headers: {
@@ -43,9 +41,7 @@ export function useNotificationCounts() {
   const { data: introsData = { pending_count: 0 } } = useQuery({
     queryKey: ['intro-requests', 'count'],
     queryFn: async () => {
-      const backendUrl = typeof window !== 'undefined'
-        ? (window.location.hostname.includes('localhost') ? 'http://localhost:5000' : 'https://backend.zer0.pro')
-        : 'http://localhost:5000';
+      const backendUrl = 'https://tripit-xgvr.onrender.com';
 
       const response = await fetch(`${backendUrl}/api/intro-requests/pending-count`, {
         headers: {

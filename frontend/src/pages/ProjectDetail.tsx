@@ -41,7 +41,7 @@ export default function ProjectDetail() {
         ids.map(async (sourceId: string) => {
           try {
             const response = await axios.get(
-              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/itineraries/${sourceId}`
+              `${import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com'}/api/itineraries/${sourceId}`
             );
             return response.data.data;
           } catch {
@@ -76,7 +76,7 @@ export default function ProjectDetail() {
   const { data: updatesData } = useQuery({
     queryKey: ['projectUpdates', id],
     queryFn: async () => {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/projects/${id}/updates`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com'}/api/projects/${id}/updates`);
       return response.data.data;
     },
     enabled: false  // Disabled - updates endpoint not implemented
@@ -85,7 +85,7 @@ export default function ProjectDetail() {
   // Delete update mutation
   const deleteUpdateMutation = useMutation({
     mutationFn: async (updateId: string) => {
-      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/projects/${id}/updates/${updateId}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com'}/api/projects/${id}/updates/${updateId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
     },
@@ -161,7 +161,7 @@ export default function ProjectDetail() {
       }
 
       // Track view (fire and forget)
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/itineraries/${id}/view`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com'}/api/itineraries/${id}/view`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -4,7 +4,7 @@
  */
 
 const MAPBOX_TOKEN = 'pk.eyJ1Ijoic2hyYXZhbjQ1IiwiYSI6ImNtaXgxZ3gwajAxeG4zZnF1ZWJpODRpOGQifQ.YT9XlUwsK8dLRAF-BjC54A';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com';
 
 export interface RouteWaypoint {
   day: number;

@@ -4,9 +4,7 @@ import { toast } from 'sonner';
 
 // Get backend URL
 const getBackendUrl = (): string => {
-  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-  return isDev ? 'http://localhost:5000' : 'https://backend.zer0.pro';
+  return 'https://tripit-xgvr.onrender.com';
 };
 
 export function useReceivedIntros() {

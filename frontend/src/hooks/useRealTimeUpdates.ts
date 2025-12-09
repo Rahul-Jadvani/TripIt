@@ -67,7 +67,7 @@ export function useRealTimeUpdates() {
     subscriberCount++;
 
     // Get backend URL from environment or use default
-    const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com';
 
     // Initialize Socket.IO connection (only once)
     if (!socket) {

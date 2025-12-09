@@ -328,7 +328,7 @@ export default function Publish() {
           const formData = new FormData();
           formData.append('file', file);
 
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com'}/api/upload`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${localStorage.getItem('token')}`,
