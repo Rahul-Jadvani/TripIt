@@ -50,6 +50,10 @@ def import_models():
     from models.women_safety_resource import WomenSafetyResource
     from models.snap import Snap
 
+    # QR Verification Models
+    from models.vendor import Vendor
+    from models.user_verification import UserVerification
+
     return True
 
 
@@ -440,6 +444,10 @@ def register_blueprints(app):
     from routes.route_map import route_map_bp
     from routes.booking_chat import booking_chat_bp
 
+    # QR Verification / Vendor Routes
+    from routes.vendor_auth import vendor_auth_bp
+    from routes.vendor_verification import vendor_verification_bp
+
     # PERFORMANCE: Ultra-fast optimized routes
     from routes.prefetch import prefetch_bp
     from routes.fast_leaderboard import fast_leaderboard_bp
@@ -484,6 +492,10 @@ def register_blueprints(app):
     app.register_blueprint(remix_chat_bp, url_prefix='/api/remix')
     app.register_blueprint(route_map_bp, url_prefix='/api/route-map')
     app.register_blueprint(booking_chat_bp, url_prefix='/api/booking')
+
+    # QR Verification / Vendor Portal
+    app.register_blueprint(vendor_auth_bp, url_prefix='/api/vendor')
+    app.register_blueprint(vendor_verification_bp, url_prefix='/api/vendor')
 
     # PERFORMANCE: Ultra-fast optimized endpoints
     app.register_blueprint(prefetch_bp, url_prefix='/api/prefetch')

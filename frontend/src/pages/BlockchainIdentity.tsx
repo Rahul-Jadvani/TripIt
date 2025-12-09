@@ -21,7 +21,9 @@ import {
   Trophy,
   Coins,
   Heart,
-  Users
+  Users,
+  QrCode,
+  ScanLine
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
@@ -57,6 +59,7 @@ export default function BlockchainIdentity() {
   const hasEmergencyContactsAndMedical = Boolean(user?.emergency_contact_1_name && user?.emergency_contact_1_phone);
   const hasProfileHash = Boolean(user?.profile_hash);
   const hasSBT = user?.sbt_status === 'issued' || user?.sbt_status === 'verified';
+  const hasQRCode = Boolean(user?.qr_ipfs_url);
 
   // Validation effect
   useEffect(() => {
@@ -598,6 +601,81 @@ export default function BlockchainIdentity() {
                       )}
                     </div>
                   </div>
+
+                  {/* QR Code Verification Section */}
+                  {hasQRCode && (
+                    <div className="rounded-lg border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background p-6">
+                      <div className="flex flex-col md:flex-row gap-6 items-center">
+                        {/* QR Code Image */}
+                        <div className="flex-shrink-0">
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-primary/20 rounded-xl blur-xl" />
+                            <div className="relative bg-white p-3 rounded-xl border-2 border-primary/20 shadow-lg">
+                              <img
+                                src={user?.qr_ipfs_url}
+                                alt="Your Verification QR Code"
+                                className="w-48 h-48 object-contain"
+                                onError={(e) => {
+                                  // Fallback if image fails to load
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* QR Info */}
+                        <div className="flex-1 text-center md:text-left space-y-4">
+                          <div>
+                            <h4 className="text-lg font-bold flex items-center justify-center md:justify-start gap-2">
+                              <QrCode className="h-5 w-5 text-primary" />
+                              Your Verification QR Code
+                            </h4>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Vendors can scan this QR code to verify your identity and access your emergency contact information.
+                            </p>
+                          </div>
+
+                          {/* Scan Count if available */}
+                          {user?.scan_count !== undefined && user.scan_count > 0 && (
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                              <ScanLine className="h-4 w-4" />
+                              Scanned {user.scan_count} time{user.scan_count !== 1 ? 's' : ''}
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="flex-1"
+                            >
+                              <a
+                                href={user?.qr_ipfs_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                View on IPFS
+                              </a>
+                            </Button>
+                          </div>
+
+                          {/* How it works */}
+                          <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">HOW IT WORKS:</p>
+                            <ul className="text-xs text-muted-foreground space-y-1">
+                              <li>1. Hotels, transport, or authorities scan your QR code</li>
+                              <li>2. They verify your identity through the TripIt vendor portal</li>
+                              <li>3. In emergencies, they can access your emergency contacts</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* SBT Utility & Benefits */}
                   <div className="rounded-lg border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background p-5">

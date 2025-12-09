@@ -49,6 +49,10 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=30)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=90)
 
+    # Vendor JWT (for QR verification portal)
+    VENDOR_JWT_SECRET_KEY = os.getenv('VENDOR_JWT_SECRET_KEY', os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production'))
+    VENDOR_JWT_EXPIRATION_DAYS = int(os.getenv('VENDOR_JWT_EXPIRATION_DAYS', 7))
+
     # Redis
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 

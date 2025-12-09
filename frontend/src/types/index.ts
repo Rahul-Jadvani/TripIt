@@ -25,6 +25,10 @@ export interface User {
   sbt_blockchain_hash?: string; // Transaction hash of SBT minting
   reputation_score?: number; // 0-100 reputation score
   trip_token_balance?: number; // TRIP token balance
+  // QR Verification Fields
+  qr_ipfs_url?: string; // IPFS URL of verification QR code
+  verification_status?: string; // verified, pending, revoked
+  scan_count?: number; // Number of times QR has been scanned
   hasOxcert?: boolean;
   has_oxcert?: boolean; // Backend field
   oxcert_tx_hash?: string;

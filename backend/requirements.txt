@@ -55,3 +55,7 @@ gevent-websocket==0.10.1
 
 # Task Queue & Background Jobs
 celery[redis]==5.3.4
+
+# QR Code Generation (for SBT verification)
+qrcode[pil]==7.4.2
+Pillow==10.2.0

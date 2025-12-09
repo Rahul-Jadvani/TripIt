@@ -13,6 +13,7 @@ import {
   AdminRoute,
   ValidatorRoute,
 } from "./components/ProtectedRoute";
+import { VendorRoute } from "./components/VendorRoute";
 import { PageScrollBackground } from "./components/PageScrollBackground";
 import { usePrefetch } from "./hooks/usePrefetch";
 import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
@@ -63,6 +64,11 @@ const VerifiedPosts = lazy(() => import("./pages/VerifiedPosts"));
 const RemixPage = lazy(() => import("./pages/RemixPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
 const Gallery = lazy(() => import("./pages/Gallery"));
+
+// Vendor Portal Pages
+const VendorLogin = lazy(() => import("./pages/VendorLogin"));
+const VendorDashboard = lazy(() => import("./pages/VendorDashboard"));
+const VendorScanQR = lazy(() => import("./pages/VendorScanQR"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -340,6 +346,25 @@ const App = () => (
                             <ValidatorRoute>
                               <Dashboard />
                             </ValidatorRoute>
+                          }
+                        />
+
+                        {/* Vendor Portal Routes (separate from main layout) */}
+                        <Route path="/vendor/login" element={<VendorLogin />} />
+                        <Route
+                          path="/vendor/dashboard"
+                          element={
+                            <VendorRoute>
+                              <VendorDashboard />
+                            </VendorRoute>
+                          }
+                        />
+                        <Route
+                          path="/vendor/scan-qr"
+                          element={
+                            <VendorRoute>
+                              <VendorScanQR />
+                            </VendorRoute>
                           }
                         />
 
