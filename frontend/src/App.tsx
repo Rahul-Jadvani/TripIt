@@ -1,4 +1,4 @@
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -13,10 +13,7 @@ import {
   AdminRoute,
   ValidatorRoute,
 } from "./components/ProtectedRoute";
-<<<<<<< HEAD
-=======
 import { VendorRoute } from "./components/VendorRoute";
->>>>>>> 6e63927239b09ca3d5fafe8f5dee2e1ac5fb1a77
 import { PageScrollBackground } from "./components/PageScrollBackground";
 import { usePrefetch } from "./hooks/usePrefetch";
 import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
@@ -67,14 +64,11 @@ const VerifiedPosts = lazy(() => import("./pages/VerifiedPosts"));
 const RemixPage = lazy(() => import("./pages/RemixPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
 const Gallery = lazy(() => import("./pages/Gallery"));
-<<<<<<< HEAD
-=======
 
 // Vendor Portal Pages
 const VendorLogin = lazy(() => import("./pages/VendorLogin"));
 const VendorDashboard = lazy(() => import("./pages/VendorDashboard"));
 const VendorScanQR = lazy(() => import("./pages/VendorScanQR"));
->>>>>>> 6e63927239b09ca3d5fafe8f5dee2e1ac5fb1a77
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -355,8 +349,6 @@ const App = () => (
                           }
                         />
 
-<<<<<<< HEAD
-=======
                         {/* Vendor Portal Routes (separate from main layout) */}
                         <Route path="/vendor/login" element={<VendorLogin />} />
                         <Route
@@ -376,7 +368,6 @@ const App = () => (
                           }
                         />
 
->>>>>>> 6e63927239b09ca3d5fafe8f5dee2e1ac5fb1a77
                         {/* 404 */}
                         <Route path="*" element={<NotFound />} />
                       </Route>

@@ -1,7 +1,4 @@
-import { toast } from "@/lib/toast";
+import { toast, Toaster } from "sonner";
 
-// Local shim Toaster: styling handled by NotificationCenterHost globally.
-// Keep API compatibility for existing imports.
-const Toaster = (_props: any) => null;
-
+// Re-export toast and Toaster from sonner
 export { Toaster, toast };

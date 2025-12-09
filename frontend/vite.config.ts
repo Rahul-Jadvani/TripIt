@@ -105,8 +105,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Route all `import { toast } from 'sonner'` to our branded wrapper
-      "sonner": path.resolve(__dirname, "./src/lib/toast"),
     },
   },
 
@@ -158,6 +156,7 @@ export default defineConfig(({ mode }) => ({
       'axios',
       'framer-motion',
       'lucide-react',
+      'sonner',
     ],
   },
 }));

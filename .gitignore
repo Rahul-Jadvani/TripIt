@@ -3,6 +3,8 @@
 .env.local
 .env.*.local
 .env.prod
+backend/.env.prod
+
 *.env.prod
 # Virtual environments
 venv/

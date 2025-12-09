@@ -637,7 +637,7 @@ def get_leaderboard(user_id):
             traveler_query = traveler_query.filter(Itinerary.created_at >= since)
 
         top_travelers = traveler_query.group_by(
-            Traveler.id, Traveler.username, Traveler.first_name, Traveler.avatar_url
+            Traveler.id, Traveler.username, Traveler.avatar_url
         ).order_by(
             func.sum(Itinerary.proof_score).desc()
         ).limit(limit).all()
