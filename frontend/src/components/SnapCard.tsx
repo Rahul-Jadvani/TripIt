@@ -107,7 +107,7 @@ interface SnapCardProps {
 }
 
 const SnapCard: React.FC<SnapCardProps> = memo(({ snap }) => {
-  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API = import.meta.env.VITE_API_URL || "https://tripit-xgvr.onrender.com";
 
   const hasImage = !!snap.image_url;
 

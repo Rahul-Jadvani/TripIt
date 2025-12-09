@@ -93,7 +93,7 @@ export function UserSearchSelect({ onSelect, placeholder = 'Search users by name
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/search?q=${encodeURIComponent(query)}&limit=10`
+          `${import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com'}/api/users/search?q=${encodeURIComponent(query)}&limit=10`
         );
 
         if (response.data.status === 'success') {

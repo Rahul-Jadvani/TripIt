@@ -2,17 +2,7 @@ import axios from 'axios';
 
 // Get backend URL without /api suffix (used for non-API endpoints)
 export const getBackendUrl = (): string => {
-  let baseUrl = import.meta.env.VITE_API_URL;
-  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isDev = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-
-  if (!baseUrl) {
-    if (isDev) {
-      baseUrl = 'http://localhost:5000';
-    } else {
-      baseUrl = 'https://backend.zer0.pro';
-    }
-  }
+  let baseUrl = import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com';
 
   // Remove /api suffix if present
   return baseUrl.endsWith('/api') ? baseUrl.slice(0, -4) : baseUrl;

@@ -79,7 +79,7 @@ export function CreatePostDialog({ chainSlug, chainName }: CreatePostDialogProps
       formData.append('file', file);
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload`,
+        `${import.meta.env.VITE_API_URL || 'https://tripit-xgvr.onrender.com'}/api/upload`,
         {
           method: 'POST',
           headers: {

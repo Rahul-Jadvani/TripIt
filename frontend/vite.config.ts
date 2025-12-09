@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       '/api': {
         // Use environment variable for backend URL (useful for tunnels)
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:5000',
+        target: process.env.VITE_BACKEND_URL || 'https://tripit-xgvr.onrender.com',
         changeOrigin: true,
         secure: false,
         ws: true,
@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => ({
         },
       },
       '/admin': {
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:5000',
+        target: process.env.VITE_BACKEND_URL || 'https://tripit-xgvr.onrender.com',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
