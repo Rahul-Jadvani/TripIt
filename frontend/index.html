@@ -6,6 +6,11 @@
     <title>TripIt - Safety-Verified Travel Discovery</title>
     <meta name="description" content="Discover travel itineraries with safety-verified credibility on TripIt - a caravan-driven platform for travelers." />
     <meta name="author" content="TripIt" />
+
+    <!-- Aggressive Browser Caching -->
+    <meta http-equiv="Cache-Control" content="public, max-age=31536000" />
+    <meta http-equiv="Expires" content="31536000" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,6 +19,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
 
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Preload critical resources for faster loading -->
+    <link rel="modulepreload" href="/src/main.tsx" />
+    <link rel="prefetch" href="/src/pages/SOS.tsx" />
 
     <meta property="og:title" content="TripIt - Safety-Verified Travel Discovery" />
     <meta property="og:description" content="Discover travel itineraries with safety-verified credibility. Caravan-driven platform for travelers." />
