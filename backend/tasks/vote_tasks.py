@@ -257,7 +257,7 @@ def sync_votes_to_db(self):
                 # 4. Update Redis to match votes table truth
                 if result.rowcount > 0:
                     key = vote_service.KEY_VOTE_STATE.format(project_id=project_id)
-                    vote_service.redis.hset(key, mapping={
+                    vote_service.redis.hset(key, {
                         'upvotes': upvotes_count,
                         'downvotes': downvotes_count
                     })
@@ -443,7 +443,7 @@ def reconcile_all_vote_counts(self, batch_size=100):
 
                 # Update Redis cache
                 key = vote_service.KEY_VOTE_STATE.format(project_id=project_id)
-                vote_service.redis.hset(key, mapping={
+                vote_service.redis.hset(key, {
                     'upvotes': upvotes_count,
                     'downvotes': downvotes_count
                 })

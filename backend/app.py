@@ -350,6 +350,16 @@ def create_app(config_name=None):
             vote_sync_thread.start()
             print("[VOTE SYNC] Fallback vote sync scheduler started (every 60s)")
 
+    # Root route
+    @app.route('/', methods=['GET'])
+    def root():
+        return jsonify({
+            'status': 'ok',
+            'message': 'TripIt API is running',
+            'version': '1.0',
+            'health_endpoint': '/health'
+        }), 200
+
     # Health check
     @app.route('/health', methods=['GET'])
     def health_check():

@@ -298,7 +298,7 @@ class VoteService:
                 .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
 
             # Set initial values from votes table
-            self.redis.hset(key, mapping={
+            self.redis.hset(key, {
                 'upvotes': upvotes_count,
                 'downvotes': downvotes_count
             })
@@ -394,7 +394,7 @@ class VoteService:
             'created_at': datetime.utcnow().isoformat()
         }
 
-        self.redis.hset(key, mapping=metadata)
+        self.redis.hset(key, metadata)
         self.redis.expire(key, self.REQUEST_TTL)
 
     def _add_to_event_stream(
@@ -487,7 +487,7 @@ class VoteService:
 
         updates['updated_at'] = datetime.utcnow().isoformat()
 
-        self.redis.hset(key, mapping=updates)
+        self.redis.hset(key, updates)
 
     def get_metrics(self) -> Dict:
         """Get vote service metrics for monitoring"""
@@ -558,7 +558,7 @@ class VoteService:
                     .filter(Vote.project_id == project_id, Vote.vote_type == 'down').scalar() or 0
 
                 # Cache for future requests
-                self.redis.hset(key, mapping={
+                self.redis.hset(key, {
                     'upvotes': upvotes_count,
                     'downvotes': downvotes_count
                 })
