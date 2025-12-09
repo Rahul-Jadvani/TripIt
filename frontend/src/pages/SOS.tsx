@@ -17,22 +17,43 @@ export default function SOS() {
 
   const handleSOSClick = () => {
     // Deep link to TripIt-SOS Android app
-    const deepLinkUrl = 'tripitsos://open';
-    const intentUrl = 'intent://open#Intent;scheme=tripitsos;package=com.bitchat.android;end';
-    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.bitchat.android';
+    const packageName = 'com.bitchat.droid'; // Correct applicationId from build.gradle.kts
+    const scheme = 'tripitsos';
+    const host = 'open';
 
-    // Use intent URL for better Android compatibility
-    const urlToOpen = isMobile ? intentUrl : deepLinkUrl;
+    console.log('🚨 SOS Button Clicked - Attempting to open TripIt-SOS app');
 
-    // Try to open the app
-    window.location.href = urlToOpen;
+    if (isMobile) {
+      // Try multiple approaches for Android
 
-    // Fallback after 2 seconds if app didn't open
-    setTimeout(() => {
-      if (isMobile && confirm('TripIt-SOS app not found. Would you like to install it from Play Store?')) {
-        window.location.href = playStoreUrl;
-      }
-    }, 2000);
+      // Approach 1: Intent URL (most reliable for Chrome on Android)
+      const intentUrl = `intent://${host}#Intent;scheme=${scheme};package=${packageName};end`;
+      console.log('📱 Trying Intent URL:', intentUrl);
+
+      // Try opening via window.location
+      window.location.href = intentUrl;
+
+      // Approach 2: Fallback to direct scheme after 1 second
+      setTimeout(() => {
+        const directUrl = `${scheme}://${host}`;
+        console.log('📱 Fallback: Trying direct deep link:', directUrl);
+        window.location.href = directUrl;
+      }, 1000);
+
+      // Log for debugging
+      setTimeout(() => {
+        console.log('⚠️ If app didn\'t open, either:');
+        console.log('1. App is not installed');
+        console.log('2. Package name is wrong:', packageName);
+        console.log('3. Deep link intent-filter not configured correctly');
+      }, 3000);
+
+    } else {
+      // Desktop: Just try direct deep link
+      const directUrl = `${scheme}://${host}`;
+      console.log('💻 Desktop: Trying direct deep link:', directUrl);
+      window.location.href = directUrl;
+    }
   };
 
   return (
