@@ -82,9 +82,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
           const response = await authService.getCurrentUser();
           setUser(transformUser(response.data.data));
-        } catch (error) {
-          localStorage.removeItem('token');
-          setToken(null);
+        } catch (error: any) {
+          // Check if error is due to backend being down vs auth failure
+          const isNetworkError = !error.response || error.code === 'ERR_NETWORK';
+
+          if (isNetworkError) {
+            // Backend is down - don't clear token, just fail silently
+            // The backend health monitor will redirect to SOS
+            console.warn('Backend unreachable during auth init');
+          } else {
+            // Auth error - clear invalid token
+            localStorage.removeItem('token');
+            setToken(null);
+          }
         }
       }
       setIsLoading(false);

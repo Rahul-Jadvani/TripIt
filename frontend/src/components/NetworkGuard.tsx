@@ -22,21 +22,17 @@ export function NetworkGuard() {
 
   // Navigate based on actual online/offline status only
   useEffect(() => {
-    const onOfflineRoute = location.pathname.startsWith('/offline');
-    const lastPathKey = 'last_route_before_offline';
+    const onSOSRoute = location.pathname === '/sos';
 
-    if (!isOnline && !onOfflineRoute) {
-      // User actually went offline
-      const last = location.pathname + location.search + location.hash;
-      sessionStorage.setItem(lastPathKey, last);
-      navigate(`/offline?type=offline`, { replace: false });
-    } else if (isOnline && onOfflineRoute) {
-      // User came back online - restore previous page
-      const backTo = sessionStorage.getItem(lastPathKey) || '/';
-      sessionStorage.removeItem(lastPathKey);
-      navigate(backTo, { replace: true });
+    // Only redirect TO SOS when offline (never redirect away from SOS)
+    // Allow manual navigation to SOS anytime
+    if (!isOnline && !onSOSRoute) {
+      // User went offline - hard redirect to SOS page (bypasses all wrappers)
+      window.location.href = '/sos';
     }
-  }, [isOnline, location.pathname, navigate]);
+    // Don't redirect away from SOS when coming back online
+    // User can manually navigate away if they want
+  }, [isOnline, location.pathname]);
 
   return null;
 }
