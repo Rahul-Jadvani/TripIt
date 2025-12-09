@@ -188,7 +188,7 @@ class Config:
     # Google OAuth
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/api/auth/google/callback')
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'https://tripit-xgvr.onrender.com/api/auth/google/callback')
 
     # Performance Optimization - Materialized Views
     ENABLE_FEED_MV = os.getenv('ENABLE_FEED_MV', 'true').lower() == 'true'
