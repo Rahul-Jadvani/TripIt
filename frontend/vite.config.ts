@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        // Use environment variable for backend URL (useful for tunnels)
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
         ws: true,
@@ -27,7 +28,7 @@ export default defineConfig(({ mode }) => ({
         },
       },
       '/admin': {
-        target: 'http://localhost:5000',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {

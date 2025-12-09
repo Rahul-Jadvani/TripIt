@@ -65,6 +65,9 @@ const RemixPage = lazy(() => import("./pages/RemixPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 
+// SOS page is NOT lazy loaded - always available offline
+import SOS from "./pages/SOS";
+
 // Vendor Portal Pages
 const VendorLogin = lazy(() => import("./pages/VendorLogin"));
 const VendorDashboard = lazy(() => import("./pages/VendorDashboard"));
@@ -92,34 +95,47 @@ function PrefetchWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const App = () => (
-  <WagmiProvider config={wagmiConfig}>
-    <QueryClientProvider client={queryClient}>
-      <RainbowKitProvider
-        theme={darkTheme({
-          accentColor: "#f66926", // TripIt orange
-          accentColorForeground: "white",
-          borderRadius: "large",
-          fontStack: "system",
-        })}
-      >
-        <AuthProvider>
-          <PrefetchWrapper>
-            <PageScrollBackground />
-            <FirstOpenLoader />
-            <TooltipProvider>
-              <Toaster />
-              <BrowserRouter>
-                <NetworkGuard />
-                <Suspense
-                  fallback={
-                    <div className="flex min-h-[40vh] items-center justify-center">
-                      <CoffeeLoader message="Warming up modules…" />
-                    </div>
-                  }
-                >
-                  <ErrorBoundary>
-                    <Routes>
+const App = () => {
+  // Check if user is trying to access SOS page
+  // Render it immediately without any backend-dependent wrappers
+  const isSOS = typeof window !== 'undefined' && window.location.pathname === '/sos';
+
+  if (isSOS) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SOS />
+      </div>
+    );
+  }
+
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider
+          theme={darkTheme({
+            accentColor: "#f66926", // TripIt orange
+            accentColorForeground: "white",
+            borderRadius: "large",
+            fontStack: "system",
+          })}
+        >
+          <AuthProvider>
+            <PrefetchWrapper>
+              <PageScrollBackground />
+              <FirstOpenLoader />
+              <TooltipProvider>
+                <Toaster />
+                <BrowserRouter>
+                  <NetworkGuard />
+                  <Suspense
+                    fallback={
+                      <div className="flex min-h-[40vh] items-center justify-center">
+                        <CoffeeLoader message="Warming up modules…" />
+                      </div>
+                    }
+                  >
+                    <ErrorBoundary>
+                      <Routes>
                       <Route element={<MainLayout />}>
                         {/* Public Routes */}
                         <Route path="/" element={<Feed />} />
@@ -147,6 +163,7 @@ const App = () => (
                           element={<Gallery />}
                         />
                         <Route path="/about" element={<About />} />
+                        <Route path="/sos" element={<SOS />} />
                         <Route path="/leaderboard" element={<Leaderboard />} />
                         <Route
                           path="/communities"
@@ -381,6 +398,7 @@ const App = () => (
       </RainbowKitProvider>
     </QueryClientProvider>
   </WagmiProvider>
-);
+  );
+};
 
 export default App;

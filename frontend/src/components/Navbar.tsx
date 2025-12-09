@@ -34,7 +34,8 @@ import {
   CheckCircle,
   FileText,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { TripBalance } from '@/components/TripBalance';
@@ -89,6 +90,9 @@ export const Navbar = memo(function Navbar() {
         break;
       case '/remix':
         import('@/pages/RemixPage');
+        break;
+      case '/sos':
+        import('@/pages/SOS');
         break;
       default:
         break;
@@ -160,6 +164,14 @@ export const Navbar = memo(function Navbar() {
                     >
                       <Search className="h-4 w-4" />
                       <span>Search</span>
+                    </Link>
+                    <Link
+                      to="/sos"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-bold bg-red-600 hover:bg-red-700 text-white transition-colors"
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>Emergency SOS</span>
                     </Link>
                   </div>
 
