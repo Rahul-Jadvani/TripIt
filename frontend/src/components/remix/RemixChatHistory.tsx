@@ -72,9 +72,9 @@ export const RemixChatHistory: FC<RemixChatHistoryProps> = ({
                 {/* Status Badge */}
                 <div className="flex items-center gap-2 mb-2">
                   {session.status === 'finalized' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-600 border border-green-600 flex items-center gap-1">
+                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 border border-blue-600 flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" />
-                      Published
+                      Ready
                     </span>
                   )}
                   {session.status === 'archived' && (

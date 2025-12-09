@@ -10,6 +10,7 @@ from services.scoring.score_engine import ScoringEngine
 from models.itinerary import Itinerary
 from datetime import datetime, timedelta
 from flask import current_app
+from sqlalchemy import func
 import traceback
 
 
@@ -211,79 +212,7 @@ def score_itinerary_task(self, itinerary_id):
                 from models.snap import Snap
                 from models.safety_rating import SafetyRating
 
-                # Get maximum values for normalization - use actual user counts
-                try:
-                    # Count itineraries per user, get the maximum
-                    from sqlalchemy import select
-                    itinerary_counts = db.session.query(
-                        Itinerary.created_by_traveler_id,
-                        func.count(Itinerary.id).label('count')
-                    ).filter(
-                        Itinerary.created_by_traveler_id != None,
-                        Itinerary.is_deleted == False
-                    ).group_by(
-                        Itinerary.created_by_traveler_id
-                    ).all()
-
-                    if itinerary_counts:
-                        max_itineraries = max([count for _, count in itinerary_counts])
-                    else:
-                        max_itineraries = user_itineraries if user_itineraries > 0 else 1
-                except Exception as e:
-                    print(f"Max itineraries query error: {e}")
-                    max_itineraries = user_itineraries if user_itineraries > 0 else 1
-
-                try:
-                    # Count snaps per user, get the maximum
-                    snap_counts = db.session.query(
-                        Snap.user_id,
-                        func.count(Snap.id).label('count')
-                    ).filter(
-                        Snap.user_id != None,
-                        Snap.is_deleted == False
-                    ).group_by(
-                        Snap.user_id
-                    ).all()
-
-                    if snap_counts:
-                        max_snaps = max([count for _, count in snap_counts])
-                    else:
-                        max_snaps = user_snaps if user_snaps > 0 else 1
-                except Exception as e:
-                    print(f"Max snaps query error: {e}")
-                    max_snaps = user_snaps if user_snaps > 0 else 1
-
-                try:
-                    # Count safety ratings per user, get the maximum
-                    rating_counts = db.session.query(
-                        SafetyRating.traveler_id,
-                        func.count(SafetyRating.id).label('count')
-                    ).filter(
-                        SafetyRating.traveler_id != None
-                    ).group_by(
-                        SafetyRating.traveler_id
-                    ).all()
-
-                    if rating_counts:
-                        max_safety_ratings = max([count for _, count in rating_counts])
-                    else:
-                        max_safety_ratings = user_safety_ratings if user_safety_ratings > 0 else 1
-                except Exception as e:
-                    print(f"Max safety ratings query error: {e}")
-                    max_safety_ratings = user_safety_ratings if user_safety_ratings > 0 else 1
-
-                try:
-                    # Max contributions verified
-                    max_contributions = db.session.query(
-                        func.max(Traveler.contributions_verified)
-                    ).scalar() or 0
-                    if max_contributions == 0:
-                        max_contributions = user_contributions if user_contributions > 0 else 1
-                except Exception as e:
-                    print(f"Max contributions query error: {e}")
-                    max_contributions = user_contributions if user_contributions > 0 else 1
-
-                # Count user's contributions
+                # STEP 1: Count user's contributions FIRST
                 try:
                     user_itineraries = Itinerary.query.filter_by(
                         created_by_traveler_id=creator.id, is_deleted=False
@@ -305,6 +234,85 @@ def score_itinerary_task(self, itinerary_id):
 
                 user_contributions = getattr(creator, 'contributions_verified', 0) or 0
 
+                # STEP 2: Get maximum values for normalization
+                try:
+                    # Count itineraries per user, get the maximum
+                    itinerary_counts = db.session.query(
+                        Itinerary.created_by_traveler_id,
+                        func.count(Itinerary.id).label('count')
+                    ).filter(
+                        Itinerary.created_by_traveler_id != None,
+                        Itinerary.is_deleted == False
+                    ).group_by(
+                        Itinerary.created_by_traveler_id
+                    ).all()
+
+                    if itinerary_counts:
+                        max_itineraries = max([count for _, count in itinerary_counts])
+                    else:
+                        max_itineraries = user_itineraries if user_itineraries > 0 else 1
+                except Exception as e:
+                    print(f"Max itineraries query error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    max_itineraries = user_itineraries if user_itineraries > 0 else 1
+
+                try:
+                    # Count snaps per user, get the maximum
+                    snap_counts = db.session.query(
+                        Snap.user_id,
+                        func.count(Snap.id).label('count')
+                    ).filter(
+                        Snap.user_id != None,
+                        Snap.is_deleted == False
+                    ).group_by(
+                        Snap.user_id
+                    ).all()
+
+                    if snap_counts:
+                        max_snaps = max([count for _, count in snap_counts])
+                    else:
+                        max_snaps = user_snaps if user_snaps > 0 else 1
+                except Exception as e:
+                    print(f"Max snaps query error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    max_snaps = user_snaps if user_snaps > 0 else 1
+
+                try:
+                    # Count safety ratings per user, get the maximum
+                    rating_counts = db.session.query(
+                        SafetyRating.traveler_id,
+                        func.count(SafetyRating.id).label('count')
+                    ).filter(
+                        SafetyRating.traveler_id != None
+                    ).group_by(
+                        SafetyRating.traveler_id
+                    ).all()
+
+                    if rating_counts:
+                        max_safety_ratings = max([count for _, count in rating_counts])
+                    else:
+                        max_safety_ratings = user_safety_ratings if user_safety_ratings > 0 else 1
+                except Exception as e:
+                    print(f"Max safety ratings query error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    max_safety_ratings = user_safety_ratings if user_safety_ratings > 0 else 1
+
+                try:
+                    # Max contributions verified
+                    max_contributions = db.session.query(
+                        func.max(Traveler.contributions_verified)
+                    ).scalar() or 0
+                    if max_contributions == 0:
+                        max_contributions = user_contributions if user_contributions > 0 else 1
+                except Exception as e:
+                    print(f"Max contributions query error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    max_contributions = user_contributions if user_contributions > 0 else 1
+
                 # Normalize and weight each component
                 itineraries_score = (user_itineraries / max_itineraries) * 8.0
                 snaps_score = (user_snaps / max_snaps) * 6.0
@@ -324,7 +332,6 @@ def score_itinerary_task(self, itinerary_id):
         # === 3. COMMUNITY SCORE (0-20) - Upvote ratio + Normalized engagement ===
         # Get maximum values from top itineraries for normalization
         try:
-            from sqlalchemy import func
             max_values = db.session.query(
                 func.max(Itinerary.helpful_votes).label('max_helpful'),
                 func.max(Itinerary.view_count).label('max_views'),

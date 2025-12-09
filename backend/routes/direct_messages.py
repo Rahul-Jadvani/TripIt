@@ -2,9 +2,11 @@
 Direct Messages Routes
 """
 from flask import Blueprint, request, jsonify
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, union_all, select
+from datetime import datetime
 from extensions import db
 from models.direct_message import DirectMessage
+from models.intro import Intro  # Using Intro instead of IntroRequest
 from models.user import User
 from utils.decorators import token_required
 
@@ -71,32 +73,129 @@ def send_message(user_id):
 @direct_messages_bp.route('/conversations', methods=['GET'])
 @token_required
 def get_conversations(user_id):
-    """Get all conversations for current user"""
+    """Get all conversations for current user (including accepted intros)"""
     try:
-        # Get all users current user has conversations with
-        # Note: We only group by User.id to avoid issues with JSON columns
-        conversations = db.session.query(
+        print(f"\n[CONVERSATIONS DEBUG] Starting for user_id: {user_id}")
+
+        # STEP 1: Get all user IDs from DirectMessages
+        message_user_ids = db.session.query(
+            db.distinct(
+                db.case(
+                    (DirectMessage.sender_id == user_id, DirectMessage.recipient_id),
+                    else_=DirectMessage.sender_id
+                )
+            )
+        ).filter(
+            or_(
+                DirectMessage.sender_id == user_id,
+                DirectMessage.recipient_id == user_id
+            )
+        ).all()
+        message_user_ids = {uid[0] for uid in message_user_ids if uid[0] != user_id}
+        print(f"[CONVERSATIONS DEBUG] Message user IDs: {message_user_ids}")
+
+        # STEP 2: Get all user IDs from accepted Intros
+        # Intro uses requester_id and recipient_id
+        print(f"[CONVERSATIONS DEBUG] Querying Intros for user_id: {user_id}")
+        accepted_intro_users = db.session.query(
+            db.distinct(
+                db.case(
+                    (Intro.requester_id == user_id, Intro.recipient_id),
+                    else_=Intro.requester_id
+                )
+            )
+        ).filter(
+            and_(
+                or_(
+                    Intro.requester_id == user_id,
+                    Intro.recipient_id == user_id
+                ),
+                Intro.status == 'accepted'
+            )
+        ).all()
+        print(f"[CONVERSATIONS DEBUG] Raw accepted intro query result: {accepted_intro_users}")
+        accepted_intro_user_ids = {uid[0] for uid in accepted_intro_users if uid[0] != user_id}
+        print(f"[CONVERSATIONS DEBUG] Accepted intro user IDs: {accepted_intro_user_ids}")
+
+        # STEP 3: Combine all conversation user IDs
+        all_conversation_user_ids = message_user_ids | accepted_intro_user_ids
+        print(f"[CONVERSATIONS DEBUG] Combined conversation user IDs: {all_conversation_user_ids}")
+
+        if not all_conversation_user_ids:
+            print(f"[CONVERSATIONS DEBUG] No conversation user IDs found, returning empty array")
+            return jsonify({
+                'status': 'success',
+                'data': []
+            }), 200
+
+        # STEP 4: Get conversation stats and last activity time for each user
+        # For users with messages, use last message time
+        # For users with only accepted intros (no messages), use intro accepted_at time
+        conversations_with_messages = db.session.query(
             User.id,
-            db.func.max(DirectMessage.created_at).label('last_message_time'),
+            db.func.max(DirectMessage.created_at).label('last_activity_time'),
             db.func.count(
                 db.case(
                     (and_(DirectMessage.recipient_id == user_id, DirectMessage.is_read == False), 1),
                     else_=None
                 )
             ).label('unread_count')
-        ).join(
+        ).outerjoin(
             DirectMessage,
             or_(
                 and_(DirectMessage.sender_id == User.id, DirectMessage.recipient_id == user_id),
                 and_(DirectMessage.recipient_id == User.id, DirectMessage.sender_id == user_id)
             )
         ).filter(
-            User.id != user_id
+            User.id.in_(all_conversation_user_ids)
         ).group_by(
             User.id
-        ).order_by(
-            db.desc('last_message_time')
         ).all()
+
+        # Create a dict to store last activity times (from messages or intro acceptance)
+        conversation_times = {}
+        for uid, last_msg_time, unread in conversations_with_messages:
+            conversation_times[uid] = {
+                'last_message_time': last_msg_time,
+                'unread_count': unread
+            }
+
+        # For users with no messages, get the intro accepted_at time
+        for uid in all_conversation_user_ids:
+            if uid not in conversation_times or conversation_times[uid]['last_message_time'] is None:
+                # Get the accepted intro timestamp
+                intro = Intro.query.filter(
+                    and_(
+                        or_(
+                            and_(Intro.requester_id == user_id, Intro.recipient_id == uid),
+                            and_(Intro.recipient_id == user_id, Intro.requester_id == uid)
+                        ),
+                        Intro.status == 'accepted'
+                    )
+                ).first()
+
+                if intro:
+                    # Use updated_at as proxy for accepted time (intro was last updated when accepted)
+                    if uid not in conversation_times:
+                        conversation_times[uid] = {'last_message_time': None, 'unread_count': 0}
+                    conversation_times[uid]['last_activity_time'] = intro.updated_at
+                else:
+                    if uid not in conversation_times:
+                        conversation_times[uid] = {'last_message_time': None, 'unread_count': 0, 'last_activity_time': None}
+
+        # Sort by last activity time (messages or intro acceptance)
+        sorted_user_ids = sorted(
+            all_conversation_user_ids,
+            key=lambda uid: conversation_times.get(uid, {}).get('last_activity_time') or
+                           conversation_times.get(uid, {}).get('last_message_time') or
+                           datetime.min,
+            reverse=True
+        )
+
+        conversations = [
+            (uid, conversation_times[uid]['last_message_time'], conversation_times[uid]['unread_count'])
+            for uid in sorted_user_ids
+        ]
 
         # OPTIMIZED: Fetch all last messages in a single query instead of N queries
         if conversations:
@@ -146,6 +245,7 @@ def get_conversations(user_id):
         for other_user_id, last_message_time, unread_count in conversations:
             user = users_dict.get(other_user_id)
             if not user:
+                print(f"[CONVERSATIONS DEBUG] User not found for ID: {other_user_id}")
                 continue
 
             last_message = last_message_dict.get(other_user_id)
@@ -157,6 +257,9 @@ def get_conversations(user_id):
                 'unread_count': unread_count
             })
 
+        print(f"[CONVERSATIONS DEBUG] Final result count: {len(result)}")
+        print(f"[CONVERSATIONS DEBUG] Final result: {[{'user_id': r['user']['id'], 'username': r['user'].get('username')} for r in result]}")
+
         return jsonify({
             'status': 'success',
             'data': result
@@ -164,8 +267,8 @@ def get_conversations(user_id):
 
     except Exception as e:
         import traceback
-        print(f"[DirectMessages] Error in get_conversations: {str(e)}")
-        print(f"[DirectMessages] Traceback: {traceback.format_exc()}")
+        print(f"[CONVERSATIONS DEBUG] ERROR in get_conversations: {str(e)}")
+        print(f"[CONVERSATIONS DEBUG] Traceback: {traceback.format_exc()}")
         return jsonify({
             'status': 'error',
             'message': str(e)

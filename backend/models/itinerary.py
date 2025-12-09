@@ -125,16 +125,42 @@ class Itinerary(db.Model):
 
     def calculate_proof_score(self):
         """Recalculate proof score from components"""
-        self.proof_score = (
-            self.identity_score +
-            self.travel_history_score +
-            self.community_score +
-            self.safety_score_component +
-            self.quality_score
-        )
+        # Cap each component at 20 points (max for each category)
+        # Handle None values by treating them as 0.0
+        identity = min(self.identity_score or 0.0, 20.0)
+        travel_history = min(self.travel_history_score or 0.0, 20.0)
+        community = min(self.community_score or 0.0, 20.0)
+        safety = min(self.safety_score_component or 0.0, 20.0)
+        quality = min(self.quality_score or 0.0, 20.0)
+
+        self.proof_score = identity + travel_history + community + safety + quality
 
     def to_dict(self, include_creator=False, user_id=None):
         """Convert to dictionary"""
+        # Get fresh vote counts from VoteService (Redis or votes table)
+        upvotes = self.upvotes
+        downvotes = self.downvotes
+
+        try:
+            from services.vote_service import VoteService
+            vote_service = VoteService()
+            vote_counts = vote_service.get_vote_counts(self.id)
+            if vote_counts:
+                upvotes = vote_counts['upvotes']
+                downvotes = vote_counts['downvotes']
+        except Exception as e:
+            # Fallback to itinerary table columns if VoteService fails
+            pass
+
+        # Get fresh comment count from travel_intel table
+        comment_count = self.comment_count
+        try:
+            from models.travel_intel import TravelIntel
+            comment_count = TravelIntel.query.filter_by(itinerary_id=self.id).count()
+        except Exception as e:
+            # Fallback to itinerary table column if query fails
+            pass
+
         data = {
             'id': self.id,
             'uuid': self.uuid,
@@ -186,10 +212,10 @@ class Itinerary(db.Model):
             'is_featured': self.is_featured,
             'view_count': self.view_count,
             'helpful_votes': self.helpful_votes,
-            'upvotes': self.upvotes,
-            'downvotes': self.downvotes,
-            'voteCount': self.upvotes - self.downvotes,
-            'comment_count': self.comment_count,
+            'upvotes': upvotes,
+            'downvotes': downvotes,
+            'voteCount': upvotes - downvotes,
+            'comment_count': comment_count,
             'created_by_traveler_id': self.created_by_traveler_id,
             'user_id': self.created_by_traveler_id,  # Alias for compatibility
             'created_at': self.created_at.isoformat() if self.created_at else None,

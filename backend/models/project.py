@@ -81,7 +81,10 @@ class Project(db.Model):
     # Relationships
     screenshots = db.relationship('ProjectScreenshot', backref='project', lazy='dynamic',
                                    cascade='all, delete-orphan')
-    votes = db.relationship('Vote', backref='project', lazy='dynamic', cascade='all, delete-orphan')
+    # Votes relationship - explicit join since FK constraint was removed to support both projects and itineraries
+    votes = db.relationship('Vote',
+                           primaryjoin='Project.id==foreign(Vote.project_id)',
+                           backref='project', lazy='dynamic', cascade='all, delete-orphan')
     # comments relationship disabled - Comment model now references itineraries table
     # comments = db.relationship('Comment', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     badges = db.relationship('ValidationBadge', backref='project', lazy='dynamic',
@@ -118,6 +121,30 @@ class Project(db.Model):
             user_id: If provided, includes user's vote on this project
             include_chains: Include chains this project belongs to (default: True)
         """
+        # Get fresh vote counts from VoteService (Redis or votes table)
+        upvotes = self.upvotes
+        downvotes = self.downvotes
+
+        try:
+            from services.vote_service import VoteService
+            vote_service = VoteService()
+            vote_counts = vote_service.get_vote_counts(self.id)
+            if vote_counts:
+                upvotes = vote_counts['upvotes']
+                downvotes = vote_counts['downvotes']
+        except Exception as e:
+            # Fallback to project table columns if VoteService fails
+            pass
+
+        # Get fresh comment count from comments table
+        comment_count = self.comment_count
+        try:
+            from models.comment import Comment
+            comment_count = Comment.query.filter_by(project_id=self.id).count()
+        except Exception as e:
+            # Fallback to project table column if query fails
+            pass
+
         data = {
             'id': self.id,
             'title': self.title,
@@ -149,10 +176,10 @@ class Project(db.Model):
             'scoring_retry_count': self.scoring_retry_count,
             'last_scored_at': self.last_scored_at.isoformat() if self.last_scored_at else None,
             'scoring_error': self.scoring_error,
-            'upvotes': self.upvotes,
-            'downvotes': self.downvotes,
-            'upvote_ratio': round(self.get_upvote_ratio(), 2),
-            'comment_count': self.comment_count,
+            'upvotes': upvotes,
+            'downvotes': downvotes,
+            'upvote_ratio': round((upvotes / (upvotes + downvotes) * 100) if (upvotes + downvotes) > 0 else 0, 2),
+            'comment_count': comment_count,
             'view_count': self.view_count,
             'share_count': self.share_count,
             'is_featured': self.is_featured,
