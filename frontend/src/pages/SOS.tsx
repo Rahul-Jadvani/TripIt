@@ -73,14 +73,26 @@ export default function SOS() {
         </div>
 
         <div className="space-y-4">
-          <Button
-            onClick={handleSOSClick}
-            size="lg"
-            className="w-full h-24 text-2xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg"
+          {/* Direct link - works even when JS fails offline */}
+          <a
+            href={isMobile
+              ? 'intent://open#Intent;scheme=tripitsos;package=com.bitchat.droid;end'
+              : 'tripitsos://open'
+            }
+            className="block"
           >
-            <AlertTriangle className="h-8 w-8 mr-3" />
-            SOS
-          </Button>
+            <Button
+              onClick={handleSOSClick}
+              size="lg"
+              className="w-full h-24 text-2xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg"
+              asChild
+            >
+              <div>
+                <AlertTriangle className="h-8 w-8 mr-3" />
+                SOS
+              </div>
+            </Button>
+          </a>
 
           {isMobile && (
             <div className="flex items-center gap-2 text-sm text-green-500 justify-center">
