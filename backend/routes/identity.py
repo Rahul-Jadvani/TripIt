@@ -7,7 +7,7 @@ from extensions import db
 from models.traveler import Traveler
 from utils.decorators import token_required
 from utils.helpers import success_response, error_response
-from utils.identity import IdentityHasher, EmergencyContactHasher
+from utils.identity import IdentityHasher, EmergencyContactHasher, MedicalInfoHasher
 from utils.sbt_service import SBTService
 from web3 import Web3
 from eth_account.messages import encode_defunct
@@ -135,43 +135,51 @@ def bind_wallet(user_id):
 @token_required
 def create_profile_hash(user_id):
     """
-    Generate profile hash for SBT minting
+    Generate profile hash from emergency contacts + medical information for SBT minting
 
     Request Body:
-        full_name (str): Full name
-        date_of_birth (str): DOB in YYYY-MM-DD format
-        phone (str, optional): Phone number
+        contact1_name (str): Primary emergency contact name (required)
+        contact1_phone (str): Primary emergency contact phone (required)
+        contact2_name (str, optional): Secondary emergency contact name
+        contact2_phone (str, optional): Secondary emergency contact phone
+        blood_group (str, optional): Blood group (A+, B+, O+, AB+, A-, B-, O-, AB-)
+        medications (str, optional): Current medications
+        allergies (str, optional): Known allergies
+        other_medical_info (str, optional): Additional medical/safety information
 
     Returns:
         200: Profile hash created
         400: Invalid input
     """
     data = request.get_json()
-    full_name = data.get('full_name')
-    date_of_birth_str = data.get('date_of_birth')
-    phone = data.get('phone')
+    contact1_name = data.get('contact1_name')
+    contact1_phone = data.get('contact1_phone')
+    contact2_name = data.get('contact2_name')
+    contact2_phone = data.get('contact2_phone')
+    blood_group = data.get('blood_group')
+    medications = data.get('medications')
+    allergies = data.get('allergies')
+    other_medical_info = data.get('other_medical_info')
 
-    # Validate inputs
-    if not full_name or not date_of_birth_str:
-        return error_response('Missing required fields: full_name, date_of_birth', status_code=400)
+    # Validate required inputs
+    if not contact1_name or not contact1_phone:
+        return error_response('Missing required fields: contact1_name, contact1_phone', status_code=400)
 
     # Get traveler
     traveler = Traveler.query.get(user_id)
     if not traveler:
         return error_response('Traveler not found', status_code=404)
 
-    # Parse date
-    try:
-        dob = datetime.strptime(date_of_birth_str, '%Y-%m-%d').date()
-    except ValueError:
-        return error_response('Invalid date format. Use YYYY-MM-DD', status_code=400)
-
-    # Generate profile hash
-    result = IdentityHasher.generate_profile_hash(
-        full_name=full_name,
-        date_of_birth=dob,
-        email=traveler.email,
-        phone=phone
+    # Generate medical profile hash using MedicalInfoHasher
+    result = MedicalInfoHasher.generate_medical_profile_hash(
+        contact1_name=contact1_name,
+        contact1_phone=contact1_phone,
+        contact2_name=contact2_name,
+        contact2_phone=contact2_phone,
+        blood_group=blood_group,
+        medications=medications,
+        allergies=allergies,
+        other_medical_info=other_medical_info
     )
 
     # Update traveler
@@ -180,28 +188,33 @@ def create_profile_hash(user_id):
         current_app.logger.info(f"[CREATE_HASH] Traveler ID: {traveler.id}")
         current_app.logger.info(f"[CREATE_HASH] Before assignment - profile_hash: {traveler.profile_hash}")
 
+        # Update profile hash
         traveler.profile_hash = result['hash']
         traveler.profile_hash_salt = result['salt']
         traveler.profile_hash_updated_at = datetime.utcnow()
-        traveler.full_name = full_name
-        traveler.date_of_birth = dob
-        if phone:
-            traveler.phone = phone
+
+        # Update emergency contacts
+        traveler.emergency_contact_1_name = contact1_name
+        traveler.emergency_contact_1_phone = contact1_phone
+        traveler.emergency_contact_2_name = contact2_name
+        traveler.emergency_contact_2_phone = contact2_phone
+
+        # Update medical information
+        traveler.blood_group = blood_group
+        traveler.medications = medications
+        traveler.allergies = allergies
+        traveler.other_medical_info = other_medical_info
+
+        # Generate emergency contacts hash for backward compatibility
+        emergency_hash = EmergencyContactHasher.generate_emergency_hash(
+            contact1_name, contact1_phone, contact2_name, contact2_phone
+        )
+        traveler.emergency_contacts_hash = emergency_hash
 
         current_app.logger.info(f"[CREATE_HASH] After assignment - profile_hash: {traveler.profile_hash}")
         current_app.logger.info(f"[CREATE_HASH] After assignment - profile_hash_salt: {traveler.profile_hash_salt}")
-        current_app.logger.info(f"[CREATE_HASH] After assignment - full_name: {traveler.full_name}")
-
-        # Update emergency contacts hash if emergency contacts exist
-        if traveler.emergency_contact_1_name or traveler.emergency_contact_2_name:
-            emergency_hash = EmergencyContactHasher.generate_emergency_hash(
-                traveler.emergency_contact_1_name,
-                traveler.emergency_contact_1_phone,
-                traveler.emergency_contact_2_name,
-                traveler.emergency_contact_2_phone
-            )
-            traveler.emergency_contacts_hash = emergency_hash
-            current_app.logger.info(f"[CREATE_HASH] Emergency contacts hash: {emergency_hash}")
+        current_app.logger.info(f"[CREATE_HASH] Emergency contacts hash: {emergency_hash}")
+        current_app.logger.info(f"[CREATE_HASH] Medical data stored successfully")
 
         # Check session state
         current_app.logger.info(f"[CREATE_HASH] Is traveler in session: {traveler in db.session}")
@@ -213,7 +226,7 @@ def create_profile_hash(user_id):
         # Verify the commit
         db.session.refresh(traveler)
         current_app.logger.info(f"[CREATE_HASH] After refresh - profile_hash: {traveler.profile_hash}")
-        current_app.logger.info(f"[CREATE_HASH] After refresh - full_name: {traveler.full_name}")
+        current_app.logger.info(f"[CREATE_HASH] After refresh - contact1_name: {traveler.emergency_contact_1_name}")
 
         # Double-check with fresh query
         fresh_traveler = Traveler.query.get(user_id)
@@ -229,9 +242,10 @@ def create_profile_hash(user_id):
     return success_response(
         {
             'profile_hash': result['hash'],
+            'emergency_contacts_hash': emergency_hash,
             'updated_at': traveler.profile_hash_updated_at.isoformat()
         },
-        message='Profile hash created successfully'
+        message='Profile hash created successfully from emergency contacts and medical information'
     )
 
 
@@ -280,12 +294,25 @@ def mint_sbt(user_id):
     reputation = traveler.reputation_score if traveler.reputation_score else (traveler.traveler_reputation_score or 0.0)
 
     # Mint SBT via backend signer
-    result = SBTService.mint_sbt(
-        traveler_wallet=traveler.wallet_address,
-        profile_hash=traveler.profile_hash,
-        reputation_score=reputation,
-        metadata_uri=None  # TODO: Upload metadata to IPFS
-    )
+    try:
+        current_app.logger.info(f"[MINT_SBT] Starting SBT minting for user {user_id}")
+        current_app.logger.info(f"[MINT_SBT] Wallet: {traveler.wallet_address}")
+        current_app.logger.info(f"[MINT_SBT] Profile Hash: {traveler.profile_hash}")
+        current_app.logger.info(f"[MINT_SBT] Reputation: {reputation}")
+
+        result = SBTService.mint_sbt(
+            traveler_wallet=traveler.wallet_address,
+            profile_hash=traveler.profile_hash,
+            reputation_score=reputation,
+            metadata_uri=None  # TODO: Upload metadata to IPFS
+        )
+
+        current_app.logger.info(f"[MINT_SBT] Result: {result}")
+    except Exception as e:
+        current_app.logger.error(f"[MINT_SBT] Exception: {str(e)}")
+        import traceback
+        current_app.logger.error(f"[MINT_SBT] Traceback: {traceback.format_exc()}")
+        return error_response(f'SBT minting failed: {str(e)}', status_code=500)
 
     if result['success']:
         # Update traveler

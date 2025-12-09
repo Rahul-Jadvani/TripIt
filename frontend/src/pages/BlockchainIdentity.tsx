@@ -39,21 +39,22 @@ export default function BlockchainIdentity() {
   const [isMinting, setIsMinting] = useState(false);
   const [bindError, setBindError] = useState<string | null>(null);
 
-  // Profile hash form
-  const [fullName, setFullName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [phone, setPhone] = useState('');
-
   // Emergency contacts form
   const [contact1Name, setContact1Name] = useState('');
   const [contact1Phone, setContact1Phone] = useState('');
   const [contact2Name, setContact2Name] = useState('');
   const [contact2Phone, setContact2Phone] = useState('');
-  const [isUpdatingContacts, setIsUpdatingContacts] = useState(false);
+
+  // Medical information form
+  const [bloodGroup, setBloodGroup] = useState('');
+  const [medications, setMedications] = useState('');
+  const [allergies, setAllergies] = useState('');
+  const [otherMedicalInfo, setOtherMedicalInfo] = useState('');
 
   // Computed states
   const isWalletBound = Boolean(user?.wallet_address);
   const boundToCurrentWallet = isWalletBound && user?.wallet_address?.toLowerCase() === address?.toLowerCase();
+  const hasEmergencyContactsAndMedical = Boolean(user?.emergency_contact_1_name && user?.emergency_contact_1_phone);
   const hasProfileHash = Boolean(user?.profile_hash);
   const hasSBT = user?.sbt_status === 'issued' || user?.sbt_status === 'verified';
 
@@ -107,10 +108,10 @@ export default function BlockchainIdentity() {
     }
   };
 
-  // Handler: Create Profile Hash
+  // Handler: Create Profile Hash from Emergency Contacts + Medical Data
   const handleCreateProfileHash = async () => {
-    if (!fullName || !dateOfBirth) {
-      toast.error('Please fill in all required fields');
+    if (!contact1Name || !contact1Phone) {
+      toast.error('Please provide at least one emergency contact (name and phone)');
       return;
     }
 
@@ -118,18 +119,23 @@ export default function BlockchainIdentity() {
       setIsCreatingHash(true);
 
       const response = await api.post('/identity/create-profile-hash', {
-        full_name: fullName,
-        date_of_birth: dateOfBirth,
-        phone: phone || undefined,
+        contact1_name: contact1Name,
+        contact1_phone: contact1Phone,
+        contact2_name: contact2Name || undefined,
+        contact2_phone: contact2Phone || undefined,
+        blood_group: bloodGroup || undefined,
+        medications: medications || undefined,
+        allergies: allergies || undefined,
+        other_medical_info: otherMedicalInfo || undefined,
       });
 
       if (response.data.status === 'success') {
-        toast.success('✓ Profile hash created successfully!');
+        toast.success('✓ Transaction hash created successfully!');
         await refreshUser();
       }
     } catch (error: any) {
       console.error('Profile hash error:', error);
-      const errorMsg = error.response?.data?.error || 'Failed to create profile hash';
+      const errorMsg = error.response?.data?.error || 'Failed to create transaction hash';
       toast.error(errorMsg);
     } finally {
       setIsCreatingHash(false);
@@ -156,36 +162,6 @@ export default function BlockchainIdentity() {
     }
   };
 
-  // Handler: Update Emergency Contacts
-  const handleUpdateEmergencyContacts = async () => {
-    if (!contact1Name || !contact1Phone) {
-      toast.error('Please provide at least one emergency contact');
-      return;
-    }
-
-    try {
-      setIsUpdatingContacts(true);
-
-      const response = await api.put('/identity/update-emergency-contacts', {
-        contact1_name: contact1Name,
-        contact1_phone: contact1Phone,
-        contact2_name: contact2Name || undefined,
-        contact2_phone: contact2Phone || undefined,
-      });
-
-      if (response.data.status === 'success') {
-        toast.success('✓ Emergency contacts updated! Profile hash refreshed.');
-        await refreshUser();
-      }
-    } catch (error: any) {
-      console.error('Emergency contacts update error:', error);
-      const errorMsg = error.response?.data?.error || 'Failed to update emergency contacts';
-      toast.error(errorMsg);
-    } finally {
-      setIsUpdatingContacts(false);
-    }
-  };
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -203,15 +179,26 @@ export default function BlockchainIdentity() {
         {/* Progress Overview */}
         <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 {isWalletBound ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 ) : (
                   <div className="h-5 w-5 rounded-full border-2 border-muted" />
                 )}
-                <span className={isWalletBound ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
+                <span className={isWalletBound ? 'text-green-600 font-medium text-sm' : 'text-muted-foreground text-sm'}>
                   1. Bind Wallet
+                </span>
+              </div>
+              <Separator orientation="horizontal" className="flex-1" />
+              <div className="flex items-center gap-2">
+                {hasEmergencyContactsAndMedical ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ) : (
+                  <div className="h-5 w-5 rounded-full border-2 border-muted" />
+                )}
+                <span className={hasEmergencyContactsAndMedical ? 'text-green-600 font-medium text-sm' : 'text-muted-foreground text-sm'}>
+                  2. Enter Info
                 </span>
               </div>
               <Separator orientation="horizontal" className="flex-1" />
@@ -221,8 +208,8 @@ export default function BlockchainIdentity() {
                 ) : (
                   <div className="h-5 w-5 rounded-full border-2 border-muted" />
                 )}
-                <span className={hasProfileHash ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
-                  2. Profile Hash
+                <span className={hasProfileHash ? 'text-green-600 font-medium text-sm' : 'text-muted-foreground text-sm'}>
+                  3. Create Hash
                 </span>
               </div>
               <Separator orientation="horizontal" className="flex-1" />
@@ -232,8 +219,8 @@ export default function BlockchainIdentity() {
                 ) : (
                   <div className="h-5 w-5 rounded-full border-2 border-muted" />
                 )}
-                <span className={hasSBT ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
-                  3. Mint SBT
+                <span className={hasSBT ? 'text-green-600 font-medium text-sm' : 'text-muted-foreground text-sm'}>
+                  4. Mint SBT
                 </span>
               </div>
             </div>
@@ -329,168 +316,132 @@ export default function BlockchainIdentity() {
           </CardContent>
         </Card>
 
-        {/* Step 2: Create Profile Hash */}
-        {isWalletBound && boundToCurrentWallet && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Hash className="h-5 w-5" />
-                Step 2: Create Profile Hash
-              </CardTitle>
-              <CardDescription>
-                Generate a cryptographic hash of your identity for on-chain verification. Your data is hashed locally and only the hash is stored on-chain.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {hasProfileHash ? (
-                <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="space-y-1">
-                    <p className="font-medium text-green-900 dark:text-green-100">
-                      ✓ Profile Hash Created
-                    </p>
-                    <p className="text-xs text-green-800 dark:text-green-200 font-mono break-all">
-                      {user?.profile_hash}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Created: {user?.profile_hash_updated_at ? new Date(user.profile_hash_updated_at).toLocaleString() : 'N/A'}
-                    </p>
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <>
-                  <div className="grid gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name *</Label>
-                      <Input
-                        id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="John Doe"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                      <Input
-                        id="dateOfBirth"
-                        type="date"
-                        value={dateOfBirth}
-                        onChange={(e) => setDateOfBirth(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number (Optional)</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+1234567890"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <p className="text-xs text-blue-900 dark:text-blue-100">
-                      <strong>Privacy:</strong> Your personal information is hashed using SHA-256 with a unique salt.
-                      Only the hash is stored on-chain, ensuring your privacy while maintaining verifiability.
-                    </p>
-                  </div>
-
-                  <Button
-                    onClick={handleCreateProfileHash}
-                    disabled={isCreatingHash || !fullName || !dateOfBirth}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isCreatingHash ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating Hash...
-                      </>
-                    ) : (
-                      <>
-                        <Hash className="mr-2 h-4 w-4" />
-                        Generate Profile Hash
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 2.5: Emergency Contacts (Optional) - Clean Modern Design */}
-        {isWalletBound && boundToCurrentWallet && hasProfileHash && (
+        {/* Step 2: Enter Emergency Contacts & Medical Information */}
+        {isWalletBound && boundToCurrentWallet && !hasProfileHash && (
           <Card className="border-2">
             <CardHeader className="pb-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Emergency Contacts</CardTitle>
-                    <CardDescription className="text-xs mt-1">
-                      Optional - Add contacts for safety. Hashed for privacy.
-                    </CardDescription>
-                  </div>
-                </div>
-                <Badge variant="secondary" className="text-xs">Optional</Badge>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Step 2: Enter Emergency Contacts & Medical Information
+              </CardTitle>
+              <CardDescription>
+                Provide your emergency contact information and optional medical details. All data is cryptographically hashed for privacy.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Contact 1 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                    1
+            <CardContent className="space-y-6">
+              {/* Emergency Contacts Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  Emergency Contacts
+                </h3>
+
+                {/* Contact 1 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                      1
+                    </div>
+                    <Label className="text-sm font-semibold">Primary Contact *</Label>
                   </div>
-                  <Label className="text-sm font-semibold">Primary Contact *</Label>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Input
+                      value={contact1Name}
+                      onChange={(e) => setContact1Name(e.target.value)}
+                      placeholder="Full Name"
+                      className="text-sm"
+                    />
+                    <Input
+                      type="tel"
+                      value={contact1Phone}
+                      onChange={(e) => setContact1Phone(e.target.value)}
+                      placeholder="+1 (555) 000-0000"
+                      className="text-sm"
+                    />
+                  </div>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input
-                    value={contact1Name}
-                    onChange={(e) => setContact1Name(e.target.value)}
-                    placeholder="Full Name"
-                    className="text-sm"
-                  />
-                  <Input
-                    type="tel"
-                    value={contact1Phone}
-                    onChange={(e) => setContact1Phone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                    className="text-sm"
-                  />
+
+                {/* Contact 2 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                      2
+                    </div>
+                    <Label className="text-sm font-semibold">Secondary Contact</Label>
+                    <Badge variant="outline" className="text-[10px] h-5">Optional</Badge>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Input
+                      value={contact2Name}
+                      onChange={(e) => setContact2Name(e.target.value)}
+                      placeholder="Full Name"
+                      className="text-sm"
+                    />
+                    <Input
+                      type="tel"
+                      value={contact2Phone}
+                      onChange={(e) => setContact2Phone(e.target.value)}
+                      placeholder="+1 (555) 000-0000"
+                      className="text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
               <Separator />
 
-              {/* Contact 2 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                    2
+              {/* Medical Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-blue-500" />
+                  Medical & Safety Information
+                  <Badge variant="secondary" className="text-[10px] h-5">Optional</Badge>
+                </h3>
+
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bloodGroup" className="text-sm">Blood Group</Label>
+                    <Input
+                      id="bloodGroup"
+                      value={bloodGroup}
+                      onChange={(e) => setBloodGroup(e.target.value)}
+                      placeholder="e.g., O+, A+, B+, AB+"
+                      className="text-sm"
+                    />
                   </div>
-                  <Label className="text-sm font-semibold">Secondary Contact</Label>
-                  <Badge variant="outline" className="text-[10px] h-5">Optional</Badge>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input
-                    value={contact2Name}
-                    onChange={(e) => setContact2Name(e.target.value)}
-                    placeholder="Full Name"
-                    className="text-sm"
-                  />
-                  <Input
-                    type="tel"
-                    value={contact2Phone}
-                    onChange={(e) => setContact2Phone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                    className="text-sm"
-                  />
+
+                  <div className="space-y-2">
+                    <Label htmlFor="medications" className="text-sm">Current Medications</Label>
+                    <Input
+                      id="medications"
+                      value={medications}
+                      onChange={(e) => setMedications(e.target.value)}
+                      placeholder="e.g., Aspirin, Insulin"
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="allergies" className="text-sm">Known Allergies</Label>
+                    <Input
+                      id="allergies"
+                      value={allergies}
+                      onChange={(e) => setAllergies(e.target.value)}
+                      placeholder="e.g., Peanuts, Penicillin"
+                      className="text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="otherMedicalInfo" className="text-sm">Other Medical/Safety Information</Label>
+                    <Input
+                      id="otherMedicalInfo"
+                      value={otherMedicalInfo}
+                      onChange={(e) => setOtherMedicalInfo(e.target.value)}
+                      placeholder="e.g., Diabetic, heart condition"
+                      className="text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -498,27 +449,60 @@ export default function BlockchainIdentity() {
               <Alert className="bg-primary/5 border-primary/20">
                 <Shield className="h-4 w-4 text-primary" />
                 <AlertDescription className="text-xs">
-                  <span className="font-semibold">Privacy-Preserving</span>: Contacts are SHA-256 hashed before storage.
-                  Only the hash goes on-chain, protecting your emergency contacts' privacy.
+                  <span className="font-semibold">Privacy-Preserving</span>: All information is hashed using SHA-256 with a unique salt.
+                  Only the hash is stored on-chain, protecting your private medical information.
                 </AlertDescription>
               </Alert>
 
-              {/* Save Button */}
+              {/* Informational Note */}
+              <p className="text-xs text-muted-foreground">
+                * Only emergency contacts are required. Medical information is optional but recommended for safety in emergencies.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Create Transaction Hash */}
+        {isWalletBound && boundToCurrentWallet && !hasProfileHash && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Hash className="h-5 w-5" />
+                Step 3: Create Transaction Hash
+              </CardTitle>
+              <CardDescription>
+                Generate a cryptographic hash from your emergency contacts and medical information for on-chain storage.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  What happens when you create the hash?
+                </h4>
+                <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                  <li>• Your emergency contacts and medical data are combined</li>
+                  <li>• A unique salt is generated for security</li>
+                  <li>• SHA-256 hash is created from the salted data</li>
+                  <li>• Only the hash is stored on-chain (not your actual data)</li>
+                  <li>• This enables privacy-preserving emergency verification</li>
+                </ul>
+              </div>
+
               <Button
-                onClick={handleUpdateEmergencyContacts}
-                disabled={isUpdatingContacts || !contact1Name || !contact1Phone}
+                onClick={handleCreateProfileHash}
+                disabled={isCreatingHash || !contact1Name || !contact1Phone}
                 className="w-full"
                 size="lg"
               >
-                {isUpdatingContacts ? (
+                {isCreatingHash ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving Contacts...
+                    Creating Hash...
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Save Emergency Contacts
+                    <Hash className="mr-2 h-4 w-4" />
+                    Create Transaction Hash
                   </>
                 )}
               </Button>
@@ -526,13 +510,13 @@ export default function BlockchainIdentity() {
           </Card>
         )}
 
-        {/* Step 3: Mint SBT */}
+        {/* Step 4: Mint SBT */}
         {isWalletBound && boundToCurrentWallet && hasProfileHash && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-5 w-5" />
-                Step 3: Mint Travel SBT
+                Step 4: Mint Travel SBT
               </CardTitle>
               <CardDescription>
                 Mint your Soul-Bound Token (SBT) - a non-transferable NFT representing your verified travel identity on Base network.

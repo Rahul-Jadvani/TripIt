@@ -77,6 +77,12 @@ class Traveler(db.Model):
     insurance_provider = db.Column(db.String(100), nullable=True)
     insurance_id = db.Column(db.String(100), nullable=True)
 
+    # Medical Information (for SBT profile hash)
+    blood_group = db.Column(db.String(10), nullable=True)  # A+, B+, O+, AB+, A-, B-, O-, AB-
+    medications = db.Column(db.Text, nullable=True)  # Current medications
+    allergies = db.Column(db.Text, nullable=True)  # Known allergies
+    other_medical_info = db.Column(db.Text, nullable=True)  # Additional medical/safety info
+
     # Reputation
     traveler_reputation_score = db.Column(db.Float, default=0.0)
     contributions_verified = db.Column(db.Integer, default=0)

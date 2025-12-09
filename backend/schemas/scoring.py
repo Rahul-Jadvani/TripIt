@@ -69,4 +69,4 @@ class UpdateConfigSchema(Schema):
 class RescoreProjectSchema(Schema):
     """Schema for manual project rescoring"""
     project_id = fields.String(required=True)
-    force = fields.Boolean(missing=False)  # Force rescore even if recently scored
+    force = fields.Boolean(load_default=False)  # Force rescore even if recently scored
