@@ -154,7 +154,7 @@ class Config:
     SCORING_GITHUB_CACHE_DAYS = int(os.getenv('SCORING_GITHUB_CACHE_DAYS', 7))
 
     # CORS
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:8080').split(',')
+    CORS_ORIGINS = "*"  # Allow all origins
 
     # Rate Limiting (Upstash Redis doesn't use database numbers)
     RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'true').lower() == 'true'
