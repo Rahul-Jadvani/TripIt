@@ -65,6 +65,13 @@ export function getProjectScore(project?: Partial<Project> & { proof_score?: num
     return matchScore;
   }
 
+  // NEW: Directly use proof_score from the API (already calculated on backend)
+  const proofScore = project?.proof_score;
+  if (typeof proofScore === 'number' && Number.isFinite(proofScore)) {
+    return proofScore;
+  }
+
+  // LEGACY: Try old score breakdown format for backwards compatibility
   const breakdown = getScoreBreakdown(project);
   const breakdownScore = sumBreakdownScores(breakdown);
 
@@ -77,7 +84,8 @@ export function getProjectScore(project?: Partial<Project> & { proof_score?: num
     return componentsScore;
   }
 
-  const fallback = project?.proofScore?.total ?? project?.proof_score ?? 0;
+  // Final fallback
+  const fallback = project?.proofScore?.total ?? 0;
   const normalized = Number(fallback);
   return Number.isFinite(normalized) ? normalized : 0;
 }

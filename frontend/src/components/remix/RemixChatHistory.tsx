@@ -23,7 +23,7 @@ export const RemixChatHistory: FC<RemixChatHistoryProps> = ({
   return (
     <div className="h-full flex flex-col bg-card border-r-4 border-black">
       {/* Header */}
-      <div className="p-4 border-b-2 border-black bg-secondary/50">
+      {/* <div className="p-4 border-b-2 border-black bg-secondary/50">
         <button
           onClick={onNewChat}
           className="w-full btn-primary flex items-center justify-center gap-2"
@@ -31,7 +31,7 @@ export const RemixChatHistory: FC<RemixChatHistoryProps> = ({
           <Plus className="w-5 h-5" />
           New Remix Chat
         </button>
-      </div>
+      </div> */}
 
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -72,9 +72,9 @@ export const RemixChatHistory: FC<RemixChatHistoryProps> = ({
                 {/* Status Badge */}
                 <div className="flex items-center gap-2 mb-2">
                   {session.status === 'finalized' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-600 border border-green-600 flex items-center gap-1">
+                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 border border-blue-600 flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" />
-                      Published
+                      Ready
                     </span>
                   )}
                   {session.status === 'archived' && (

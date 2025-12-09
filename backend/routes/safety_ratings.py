@@ -37,9 +37,13 @@ def add_safety_rating(user_id):
         if not itinerary or itinerary.is_deleted:
             return error_response('Not found', 'Itinerary not found', 404)
 
-        # Resolve traveler SBT ID (fallback to traveler_id to satisfy NOT NULL constraint)
+        # Resolve traveler SBT ID and check verification status
         traveler = Traveler.query.get(user_id)
+        if not traveler:
+            return error_response('Not found', 'Traveler not found', 404)
+
         traveler_sbt_id = getattr(traveler, 'sbt_id', None) or user_id
+        is_verified = getattr(traveler, 'sbt_verified', False) or False
 
         # Check if user already rated this itinerary
         existing_rating = SafetyRating.query.filter_by(
@@ -78,6 +82,7 @@ def add_safety_rating(user_id):
                 if value is not None:
                     setattr(existing_rating, key, value)
             existing_rating.traveler_sbt_id = traveler_sbt_id
+            existing_rating.verified_traveler = is_verified
 
             if photo_ipfs_hashes:
                 existing_rating.photo_ipfs_hashes = photo_ipfs_hashes
@@ -91,6 +96,7 @@ def add_safety_rating(user_id):
                 itinerary_id=itinerary_id,
                 traveler_id=user_id,
                 traveler_sbt_id=traveler_sbt_id,
+                verified_traveler=is_verified,
                 photo_ipfs_hashes=photo_ipfs_hashes,
                 **rating_data
             )
@@ -110,13 +116,28 @@ def add_safety_rating(user_id):
             except Exception as e:
                 current_app.logger.error(f"Failed to award TRIP tokens: {e}")
 
-        # Recalculate itinerary's average safety score
-        all_ratings = SafetyRating.query.filter_by(itinerary_id=itinerary_id).all()
-        if all_ratings:
-            avg_safety = sum(r.overall_safety_score for r in all_ratings) / len(all_ratings)
+        # Recalculate itinerary's average safety score (verified users only)
+        verified_ratings = SafetyRating.query.filter_by(
+            itinerary_id=itinerary_id,
+            verified_traveler=True
+        ).all()
+
+        if verified_ratings:
+            avg_safety = sum(r.overall_safety_score for r in verified_ratings) / len(verified_ratings)
             itinerary.safety_score = round(avg_safety, 2)
-            itinerary.safety_ratings_count = len(all_ratings)
-            db.session.commit()
+            itinerary.safety_ratings_count = len(verified_ratings)
+        else:
+            # If no verified ratings, use all ratings as fallback
+            all_ratings = SafetyRating.query.filter_by(itinerary_id=itinerary_id).all()
+            if all_ratings:
+                avg_safety = sum(r.overall_safety_score for r in all_ratings) / len(all_ratings)
+                itinerary.safety_score = round(avg_safety, 2)
+                itinerary.safety_ratings_count = len(all_ratings)
+            else:
+                itinerary.safety_score = 0
+                itinerary.safety_ratings_count = 0
+
+        db.session.commit()
 
         CacheService.invalidate_itinerary(itinerary_id)
         CacheService.invalidate_itinerary_feed()
@@ -239,13 +260,29 @@ def update_safety_rating(user_id, rating_id):
         rating.updated_at = datetime.utcnow()
         db.session.commit()
 
-        # Recalculate itinerary's average safety score
+        # Recalculate itinerary's average safety score (verified users only)
         itinerary = Itinerary.query.get(rating.itinerary_id)
-        all_ratings = SafetyRating.query.filter_by(itinerary_id=rating.itinerary_id).all()
-        if all_ratings and itinerary:
-            avg_safety = sum(r.overall_safety_score for r in all_ratings) / len(all_ratings)
-            itinerary.safety_score = round(avg_safety, 2)
-            itinerary.safety_ratings_count = len(all_ratings)
+        if itinerary:
+            verified_ratings = SafetyRating.query.filter_by(
+                itinerary_id=rating.itinerary_id,
+                verified_traveler=True
+            ).all()
+
+            if verified_ratings:
+                avg_safety = sum(r.overall_safety_score for r in verified_ratings) / len(verified_ratings)
+                itinerary.safety_score = round(avg_safety, 2)
+                itinerary.safety_ratings_count = len(verified_ratings)
+            else:
+                # If no verified ratings, use all ratings as fallback
+                all_ratings = SafetyRating.query.filter_by(itinerary_id=rating.itinerary_id).all()
+                if all_ratings:
+                    avg_safety = sum(r.overall_safety_score for r in all_ratings) / len(all_ratings)
+                    itinerary.safety_score = round(avg_safety, 2)
+                    itinerary.safety_ratings_count = len(all_ratings)
+                else:
+                    itinerary.safety_score = 0
+                    itinerary.safety_ratings_count = 0
+
             db.session.commit()
 
         CacheService.invalidate_itinerary(rating.itinerary_id)
@@ -282,16 +319,29 @@ def delete_safety_rating(user_id, rating_id):
         db.session.delete(rating)
         db.session.commit()
 
-        # Recalculate itinerary's average safety score
+        # Recalculate itinerary's average safety score (verified users only)
         itinerary = Itinerary.query.get(itinerary_id)
-        all_ratings = SafetyRating.query.filter_by(itinerary_id=itinerary_id).all()
         if itinerary:
-            if all_ratings:
-                avg_safety = sum(r.overall_safety_score for r in all_ratings) / len(all_ratings)
+            verified_ratings = SafetyRating.query.filter_by(
+                itinerary_id=itinerary_id,
+                verified_traveler=True
+            ).all()
+
+            if verified_ratings:
+                avg_safety = sum(r.overall_safety_score for r in verified_ratings) / len(verified_ratings)
                 itinerary.safety_score = round(avg_safety, 2)
+                itinerary.safety_ratings_count = len(verified_ratings)
             else:
-                itinerary.safety_score = 0
-            itinerary.safety_ratings_count = len(all_ratings)
+                # If no verified ratings, use all ratings as fallback
+                all_ratings = SafetyRating.query.filter_by(itinerary_id=itinerary_id).all()
+                if all_ratings:
+                    avg_safety = sum(r.overall_safety_score for r in all_ratings) / len(all_ratings)
+                    itinerary.safety_score = round(avg_safety, 2)
+                    itinerary.safety_ratings_count = len(all_ratings)
+                else:
+                    itinerary.safety_score = 0
+                    itinerary.safety_ratings_count = 0
+
             db.session.commit()
 
         CacheService.invalidate_itinerary(itinerary_id)

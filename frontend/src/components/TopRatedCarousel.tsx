@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeftIcon, ChevronRightIcon, ArrowRight } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, ArrowRight, Sparkles } from 'lucide-react';
 import { Autoplay, Navigation } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css/navigation';
 import 'swiper/css';
 
 import { Project } from '@/types';
 import { ItineraryCard } from '@/components/ItineraryCard';
+
+// Placeholder SVG with Sparkles icon (matching RemixPage style)
+const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"%3E%3Crect width="800" height="600" fill="%23f0f0f0"/%3E%3Cg transform="translate(400,300)"%3E%3Cpath fill="%23f66926" opacity="0.5" d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21L12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z" transform="translate(-12,-11.5) scale(4)"%3E%3C/path%3E%3C/g%3E%3C/svg%3E';
 
 interface TopRatedCarouselProps {
   projects: Itinerary[];
@@ -25,6 +29,8 @@ export function TopRatedCarousel({
 }: TopRatedCarouselProps) {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
+  const swiperRef = useRef<SwiperType | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   // Daily rotation logic - changes every 24 hours
   const dailyRotatedProjects = useMemo(() => {
@@ -47,6 +53,37 @@ export function TopRatedCarousel({
 
     return shuffled;
   }, [projects]);
+
+  // Add placeholder image for projects without screenshots
+  const projectsWithPlaceholders = useMemo(() => {
+    return dailyRotatedProjects.map(project => ({
+      ...project,
+      screenshots: project.screenshots?.length > 0
+        ? project.screenshots
+        : [PLACEHOLDER_IMAGE]
+    }));
+  }, [dailyRotatedProjects]);
+
+  // IntersectionObserver to auto-play only when in viewport
+  useEffect(() => {
+    if (!carouselRef.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (swiperRef.current) {
+          if (entry.isIntersecting) {
+            swiperRef.current.autoplay?.start();
+          } else {
+            swiperRef.current.autoplay?.stop();
+          }
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(carouselRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const css = `
     .carousel-top-rated {
@@ -88,15 +125,15 @@ export function TopRatedCarousel({
   `;
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" ref={carouselRef}>
       <style>{css}</style>
 
       {/* Section Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-2xl sm:text-3xl font-black text-foreground">
+          {/* <h2 className="text-2xl sm:text-3xl font-black text-foreground">
             Top Rated Projects
-          </h2>
+          </h2> */}
           <div className="hidden sm:flex ml-auto text-sm text-muted-foreground font-medium items-center gap-3">
             <span>
               <span className="text-primary font-bold">
@@ -133,17 +170,32 @@ export function TopRatedCarousel({
         }}
         className="relative w-full"
       >
-        {dailyRotatedProjects.length > 0 ? (
+        {projectsWithPlaceholders.length > 0 ? (
           <Swiper
-            spaceBetween={30}
+            onSwiper={(swiper) => {
+              swiperRef.current = swiper;
+            }}
+            spaceBetween={20}
             autoplay={{
-              delay: 5000,
-              disableOnInteraction: true,
+              delay: 3000,
+              disableOnInteraction: false,
+              pauseOnMouseEnter: true,
             }}
             grabCursor={true}
-            centeredSlides={true}
-            loop={dailyRotatedProjects.length > 1}
-            slidesPerView="auto"
+            centeredSlides={false}
+            loop={true}
+            slidesPerView={1}
+            slidesPerGroup={3}
+            breakpoints={{
+              640: {
+                slidesPerView: 2,
+                spaceBetween: 20,
+              },
+              1024: {
+                slidesPerView: 3,
+                spaceBetween: 24,
+              },
+            }}
             onSlideChange={(swiper) => {
               setActiveIndex(swiper.realIndex);
             }}
@@ -154,17 +206,13 @@ export function TopRatedCarousel({
             className="carousel-top-rated"
             modules={[Autoplay, Navigation]}
           >
-            {dailyRotatedProjects.map((project, index) => {
-              const isActive = index === activeIndex;
-
+            {projectsWithPlaceholders.map((project, index) => {
               return (
                 <SwiperSlide
                   key={project.id}
-                  className={`!w-full sm:!w-auto flex items-center justify-center`}
+                  className="!h-auto"
                 >
-                  <div className={`w-full sm:w-[480px] md:w-[520px] transition-all duration-300 ${
-                    !isActive ? 'opacity-60 scale-95' : 'opacity-100 scale-100'
-                  }`}>
+                  <div className="w-full h-full">
                     {/* Rank Badge */}
                     <div className="flex justify-end mb-2">
                       <div className="bg-primary text-black px-3 py-1 rounded-full text-sm font-bold shadow-lg">
@@ -172,10 +220,7 @@ export function TopRatedCarousel({
                       </div>
                     </div>
 
-                    {/* Use the new ItineraryCard */}
-                    <ItineraryCard project={project} />
-
-                    {/* Use the new ItineraryCard */}
+                    {/* Use the ItineraryCard */}
                     <ItineraryCard project={project} />
                   </div>
                 </SwiperSlide>
