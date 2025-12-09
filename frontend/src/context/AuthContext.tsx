@@ -59,6 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sbt_blockchain_hash: backendUser.sbt_blockchain_hash,
       reputation_score: backendUser.reputation_score || 0,
       trip_token_balance: backendUser.trip_token_balance || 0,
+      // QR Verification Fields
+      qr_ipfs_url: backendUser.qr_ipfs_url,
+      verification_status: backendUser.verification_status,
+      scan_count: backendUser.scan_count || 0,
       createdAt: backendUser.created_at,
       created_at: backendUser.created_at,
       updatedAt: backendUser.updated_at,

@@ -48,6 +48,10 @@ from .remix_chat_session import RemixChatSession
 from .remix_chat_message import RemixChatMessage
 from .booking_session import BookingSession
 
+# QR Verification Models
+from .vendor import Vendor
+from .user_verification import UserVerification
+
 __all__ = [
     # Legacy Zer0 Models
     'User',
@@ -103,5 +107,8 @@ __all__ = [
     'RemixChatSession',
     'RemixChatMessage',
     # Booking Models
-    'BookingSession'
+    'BookingSession',
+    # QR Verification Models
+    'Vendor',
+    'UserVerification'
 ]

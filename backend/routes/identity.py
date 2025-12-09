@@ -1,14 +1,16 @@
 """
 Identity Routes - Blockchain identity management
-Endpoints: wallet binding, profile hashing, SBT minting
+Endpoints: wallet binding, profile hashing, SBT minting, QR verification
 """
 from flask import Blueprint, request, current_app
 from extensions import db
 from models.traveler import Traveler
+from models.user_verification import UserVerification
 from utils.decorators import token_required
 from utils.helpers import success_response, error_response
 from utils.identity import IdentityHasher, EmergencyContactHasher, MedicalInfoHasher
 from utils.sbt_service import SBTService
+from utils import qr_service
 from web3 import Web3
 from eth_account.messages import encode_defunct
 from datetime import datetime
@@ -254,16 +256,17 @@ def create_profile_hash(user_id):
 def mint_sbt(user_id):
     """
     Mint TravelSBT to user's wallet (backend-signed transaction)
+    Also generates QR code for vendor verification and uploads to IPFS.
 
     Prerequisites:
         - wallet_address must be bound
         - profile_hash must be created
 
     Returns:
-        200: SBT minted successfully
+        200: SBT minted successfully with QR code
         400: Missing prerequisites
         409: SBT already issued
-        500: Blockchain error
+        500: Blockchain or QR generation error
     """
     # Get traveler
     traveler = Traveler.query.get(user_id)
@@ -285,26 +288,48 @@ def mint_sbt(user_id):
 
     # Check if SBT already issued
     if traveler.sbt_status in ['issued', 'verified']:
-        return error_response(
-            f'SBT already issued. Token ID: {traveler.sbt_id}',
-            status_code=409
-        )
+        # Check if user already has verification record with QR
+        existing_verification = UserVerification.query.filter_by(traveler_id=user_id).first()
+        if existing_verification and existing_verification.qr_ipfs_url:
+            return error_response(
+                f'SBT already issued. Token ID: {traveler.sbt_id}',
+                status_code=409
+            )
+        # If no verification record, allow re-minting attempt (edge case recovery)
 
     # Use reputation_score if available, otherwise use traveler_reputation_score
     reputation = traveler.reputation_score if traveler.reputation_score else (traveler.traveler_reputation_score or 0.0)
 
-    # Mint SBT via backend signer
+    # Get user's display name for QR
+    user_name = traveler.full_name or traveler.display_name or traveler.username or 'TripIt User'
+
+    # Step 1: Generate QR code and upload to IPFS BEFORE minting
+    current_app.logger.info(f"[MINT_SBT] Generating QR code for user {user_id}")
+    qr_result = qr_service.generate_and_upload_qr(
+        traveler_id=user_id,
+        wallet_address=traveler.wallet_address,
+        user_name=user_name
+    )
+
+    if not qr_result['success']:
+        current_app.logger.error(f"[MINT_SBT] QR generation failed: {qr_result['error']}")
+        return error_response(f"QR code generation failed: {qr_result['error']}", status_code=500)
+
+    current_app.logger.info(f"[MINT_SBT] QR uploaded to IPFS: {qr_result['qr_ipfs_url']}")
+
+    # Step 2: Mint SBT with QR IPFS URL as metadata_uri
     try:
         current_app.logger.info(f"[MINT_SBT] Starting SBT minting for user {user_id}")
         current_app.logger.info(f"[MINT_SBT] Wallet: {traveler.wallet_address}")
         current_app.logger.info(f"[MINT_SBT] Profile Hash: {traveler.profile_hash}")
         current_app.logger.info(f"[MINT_SBT] Reputation: {reputation}")
+        current_app.logger.info(f"[MINT_SBT] Metadata URI (QR): {qr_result['qr_ipfs_url']}")
 
         result = SBTService.mint_sbt(
             traveler_wallet=traveler.wallet_address,
             profile_hash=traveler.profile_hash,
             reputation_score=reputation,
-            metadata_uri=None  # TODO: Upload metadata to IPFS
+            metadata_uri=qr_result['qr_ipfs_url']  # Use QR IPFS URL as tokenURI
         )
 
         current_app.logger.info(f"[MINT_SBT] Result: {result}")
@@ -315,12 +340,58 @@ def mint_sbt(user_id):
         return error_response(f'SBT minting failed: {str(e)}', status_code=500)
 
     if result['success']:
-        # Update traveler
-        traveler.sbt_id = result['sbt_id']
-        traveler.sbt_blockchain_hash = result['tx_hash']
-        traveler.sbt_status = 'issued'
-        traveler.sbt_verified_date = datetime.utcnow()
-        db.session.commit()
+        # Step 3: Create UserVerification record
+        try:
+            # Check if verification record already exists (shouldn't, but handle edge case)
+            existing_verification = UserVerification.query.filter_by(traveler_id=user_id).first()
+
+            if existing_verification:
+                # Update existing record
+                existing_verification.sbt_token_id = result['sbt_id']
+                existing_verification.verification_token = qr_result['token']
+                existing_verification.qr_ipfs_url = qr_result['qr_ipfs_url']
+                existing_verification.qr_ipfs_hash = qr_result['qr_ipfs_hash']
+                existing_verification.verification_status = 'verified'
+                existing_verification.full_name = user_name
+                existing_verification.emergency_contact_1_name = traveler.emergency_contact_1_name
+                existing_verification.emergency_contact_1_phone = traveler.emergency_contact_1_phone
+                existing_verification.emergency_contact_2_name = traveler.emergency_contact_2_name
+                existing_verification.emergency_contact_2_phone = traveler.emergency_contact_2_phone
+                existing_verification.blood_group = traveler.blood_group
+                verification = existing_verification
+            else:
+                # Create new verification record
+                verification = UserVerification(
+                    traveler_id=user_id,
+                    wallet_address=traveler.wallet_address,
+                    sbt_token_id=result['sbt_id'],
+                    verification_token=qr_result['token'],
+                    qr_ipfs_url=qr_result['qr_ipfs_url'],
+                    qr_ipfs_hash=qr_result['qr_ipfs_hash'],
+                    verification_status='verified',
+                    full_name=user_name,
+                    emergency_contact_1_name=traveler.emergency_contact_1_name,
+                    emergency_contact_1_phone=traveler.emergency_contact_1_phone,
+                    emergency_contact_2_name=traveler.emergency_contact_2_name,
+                    emergency_contact_2_phone=traveler.emergency_contact_2_phone,
+                    blood_group=traveler.blood_group
+                )
+                db.session.add(verification)
+
+            # Update traveler SBT status
+            traveler.sbt_id = result['sbt_id']
+            traveler.sbt_blockchain_hash = result['tx_hash']
+            traveler.sbt_status = 'issued'
+            traveler.sbt_verified_date = datetime.utcnow()
+
+            db.session.commit()
+            current_app.logger.info(f"[MINT_SBT] UserVerification record created for user {user_id}")
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"[MINT_SBT] Failed to create verification record: {str(e)}")
+            # SBT was minted but verification record failed - log but don't fail the request
+            # The SBT is on-chain, so we return success but note the issue
 
         # Determine network
         network = current_app.config.get('BLOCKCHAIN_NETWORK', 'base_sepolia')
@@ -332,9 +403,11 @@ def mint_sbt(user_id):
                 'tx_hash': result['tx_hash'],
                 'gas_used': result['gas_used'],
                 'explorer_url': f"{explorer_base}/tx/{result['tx_hash']}",
-                'token_url': f"{explorer_base}/nft/{current_app.config['SBT_CONTRACT_ADDRESS']}/{result['sbt_id']}"
+                'token_url': f"{explorer_base}/nft/{current_app.config['SBT_CONTRACT_ADDRESS']}/{result['sbt_id']}",
+                'qr_ipfs_url': qr_result['qr_ipfs_url'],
+                'verification_token': qr_result['token']
             },
-            message='SBT minted successfully!'
+            message='SBT minted successfully with verification QR code!'
         )
     else:
         return error_response(
@@ -347,7 +420,7 @@ def mint_sbt(user_id):
 @token_required
 def get_identity_profile(user_id):
     """
-    Get identity profile with blockchain status
+    Get identity profile with blockchain status and QR verification data
 
     Returns:
         200: Identity profile
@@ -362,6 +435,17 @@ def get_identity_profile(user_id):
     if traveler.wallet_address:
         masked_wallet = f"{traveler.wallet_address[:6]}...{traveler.wallet_address[-4:]}"
 
+    # Get QR verification data if exists
+    qr_ipfs_url = None
+    verification_status = None
+    scan_count = 0
+
+    verification_record = UserVerification.query.filter_by(traveler_id=user_id).first()
+    if verification_record:
+        qr_ipfs_url = verification_record.qr_ipfs_url
+        verification_status = verification_record.verification_status
+        scan_count = verification_record.scan_count
+
     return success_response({
         'wallet_address': masked_wallet,
         'full_wallet_address': traveler.wallet_address,  # For explorer links
@@ -374,6 +458,10 @@ def get_identity_profile(user_id):
         'sbt_verified_date': traveler.sbt_verified_date.isoformat() if traveler.sbt_verified_date else None,
         'reputation_score': traveler.reputation_score or traveler.traveler_reputation_score or 0.0,
         'emergency_contacts_configured': bool(traveler.emergency_contact_1_name or traveler.emergency_contact_2_name),
+        # QR Verification data
+        'qr_ipfs_url': qr_ipfs_url,
+        'verification_status': verification_status,
+        'scan_count': scan_count,
     })
 
 
