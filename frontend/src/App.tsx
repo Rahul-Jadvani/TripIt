@@ -22,7 +22,10 @@ import { CoffeeLoader } from "./components/CoffeeLoader";
 import { FirstOpenLoader } from "./components/FirstOpenLoader";
 import { NetworkGuard } from "./components/NetworkGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+<<<<<<< HEAD
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+=======
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
 
 // Pages (lazy-loaded)
 const Feed = lazy(() => import("./pages/Feed"));
@@ -124,7 +127,10 @@ const App = () => {
             <PrefetchWrapper>
               <PageScrollBackground />
               <FirstOpenLoader />
+<<<<<<< HEAD
               <PWAInstallPrompt />
+=======
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
               <TooltipProvider>
                 <Toaster />
                 <BrowserRouter>

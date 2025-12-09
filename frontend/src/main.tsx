@@ -6,6 +6,7 @@ import { setupBackendHealthMonitor } from "./lib/backendHealthMonitor";
 // Setup backend health monitoring before app renders
 setupBackendHealthMonitor();
 
+<<<<<<< HEAD
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
   // Use the virtual module from vite-plugin-pwa
@@ -25,4 +26,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+=======
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
 createRoot(document.getElementById("root")!).render(<App />);

@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+<<<<<<< HEAD
 
 declare module 'virtual:pwa-register' {
   export interface RegisterSWOptions {
@@ -11,3 +12,5 @@ declare module 'virtual:pwa-register' {
 
   export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => Promise<void>;
 }
+=======
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679

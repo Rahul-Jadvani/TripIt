@@ -98,7 +98,10 @@
     "vite": "^5.4.19",
     "vite-plugin-compression": "^0.5.1",
     "vite-plugin-imagemin": "^0.6.1",
+<<<<<<< HEAD
     "vite-plugin-pwa": "^1.2.0",
+=======
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
     "vite-plugin-webfont-dl": "^3.11.1"
   }
 }

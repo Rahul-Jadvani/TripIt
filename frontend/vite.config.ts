@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // import { defineConfig } from "vite";
 // import react from "@vitejs/plugin-react-swc";
 // import path from "path";
@@ -161,6 +162,8 @@
 //     ],
 //   },
 // }));
+=======
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -168,7 +171,10 @@ import viteCompression from "vite-plugin-compression";
 import viteImagemin from "vite-plugin-imagemin";
 import { visualizer } from "rollup-plugin-visualizer";
 import webfontDownload from "vite-plugin-webfont-dl";
+<<<<<<< HEAD
 import { VitePWA } from "vite-plugin-pwa";
+=======
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -206,6 +212,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
+<<<<<<< HEAD
 
   plugins: [
     react(),
@@ -358,6 +365,11 @@ export default defineConfig(({ mode }) => ({
       },
     }),
 
+=======
+  plugins: [
+    react(),
+
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
     // Optimize images during build
     viteImagemin({
       gifsicle: {
@@ -408,6 +420,7 @@ export default defineConfig(({ mode }) => ({
     }),
 
     // Bundle analyzer (only in analyze mode)
+<<<<<<< HEAD
     mode === 'analyze' &&
       visualizer({
         open: true,
@@ -415,6 +428,14 @@ export default defineConfig(({ mode }) => ({
         gzipSize: true,
         brotliSize: true,
       }),
+=======
+    mode === 'analyze' && visualizer({
+      open: true,
+      filename: 'dist/stats.html',
+      gzipSize: true,
+      brotliSize: true,
+    }),
+>>>>>>> f5e1b66bb20dd8258333f87d943ad5ce1ace2679
   ].filter(Boolean),
 
   resolve: {
