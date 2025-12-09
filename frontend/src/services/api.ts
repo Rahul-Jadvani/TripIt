@@ -159,13 +159,14 @@ export const safetyRatingsService = {
     api.post(`/safety-ratings/${ratingId}/unhelpful`),
 };
 
-// Keep legacy votesService as alias for backward compatibility during migration
+// Votes service (actual voting endpoint)
 export const votesService = {
   vote: (projectId: string, voteType: 'up' | 'down') =>
-    safetyRatingsService.addRating(projectId, {
-      overall_safety_score: voteType === 'up' ? 5 : 1
+    api.post('/votes', {
+      project_id: projectId,
+      vote_type: voteType
     }),
-  getUserVotes: () => safetyRatingsService.getUserRatings(),
+  getUserVotes: () => api.get('/votes/user'),
 };
 
 // Travel Intel (TripIt - replaces Comments)

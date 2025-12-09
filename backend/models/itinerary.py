@@ -137,23 +137,12 @@ class Itinerary(db.Model):
 
     def to_dict(self, include_creator=False, user_id=None):
         """Convert to dictionary"""
-        # Get fresh vote counts from VoteService (Redis or votes table)
-        upvotes = self.upvotes
-        downvotes = self.downvotes
-
-        try:
-            from services.vote_service import VoteService
-            vote_service = VoteService()
-            vote_counts = vote_service.get_vote_counts(self.id)
-            if vote_counts:
-                upvotes = vote_counts['upvotes']
-                downvotes = vote_counts['downvotes']
-        except Exception as e:
-            # Fallback to itinerary table columns if VoteService fails
-            pass
+        # Use database columns as source of truth (updated by vote population scripts and Celery tasks)
+        upvotes = self.upvotes or 0
+        downvotes = self.downvotes or 0
 
         # Get fresh comment count from travel_intel table
-        comment_count = self.comment_count
+        comment_count = self.comment_count or 0
         try:
             from models.travel_intel import TravelIntel
             comment_count = TravelIntel.query.filter_by(itinerary_id=self.id).count()

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Itinerary } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageSquare, Share2, Bookmark, ChevronLeft, ChevronRight, MapPin, Calendar, TrendingUp, DollarSign, Users } from 'lucide-react';
+import { Share2, Bookmark, ChevronLeft, ChevronRight, MapPin, Calendar, TrendingUp, DollarSign, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCheckIfSavedItinerary, useSaveItinerary, useUnsaveItinerary } from '@/hooks/useSavedItineraries';
 import { useAuth } from '@/context/AuthContext';
@@ -261,15 +261,6 @@ export const ItineraryCard = memo(function ItineraryCard({ project }: ItineraryC
               userVote={userVote}
               projectOwnerId={projectOwnerId}
             />
-
-            <Link
-              to={`/project/${project.id}#comments`}
-              className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MessageSquare className="h-5 w-5" />
-              <span className="text-sm font-medium">{project.comment_count || 0}</span>
-            </Link>
 
             <button
               onClick={handleShare}

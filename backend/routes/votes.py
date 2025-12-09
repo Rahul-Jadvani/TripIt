@@ -29,34 +29,46 @@ def cast_vote(user_id):
     2. Slow path: Celery worker does durable DB write + reconciliation
     """
     try:
+        print(f"\n[VOTE_DEBUG] ========== NEW VOTE REQUEST ==========")
+        print(f"[VOTE_DEBUG] User ID: {user_id}")
+
         # 1. Validate input
         data = request.get_json()
+        print(f"[VOTE_DEBUG] Request data: {data}")
+
         schema = VoteCreateSchema()
         validated_data = schema.load(data)
 
         project_id = validated_data['project_id']
         vote_type = validated_data['vote_type']
+        print(f"[VOTE_DEBUG] Project ID: {project_id}, Vote Type: {vote_type}")
 
         # 2. Redis rate limiting (5 votes per user per post per 10 seconds)
         from services.vote_service import VoteService
         vote_service = VoteService()
 
         if not vote_service.check_rate_limit(user_id, project_id):
+            print(f"[VOTE_DEBUG] ❌ RATE LIMITED")
             return error_response('Rate limit', 'Too many vote attempts. Please wait a moment.', 429)
 
         # 3. Verify content exists - check both Project and Itinerary tables (lightweight check - no locking)
         content = get_content_by_id(project_id)
         if not content:
+            print(f"[VOTE_DEBUG] ❌ CONTENT NOT FOUND for ID: {project_id}")
             return error_response('Not found', 'Content not found', 404)
 
-        # 4. Fast-path vote processing via Redis
+        print(f"[VOTE_DEBUG] ✅ Content found: {type(content).__name__}")
 
+        # 4. Fast-path vote processing via Redis
+        print(f"[VOTE_DEBUG] Calling fast_vote...")
         result = vote_service.fast_vote(user_id, project_id, vote_type)
+        print(f"[VOTE_DEBUG] fast_vote result: {result}")
 
         # 4. Enqueue Celery task for durable processing
         from tasks.vote_tasks import process_vote_event
 
-        process_vote_event.delay(
+        print(f"[VOTE_DEBUG] Enqueuing Celery task...")
+        task = process_vote_event.delay(
             request_id=result['request_id'],
             user_id=user_id,
             project_id=project_id,
@@ -64,6 +76,7 @@ def cast_vote(user_id):
             prior_vote=result['prior_vote'] or '',
             action=result['action']
         )
+        print(f"[VOTE_DEBUG] ✅ Celery task enqueued: {task.id}")
 
         # 5. Return optimistic response immediately
         response_data = {
@@ -76,12 +89,16 @@ def cast_vote(user_id):
             'action': result['action']  # 'created'|'removed'|'changed'
         }
 
+        print(f"[VOTE_DEBUG] ✅ SUCCESS - Returning response: {response_data}")
+        print(f"[VOTE_DEBUG] ==========================================\n")
+
         return success_response(response_data, 'Vote recorded', 200)
 
     except ValidationError as e:
+        print(f"[VOTE_DEBUG] ❌ VALIDATION ERROR: {e.messages}")
         return error_response('Validation error', str(e.messages), 400)
     except Exception as e:
-        print(f"[VOTE_ASYNC] Error: {e}")
+        print(f"[VOTE_DEBUG] ❌ EXCEPTION: {e}")
         import traceback
         traceback.print_exc()
         return error_response('Error', str(e), 500)
