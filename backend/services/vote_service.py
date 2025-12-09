@@ -2,7 +2,7 @@
 Vote Service - Fast-path Redis layer for async voting
 Handles optimistic vote updates with sub-50ms response time
 """
-import redis
+from upstash_redis import Redis
 import json
 import time
 from uuid import uuid4
@@ -39,12 +39,14 @@ class VoteService:
     RATE_LIMIT_MAX = 5      # Max 5 votes per window
 
     def __init__(self, redis_client=None):
-        """Initialize vote service with Redis client"""
+        """Initialize vote service with Upstash Redis client"""
         if redis_client is None:
             from config import config
             import os
-            redis_url = config[os.getenv("FLASK_ENV", "development")].REDIS_URL
-            redis_client = redis.from_url(redis_url, decode_responses=True)
+            app_config = config[os.getenv("FLASK_ENV", "development")]
+            upstash_url = app_config.UPSTASH_REDIS_URL
+            upstash_token = app_config.UPSTASH_REDIS_TOKEN
+            redis_client = Redis(url=upstash_url, token=upstash_token)
 
         self.redis = redis_client
 

@@ -27,13 +27,14 @@ auth_bp = Blueprint('auth', __name__)
 # In-memory OTP storage (use Redis in production)
 otp_storage = {}
 
-# OAuth state storage - use Redis for multi-worker environments
+# OAuth state storage - use Upstash Redis for multi-worker environments
 def _get_redis_client():
-    """Get Redis client for OAuth state storage"""
-    from redis import Redis
+    """Get Upstash Redis client for OAuth state storage"""
+    from upstash_redis import Redis
     from flask import current_app
-    redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
-    return Redis.from_url(redis_url, decode_responses=True)
+    upstash_url = current_app.config.get('UPSTASH_REDIS_URL')
+    upstash_token = current_app.config.get('UPSTASH_REDIS_TOKEN')
+    return Redis(url=upstash_url, token=upstash_token)
 
 def store_oauth_state(state, data, ttl=300):
     """Store OAuth state in Redis with session fallback"""

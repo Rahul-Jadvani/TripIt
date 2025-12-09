@@ -8,7 +8,7 @@ from models.project import Project
 from models.investor_request import InvestorRequest
 from sqlalchemy import and_, or_, cast, String, func
 import json
-import redis
+from upstash_redis import Redis
 from flask import current_app
 from datetime import timedelta
 
@@ -21,13 +21,14 @@ class InvestorMatchingService:
     CACHE_KEY_PREFIX = "investor_matches:"
 
     @staticmethod
-    def get_redis_client() -> Optional[redis.Redis]:
-        """Get Redis client from Flask app context"""
+    def get_redis_client() -> Optional[Redis]:
+        """Get Upstash Redis client from Flask app context"""
         try:
             if not current_app:
                 return None
-            redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
-            return redis.from_url(redis_url, decode_responses=True)
+            upstash_url = current_app.config.get('UPSTASH_REDIS_URL')
+            upstash_token = current_app.config.get('UPSTASH_REDIS_TOKEN')
+            return Redis(url=upstash_url, token=upstash_token)
         except Exception:
             return None
 

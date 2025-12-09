@@ -53,8 +53,9 @@ class Config:
     VENDOR_JWT_SECRET_KEY = os.getenv('VENDOR_JWT_SECRET_KEY', os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production'))
     VENDOR_JWT_EXPIRATION_DAYS = int(os.getenv('VENDOR_JWT_EXPIRATION_DAYS', 7))
 
-    # Redis
-    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    # Upstash Redis
+    UPSTASH_REDIS_URL = os.getenv('UPSTASH_REDIS_URL', 'https://capable-terrapin-42349.upstash.io')
+    UPSTASH_REDIS_TOKEN = os.getenv('UPSTASH_REDIS_TOKEN', '')
 
     # AWS/S3
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
@@ -119,32 +120,32 @@ class Config:
     OPENAI_MAX_TOKENS = int(os.getenv('OPENAI_MAX_TOKENS', 2000))
     OPENAI_TEMPERATURE = float(os.getenv('OPENAI_TEMPERATURE', 0.3))
 
-    # Celery Configuration
+    # Celery Configuration (Upstash Redis as broker)
+    # Note: Celery with Upstash requires special configuration
+    # For HTTP-based Redis, we'll use the Upstash REST API URL
     CELERY_BROKER_URL = os.getenv(
         'CELERY_BROKER_URL',
-        os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        f"redis://{UPSTASH_REDIS_URL.replace('https://', '')}"
     )
     CELERY_RESULT_BACKEND = os.getenv(
         'CELERY_RESULT_BACKEND',
-        os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        f"redis://{UPSTASH_REDIS_URL.replace('https://', '')}"
     )
 
-    # SSL Configuration for rediss:// (only when using TLS)
-    # Only apply SSL settings if using rediss:// URLs
-    if CELERY_BROKER_URL.startswith('rediss://'):
-        import ssl
-        CELERY_BROKER_USE_SSL = {
-            'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
-        }
-        CELERY_REDIS_BACKEND_USE_SSL = {
-            'ssl_cert_reqs': ssl.CERT_NONE  # Skip certificate verification for managed Redis (Upstash)
-        }
+    # SSL configuration for Upstash Redis (uses TLS)
+    CELERY_BROKER_USE_SSL = {'ssl_cert_reqs': 'none'} if 'rediss://' in os.getenv('CELERY_BROKER_URL', '') else None
+    CELERY_REDIS_BACKEND_USE_SSL = {'ssl_cert_reqs': 'none'} if 'rediss://' in os.getenv('CELERY_RESULT_BACKEND', '') else None
 
     CELERY_TASK_TRACK_STARTED = True
     CELERY_TASK_TIME_LIMIT = 600  # 10 minutes max per task
     CELERY_TASK_SOFT_TIME_LIMIT = 540  # 9 minutes soft limit
     CELERY_TASK_ACKS_LATE = True
     CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+    # Connection pool settings for Upstash Redis
+    CELERY_BROKER_CONNECTION_RETRY = True
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+    CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
 
     # Scoring Configuration
     SCORING_RATE_LIMIT_HOURS = int(os.getenv('SCORING_RATE_LIMIT_HOURS', 1))
@@ -155,9 +156,8 @@ class Config:
     # CORS
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:8080').split(',')
 
-    # Rate Limiting
+    # Rate Limiting (Upstash Redis doesn't use database numbers)
     RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'true').lower() == 'true'
-    RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', 'redis://localhost:6379/1')
 
     # Email (Optional)
     MAIL_SERVER = os.getenv('MAIL_SERVER')

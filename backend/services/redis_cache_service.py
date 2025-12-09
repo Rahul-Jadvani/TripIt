@@ -22,7 +22,7 @@ Usage:
     upvoted_ids = RedisUserCache.get_user_upvotes(user_id, project_ids)
 """
 
-import redis
+from upstash_redis import Redis
 import json
 from typing import Set, List, Optional, Dict
 from datetime import timedelta
@@ -49,15 +49,10 @@ class RedisUserCache:
     DEFAULT_TTL = 60 * 60 * 24
 
     @classmethod
-    def initialize(cls, redis_url: str):
-        """Initialize Redis connection"""
-        cls.redis_client = redis.from_url(
-            redis_url,
-            decode_responses=True,
-            socket_connect_timeout=5,
-            socket_timeout=5
-        )
-        print(f"[RedisUserCache] Connected to Redis: {redis_url}")
+    def initialize(cls, upstash_url: str, upstash_token: str):
+        """Initialize Upstash Redis connection"""
+        cls.redis_client = Redis(url=upstash_url, token=upstash_token)
+        print(f"[RedisUserCache] Connected to Upstash Redis: {upstash_url}")
 
     @classmethod
     def _get_key(cls, prefix: str, user_id: str) -> str:

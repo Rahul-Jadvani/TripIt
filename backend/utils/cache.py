@@ -1,8 +1,8 @@
 """
-Caching utilities using Redis
+Caching utilities using Upstash Redis
 """
 import json
-import redis
+from upstash_redis import Redis
 from flask import current_app
 
 
@@ -13,27 +13,22 @@ class CacheService:
     _redis_client = None
 
     @classmethod
-    def initialize(cls, redis_url: str):
-        """Initialize Redis connection pool (call once on app startup)"""
+    def initialize(cls, upstash_url: str, upstash_token: str):
+        """Initialize Upstash Redis connection (call once on app startup)"""
         try:
-            print(f"[CacheService] Initializing Redis connection to: {redis_url}")
+            print(f"[CacheService] Initializing Upstash Redis connection to: {upstash_url}")
 
-            # Simple approach - match RedisUserCache exactly
-            cls._redis_client = redis.from_url(
-                redis_url,
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_timeout=5
-            )
+            # Initialize Upstash Redis client
+            cls._redis_client = Redis(url=upstash_url, token=upstash_token)
 
             # Test connection
             print(f"[CacheService] Testing connection...")
             cls._redis_client.ping()
 
-            print(f"[CacheService] Connected to Redis: {redis_url}")
+            print(f"[CacheService] Connected to Upstash Redis: {upstash_url}")
         except Exception as e:
             import traceback
-            print(f"[CacheService] Redis connection failed: {e}")
+            print(f"[CacheService] Upstash Redis connection failed: {e}")
             print(f"[CacheService] Traceback: {traceback.format_exc()}")
             cls._redis_client = None
 

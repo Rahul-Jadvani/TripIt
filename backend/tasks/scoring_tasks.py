@@ -69,15 +69,17 @@ def score_project_task(self, project_id):
             CacheService.invalidate_project_feed()  # Feed rankings may change
             CacheService.invalidate_leaderboard()   # Leaderboard may change
 
-            # Publish scoring completion event to Redis pub/sub
+            # Publish scoring completion event to Upstash Redis pub/sub
             # Flask app will subscribe and emit Socket.IO event for real-time updates
             try:
-                import redis
+                from upstash_redis import Redis
                 import json
                 import os
 
-                # Get Redis client from REDIS_URL
-                redis_client = redis.from_url(os.getenv('REDIS_URL', 'redis://redis:6379/0'))
+                # Get Upstash Redis client
+                upstash_url = os.getenv('UPSTASH_REDIS_URL')
+                upstash_token = os.getenv('UPSTASH_REDIS_TOKEN')
+                redis_client = Redis(url=upstash_url, token=upstash_token)
 
                 message = {
                     'event': 'project:scored',
@@ -89,9 +91,9 @@ def score_project_task(self, project_id):
                     'community_score': float(project.community_score)
                 }
                 redis_client.publish('scoring_events', json.dumps(message))
-                print(f"[Redis Pub/Sub] Published scoring event for project {project.id}")
+                print(f"[Upstash Redis Pub/Sub] Published scoring event for project {project.id}")
             except Exception as pubsub_err:
-                print(f"Failed to publish scoring event to Redis: {pubsub_err}")
+                print(f"Failed to publish scoring event to Upstash Redis: {pubsub_err}")
 
             return {
                 'success': True,

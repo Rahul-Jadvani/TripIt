@@ -195,18 +195,23 @@ def create_app(config_name=None):
 
         # PERFORMANCE: Initialize Redis Cache (Instagram-style instant updates)
         try:
-            redis_url = os.getenv('REDIS_URL')
-            if redis_url:
+            upstash_url = app.config.get('UPSTASH_REDIS_URL')
+            upstash_token = app.config.get('UPSTASH_REDIS_TOKEN')
+            if upstash_url and upstash_token:
                 from services.redis_cache_service import RedisUserCache
                 from utils.cache import CacheService
 
-                RedisUserCache.initialize(redis_url)
-                CacheService.initialize(redis_url)
-                print("[App] Redis cache initialized successfully")
+                RedisUserCache.initialize(upstash_url, upstash_token)
+                CacheService.initialize(upstash_url, upstash_token)
+                print("[App] Upstash Redis cache initialized successfully")
             else:
-                print("[App] WARNING: REDIS_URL not set in environment")
+                print("[App] WARNING: UPSTASH_REDIS_URL or UPSTASH_REDIS_TOKEN not set in environment")
+        except ImportError as e:
+            print(f"[App] WARNING: Redis cache service import error: {e}")
+            print("[App] Redis cache will not be available")
         except Exception as e:
-            print(f"[App] WARNING: Redis initialization error: {e}")
+            print(f"[App] WARNING: Redis cache initialization error: {e}")
+            print("[App] Application will continue without Redis cache")
 
         # Initialize trending tags tracker
         try:

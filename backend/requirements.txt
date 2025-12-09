@@ -19,7 +19,7 @@ web3==6.11.2
 eth-keys==0.5.1
 
 # Caching
-redis==4.6.0
+upstash-redis
 
 # WebSockets (Real-time updates)
 flask-socketio==5.3.6
