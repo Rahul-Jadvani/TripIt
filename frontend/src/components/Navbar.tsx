@@ -205,7 +205,7 @@ export const Navbar = memo(function Navbar() {
                       >
                         <Sparkles className="h-4 w-4 text-primary" />
                         <span className="text-primary font-semibold">AI Remix</span>
-                        <Badge variant="secondary" className="ml-auto text-xs">New</Badge>
+                        {/* <Badge variant="secondary" className="ml-auto text-xs">New</Badge> */}
                       </Link>
                     )}
                     <Link
@@ -319,7 +319,7 @@ export const Navbar = memo(function Navbar() {
                     >
                       <Avatar className="h-9 w-9">
                         <AvatarImage
-                          src={user.profilePictureUrl || user.profile_picture_url || undefined}
+                          src={user.avatar_url || user.avatar || user.profilePictureUrl || user.profile_picture_url || undefined}
                           alt={user.username || 'User'}
                         />
                         <AvatarFallback>

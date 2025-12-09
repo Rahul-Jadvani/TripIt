@@ -153,7 +153,7 @@ export default function RemixPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-16 pb-12 flex">
+    <div className="min-h-screen bg-background pb-12 flex">
       {/* Sidebar Toggle (Mobile) */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -189,7 +189,7 @@ export default function RemixPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Header */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 mt-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 badge-primary px-4 py-2 rounded-full mb-4">
             <Sparkles className="w-5 h-5" />

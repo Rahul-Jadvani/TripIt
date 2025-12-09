@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+
 import { useSnaps } from "@/hooks/useSnaps";
 import { TravelSnapsCarousel } from '@/components/TravelSnapsCarousel';
 import { Flame, Clock, TrendingUp, Zap, Sparkles, MessageCircle, Shield, Camera } from 'lucide-react';
@@ -154,6 +155,8 @@ export default function Feed() {
    const { user } = useAuth();
    const queryClient = useQueryClient();
    const navigate = useNavigate();
+     const handleMenuItemClick = () => {};
+  const prefetchRoute = (path: string) => {};
 
    // PROGRESSIVE LOADING: Load hooks but control data processing/display
    const [loadPhase, setLoadPhase] = useState<'initial' | 'secondary' | 'tertiary'>('initial');
@@ -351,49 +354,63 @@ export default function Feed() {
     return Array.from(unique.values());
   }, [hotData?.data, topData?.data, newData?.data, page2Data?.data, page3Data?.data, page4Data?.data, page5Data?.data, featuredData?.data, risingStarsData?.data, mostRequestedData?.data, loadPhase]);
 
-  // Compute leading tag from activity_tags (travel-focused)
-  const leader = useMemo(() => {
-    const all = visibleFeedProjects;
-    const buckets: Record<string, number> = {};
-    const push = (key: string) => {
-      if (!key) return;
-      buckets[key] = (buckets[key] || 0) + 1;
-    };
+  // Compute leading tag from travel_type (travel-focused)
+ const leader = useMemo(() => {
+  const all = visibleFeedProjects;
+  const buckets: Record<string, number> = {};
 
-    // Count activity tags from all itineraries
-    for (const p of all) {
-      if (Array.isArray((p as any).activity_tags) && (p as any).activity_tags.length) {
-        for (const tag of (p as any).activity_tags as string[]) {
-          push(tag);
-        }
+  const push = (key: string) => {
+    if (!key) return;
+    buckets[key] = (buckets[key] || 0) + 1;
+  };
+
+  for (const p of all) {
+    // ✔ FIXED: Correct field from backend — categories[]
+    if (Array.isArray((p as any).categories)) {
+      for (const tag of (p as any).categories as string[]) {
+        push(tag);
       }
     }
 
-    // Find most common tag
-    let label = 'Travel';
-    let count = 0;
-    for (const [k, v] of Object.entries(buckets)) {
-      if (v > count) { label = k; count = v; }
+    // If categories missing, fall back to activity_tags
+    else if (Array.isArray((p as any).activity_tags)) {
+      for (const tag of (p as any).activity_tags as string[]) {
+        push(tag);
+      }
     }
+  }
 
-    const total = Object.values(buckets).reduce((a, b) => a + b, 0) || 1;
-    const percent = (count / total) * 100;
+  // Find the most common tag
+  let label = 'Travel';
+  let count = 0;
 
-    // Map tag to icon category
-    const iconKey = label.toLowerCase().includes('trek') || label.toLowerCase().includes('mountain')
+  for (const [k, v] of Object.entries(buckets)) {
+    if (v > count) {
+      label = k;
+      count = v;
+    }
+  }
+
+  const total = Object.values(buckets).reduce((a, b) => a + b, 0) || 1;
+  const percent = (count / total) * 100;
+
+  // Map tag → icon category
+  const iconKey =
+    label.toLowerCase().includes('trek') ||
+    label.toLowerCase().includes('mountain')
       ? 'adventure'
-      : label.toLowerCase().includes('beach') || label.toLowerCase().includes('water')
-        ? 'beach'
-        : label.toLowerCase().includes('cultur') || label.toLowerCase().includes('herit')
-          ? 'cultural'
-          : label.toLowerCase().includes('nomad') || label.toLowerCase().includes('remote')
-            ? 'digital'
-            : label.toLowerCase().includes('photo')
-              ? 'photography'
-              : 'other';
+      : label.toLowerCase().includes('beach') ||
+        label.toLowerCase().includes('water')
+      ? 'beach'
+      : label.toLowerCase().includes('cultur')
+      ? 'cultural'
+      : label.toLowerCase().includes('women')
+      ? 'women'
+      : 'other';
 
-    return { label, count, percent, icon: iconKey as any };
-  }, [visibleFeedProjects]);
+  return { label, count, percent, icon: iconKey as any };
+}, [visibleFeedProjects]);
+
 
   // Removed old filter functions - now using real category-based data from backend
 
@@ -418,8 +435,28 @@ export default function Feed() {
                   Discover safety-verified itineraries from trusted travelers. Find your next journey, join fellow adventurers, and explore the world with confidence.
                 </p>
                 <div className="flex flex-wrap gap-3 mt-4">
-                  <button className="badge badge-primary text-xs font-bold px-3 py-1.5">Plan This Trip</button>
-                  <button className="badge badge-secondary text-xs font-bold px-3 py-1.5">Find Companions</button>
+                  <Link
+  to="/remix"
+  onClick={handleMenuItemClick}
+  onMouseEnter={() => prefetchRoute('/remix')}
+  onFocus={() => prefetchRoute('/remix')}
+>
+  <button className="badge badge-primary text-xs font-bold px-3 py-1.5">
+    Plan This Trip
+  </button>
+</Link>
+
+<Link
+  to="/remix"
+  onClick={handleMenuItemClick}
+  onMouseEnter={() => prefetchRoute('/remix')}
+  onFocus={() => prefetchRoute('/remix')}
+>
+  <button className="badge badge-secondary text-xs font-bold px-3 py-1.5">
+    Find Companions
+  </button>
+</Link>
+
                 </div>
               </div>
             </div>

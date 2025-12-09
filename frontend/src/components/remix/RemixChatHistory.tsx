@@ -23,7 +23,7 @@ export const RemixChatHistory: FC<RemixChatHistoryProps> = ({
   return (
     <div className="h-full flex flex-col bg-card border-r-4 border-black">
       {/* Header */}
-      <div className="p-4 border-b-2 border-black bg-secondary/50">
+      {/* <div className="p-4 border-b-2 border-black bg-secondary/50">
         <button
           onClick={onNewChat}
           className="w-full btn-primary flex items-center justify-center gap-2"
@@ -31,7 +31,7 @@ export const RemixChatHistory: FC<RemixChatHistoryProps> = ({
           <Plus className="w-5 h-5" />
           New Remix Chat
         </button>
-      </div>
+      </div> */}
 
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
